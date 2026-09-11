@@ -14,7 +14,8 @@ import {
   Save,
   AlertCircle,
   Coins,
-  BookOpen
+  BookOpen,
+  Compass
 } from 'lucide-react';
 import { UnionCanvas } from './components/canvas/UnionCanvas.js';
 import { useCanvasStore } from './store/canvasStore.js';
@@ -27,8 +28,15 @@ import { ExecutionHistoryDrawer } from './components/history/ExecutionHistoryDra
 import { CreditsDrawer } from './components/credits/CreditsDrawer.js';
 import { TemplateLibraryModal } from './components/modals/TemplateLibraryModal.js';
 import { WelcomeModal } from './components/welcome/WelcomeModal.js';
+import { LandingPage } from './components/landing/LandingPage.js';
 
 export function App() {
+  const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#landing') {
+      return 'landing';
+    }
+    return 'workspace';
+  });
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -79,7 +87,20 @@ export function App() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    const handleHashChange = () => {
+      if (window.location.hash === '#landing') {
+        setCurrentView('landing');
+      } else if (window.location.hash === '#workspace') {
+        setCurrentView('workspace');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, [initFromLocalStorage, saveWorkflow, fetchUserCredits]);
 
   const handleQuickAddNode = () => {
@@ -102,6 +123,18 @@ export function App() {
     const d = new Date(lastSavedAt);
     return `Saved ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
   };
+
+  if (currentView === 'landing') {
+    return (
+      <LandingPage
+        serverStatus={serverStatus}
+        onEnterWorkspace={() => {
+          window.location.hash = '#workspace';
+          setCurrentView('workspace');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen bg-union-bg text-union-text overflow-hidden select-none">
@@ -255,6 +288,18 @@ export function App() {
             </div>
           ) : (
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  window.location.hash = '#landing';
+                  setCurrentView('landing');
+                }}
+                title="Ir para a Página Inicial / Landing Page"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-zinc-500 text-zinc-300 hover:text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+              >
+                <Compass className="h-3.5 w-3.5 text-indigo-400" />
+                <span>Página Inicial</span>
+              </button>
+
               <button
                 onClick={() => setIsWelcomeOpen(true)}
                 title="Guia Completo & Apresentação UNION.AI"
