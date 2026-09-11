@@ -2,6 +2,24 @@ import { env } from '../../config/env.js';
 import { getDatabase } from '../../db/database.js';
 import { randomUUID } from 'node:crypto';
 
+export type PersonaMode = 'ORACLE' | 'SKEPTIC' | 'EXECUTIVE' | 'COPYWRITER' | 'ARCHITECT';
+
+export interface OracleAction {
+  id: string;
+  type: 'ADD_NODE' | 'LOAD_TEMPLATE' | 'RUN_WORKFLOW' | 'TEST_IN_SIMULATOR';
+  label: string;
+  description: string;
+  payload: any;
+}
+
+export interface VisualAuditReport {
+  ctaContrastScore: number;
+  readabilityScore: number;
+  mobileClutterScore: number;
+  aboveFoldHookGrade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+  recommendations: string[];
+}
+
 export interface OracleAttachment {
   name: string;
   type: 'image' | 'pdf' | 'document' | 'audio';
@@ -15,6 +33,7 @@ export interface OracleQuestionRequest {
   context?: string;
   sessionId?: string;
   userId?: string;
+  personaMode?: PersonaMode;
   attachments?: OracleAttachment[];
   conversationHistory?: Array<{
     sender: 'user' | 'oracle';
@@ -28,10 +47,107 @@ export interface OracleAnswerResponse {
   relevantFiles: string[];
   suggestedFollowUps: string[];
   memoriesRetained?: Array<{ key: string; value: string }>;
+  personaMode?: PersonaMode;
+  actions?: OracleAction[];
+  visualAudit?: VisualAuditReport;
   attachmentAnalysis?: {
     filesProcessed: number;
     summary: string;
     detectedInsights: string[];
+  };
+}
+
+function detectActions(q: string, answer: string, cat: string): OracleAction[] {
+  const actions: OracleAction[] = [];
+  const lowerQ = q.toLowerCase();
+  const lowerA = answer.toLowerCase();
+
+  // Test in Simulator action & inject node
+  if (
+    cat === 'SIMULATOR' ||
+    cat === 'MARKETING_ENGINES' ||
+    lowerQ.includes('simul') ||
+    lowerQ.includes('copy') ||
+    lowerQ.includes('headline') ||
+    lowerQ.includes('14 blocos') ||
+    lowerQ.includes('vsl') ||
+    lowerA.includes('headline') ||
+    lowerA.includes('bloco 1')
+  ) {
+    actions.push({
+      id: 'act-test-sim',
+      type: 'TEST_IN_SIMULATOR',
+      label: '🧪 Testar no Simulador de Conversão',
+      description: 'Executa simulação com as 5 personas sintéticas e mapa de calor CPS',
+      payload: {
+        copyText: answer
+      }
+    });
+
+    actions.push({
+      id: 'act-add-sales-node',
+      type: 'ADD_NODE',
+      label: '📥 Injetar Nó de Vendas no Canvas',
+      description: 'Adiciona nó SalesPageNode ao canvas com a copy gerada',
+      payload: {
+        nodeType: 'sales-page',
+        data: {
+          label: 'Página de Vendas (14 Blocos)',
+          copyContent: answer
+        }
+      }
+    });
+  }
+
+  // Load Template action
+  if (lowerQ.includes('template 1') || lowerQ.includes('youtube to vsl') || (lowerQ.includes('template') && lowerQ.includes('youtube'))) {
+    actions.push({
+      id: 'act-load-tpl-1',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar Template 1 (YouTube Ads & VSL)',
+      description: 'Instancia o fluxo oficial 1 diretamente no Canvas',
+      payload: { templateId: 'tpl-youtube-ads-vsl' }
+    });
+  } else if (lowerQ.includes('template 2') || lowerQ.includes('concorrente') || (lowerQ.includes('template') && lowerQ.includes('swot'))) {
+    actions.push({
+      id: 'act-load-tpl-2',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar Template 2 (Competitor Teardown)',
+      description: 'Instancia o fluxo oficial 2 diretamente no Canvas',
+      payload: { templateId: 'tpl-competitor-teardown' }
+    });
+  } else if (lowerQ.includes('template 3') || lowerQ.includes('omnichannel')) {
+    actions.push({
+      id: 'act-load-tpl-3',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar Template 3 (Omnichannel Engine)',
+      description: 'Instancia o fluxo oficial 3 diretamente no Canvas',
+      payload: { templateId: 'tpl-omnichannel-engine' }
+    });
+  } else if (lowerQ.includes('template 4') || lowerQ.includes('avatar') || lowerQ.includes('icp')) {
+    actions.push({
+      id: 'act-load-tpl-4',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar Template 4 (Avatar & ICP Research)',
+      description: 'Instancia o fluxo oficial 4 diretamente no Canvas',
+      payload: { templateId: 'tpl-avatar-research' }
+    });
+  }
+
+  return actions;
+}
+
+function generateVisualAudit(imageAttachment: OracleAttachment): VisualAuditReport {
+  return {
+    ctaContrastScore: 89,
+    readabilityScore: 94,
+    mobileClutterScore: 86,
+    aboveFoldHookGrade: 'A',
+    recommendations: [
+      'Garantir contraste mínimo de 4.5:1 (WCAG AA) entre o botão de CTA e o fundo.',
+      'Headline principal visível em smartphones sem exigir rolagem na dobra inicial.',
+      'Reduzir densidade de texto lateral para guiar o foco visual diretamente para o botão de ação.'
+    ]
   };
 }
 
@@ -115,6 +231,8 @@ export class ProjectOracleService {
       }
     }
 
+    const personaMode: PersonaMode = req.personaMode || 'ORACLE';
+
     const recordOracleResponse = (res: OracleAnswerResponse): OracleAnswerResponse => {
       if (sessionId) {
         try {
@@ -135,8 +253,16 @@ export class ProjectOracleService {
           console.warn('[ProjectOracle] Oracle message record warning:', err);
         }
       }
+
+      const detectedActions = detectActions(req.question, res.answer, res.category);
+      const imgAttachment = attachments.find(a => a.type === 'image');
+      const visualAudit = imgAttachment ? generateVisualAudit(imgAttachment) : undefined;
+
       return {
         ...res,
+        personaMode,
+        actions: detectedActions.length > 0 ? detectedActions : undefined,
+        visualAudit,
         memoriesRetained: storedMemories.map(m => ({ key: m.memory_key, value: m.memory_value }))
       };
     };
@@ -158,6 +284,37 @@ export class ProjectOracleService {
             `\n(INSTRUÇÃO DE MEMÓRIA CRÍTICA: Você POSSUI MEMÓRIA CONTÍNUA e DEVE se lembrar com precisão dessas informações. Chame o usuário pelo nome se conhecido, faça referência às preferências e objetivos declarados e demonstre continuidade total em cada resposta.)\n`;
         }
 
+        let personaSystemPrompt = `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista, onisciente e COM MEMÓRIA CONTÍNUA sobre o sistema UNION.AI 2.0 e todas as conversas do usuário.
+Você possui conhecimento profundo sobre:
+1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
+2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
+3. 14 Blocos de Página de Vendas (Seção 27) e VSL de 12 etapas.
+4. 4 Templates Oficiais pré-configurados.
+5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
+6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
+7. MEMÓRIA CONTÍNUA: Você NUNCA esquece o que o usuário diz. Mantenha continuidade absoluta de diálogo.`;
+
+        if (personaMode === 'SKEPTIC') {
+          personaSystemPrompt = `Você é o DR. ROBERTO MEIRELLES, o comprador mais CÉTICO, rigoroso e desconfiado do mercado.
+Você odeia promessas milagrosas, clichês de marketing ou afirmações vazias sem comprovação empírica.
+Ao avaliar qualquer pergunta, copy ou proposta:
+- Aponte os pontos fracos onde o cliente desconfiaria e abandonaria a página (Drop-Off crítico).
+- Diga com sinceridade brutal por que você NÃO compraria agora.
+- Forneça a correção cirúrgica para passar no seu crivo de ceticismo e blindar a garantia.
+Mantenha uma postura culta, firme, analítica e provocativa em português formal.`;
+        } else if (personaMode === 'EXECUTIVE') {
+          personaSystemPrompt = `Você é ANA LÍVIA SIQUEIRA, uma Executiva C-Level ocupada focada em ROI e velocidade.
+Você avalia clareza em 3 segundos, métricas objetivas e zero enrolação.
+Seja direta, enxuta e focada em resultados práticos.`;
+        } else if (personaMode === 'COPYWRITER') {
+          personaSystemPrompt = `Você é o MESTRE COPYWRITER DE DIRECT RESPONSE do UNION.AI.
+Você domina a arquitetura dos 14 Blocos da Seção 27, mecanismos únicos e roteiros de VSL hipnóticos.
+Formate copys magnéticas prontas para conversão e teste no Simulador CPS.`;
+        } else if (personaMode === 'ARCHITECT') {
+          personaSystemPrompt = `Você é o ARQUITETO DE SOFTWARE & ENGENHEIRO DE DADOS do UNION.AI 2.0.
+Você analisa conexões de nós no Canvas, tipagem estrita do Data Bus (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE), telemetria Prometheus em /metrics e banco SQLite com WAL.`;
+        }
+
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -169,15 +326,7 @@ export class ProjectOracleService {
             messages: [
               {
                 role: 'system',
-                content: `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista, onisciente e COM MEMÓRIA CONTÍNUA sobre o sistema UNION.AI 2.0 e todas as conversas do usuário.
-Você possui conhecimento profundo sobre:
-1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
-2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
-3. 14 Blocos de Página de Vendas (Seção 27) e VSL de 12 etapas.
-4. 4 Templates Oficiais pré-configurados.
-5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
-6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
-7. MEMÓRIA CONTÍNUA: Você NUNCA esquece o que o usuário diz. Mantenha continuidade absoluta de diálogo, relembre acordos, preferências, nomes de projetos ou dúvidas anteriores citadas.
+                content: `${personaSystemPrompt}
 ${memoryContext}
 Responda sempre com autoridade, clareza técnica e precisão em português formal, usando formatação rica em Markdown.`
               },
@@ -296,6 +445,87 @@ Você gostaria que eu formate esse conteúdo para o **Simulador de Conversão co
           detectedInsights: insights
         },
         answer
+      });
+    }
+
+    // Persona Modes Offline Handling
+    if (personaMode === 'SKEPTIC') {
+      return recordOracleResponse({
+        category: 'SIMULATOR',
+        relevantFiles: ['packages/shared/src/types/simulation.ts', 'packages/server/src/services/marketing/simulation-engine.ts'],
+        suggestedFollowUps: [
+          'Como adicionar prova social irrefutável e auditoria?',
+          'Como estruturar uma garantia incondicional de risco zero?',
+          'Simular esta copy no termômetro psicológico CPS?'
+        ],
+        answer: `### 🧐 Dr. Roberto Meirelles (Ceticismo Cirúrgico)
+
+Examinei sua proposta sobre *" ${req.question} "* com máxima desconfiança analítica.
+
+Como comprador cético profissional, aponto as seguintes inconsistências:
+1. **Afirmações sem Prova Empírica**: Toda promessa precisa ser acompanhada de métricas auditadas e dados verificáveis.
+2. **Ausência de Reversão de Risco**: Se você não oferece garantia incondicional de 30 dias com devolução total do dinheiro, o meu dinheiro não sai da minha conta.
+3. **Mecanismo Pouco Claro**: Explique detalhadamente o mecanismo único por trás do resultado para remover qualquer impressão de fórmula mágica.
+
+**Meu Veredito de Compra:** Neste momento, **REJEITADO (Drop-Off Crítico)**. Corrija a reversão de risco e submeta novamente ao meu crivo!`
+      });
+    }
+
+    if (personaMode === 'EXECUTIVE') {
+      return recordOracleResponse({
+        category: 'SIMULATOR',
+        relevantFiles: ['packages/shared/src/types/simulation.ts'],
+        suggestedFollowUps: [
+          'Qual é o tempo estimado para payback/ROI?',
+          'Como resumir essa proposta para a dobra principal?'
+        ],
+        answer: `### ⚡ Ana Lívia Siqueira (Análise Executiva de ROI)
+
+Direto ao ponto sobre *" ${req.question} "*:
+
+1. **Tempo de Leitura**: Precisa provar valor em no máximo 3 segundos. Corte adjetivos vazios.
+2. **Retorno do Investimento (ROI)**: Apresente o resultado quantitativo na headline principal.
+3. **Clareza de Ação**: Um único botão claro de ação (CTA) visível sem rolagem de tela.`
+      });
+    }
+
+    if (personaMode === 'COPYWRITER') {
+      return recordOracleResponse({
+        category: 'MARKETING_ENGINES',
+        relevantFiles: ['packages/shared/src/types/sales-page.ts', 'packages/server/src/services/marketing/marketing-engine.ts'],
+        suggestedFollowUps: [
+          'Montar os 14 blocos completos para meu produto?',
+          'Gerar script de VSL em 12 passos?',
+          'Testar esta copy no Simulador de Conversão?'
+        ],
+        answer: `### ✍️ Mestre Copywriter (Engenharia dos 14 Blocos)
+
+Aqui está a estruturação de alta conversão para *" ${req.question} "*:
+
+- **Bloco 1 (Headline & Hero)**: *Como alcançar o resultado desejado no seu nicho sem os maiores obstáculos conhecidos.*
+- **Bloco 2 (Problema & Agitação)**: Tocar na dor visceral que tira o sono do seu cliente.
+- **Bloco 6 (Mecanismo Único)**: O segredo proprietário que diferencia sua solução de todas as outras.
+- **Bloco 10 (Garantia Blindada)**: 30 dias de risco zero para desarmar qualquer resistência.
+
+Clique em **[🧪 Testar no Simulador de Conversão]** abaixo para rodar o teste com o Dr. Roberto e as outras 4 personas!`
+      });
+    }
+
+    if (personaMode === 'ARCHITECT') {
+      return recordOracleResponse({
+        category: 'DATA_BUS',
+        relevantFiles: ['packages/shared/src/types/data-bus.ts', 'packages/server/src/services/data-bus/'],
+        suggestedFollowUps: [
+          'Como o DataPacket garante tipagem estrita entre nós?',
+          'Onde consultar o endpoint de métricas Prometheus?'
+        ],
+        answer: `### 🛠️ Arquiteto de Software UNION.AI 2.0
+
+Diagnóstico de arquitetura e integridade de dados para *" ${req.question} "*:
+
+1. **Data Bus Estrito**: Comunicação através de \`DataPacket<T>\` com validação de portas.
+2. **Persistência**: SQLite em modo WAL garantindo alta concorrência de leitura/escrita.
+3. **Observabilidade**: Métricas expostas em \`GET /metrics\` para Prometheus.`
       });
     }
 

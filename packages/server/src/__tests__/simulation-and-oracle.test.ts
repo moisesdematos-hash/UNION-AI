@@ -163,5 +163,65 @@ describe('SimulationEngine & ProjectOracle Service Tests', () => {
       const clearedMemories = ProjectOracleService.getSessionMemories(sessionId);
       expect(clearedMemories.length).toBe(0);
     });
+
+    it('adapts response and personality to SKEPTIC (Dr. Roberto Meirelles) persona mode', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'Essa headline vai dobrar as vendas de qualquer curso em 24 horas!',
+        personaMode: 'SKEPTIC'
+      });
+
+      expect(res.personaMode).toBe('SKEPTIC');
+      expect(res.answer).toContain('Dr. Roberto Meirelles');
+      expect(res.answer).toContain('REJEITADO');
+    });
+
+    it('adapts response to EXECUTIVE (Ana Lívia) mode and COPYWRITER mode with actions', async () => {
+      const resExec = await ProjectOracleService.answerQuestion({
+        question: 'Proposta de software para automação de clínicas',
+        personaMode: 'EXECUTIVE'
+      });
+
+      expect(resExec.personaMode).toBe('EXECUTIVE');
+      expect(resExec.answer).toContain('Ana Lívia');
+
+      const resCopy = await ProjectOracleService.answerQuestion({
+        question: 'Crie uma copy de página de vendas para curso de Python',
+        personaMode: 'COPYWRITER'
+      });
+
+      expect(resCopy.personaMode).toBe('COPYWRITER');
+      expect(resCopy.actions).toBeDefined();
+      expect(resCopy.actions?.some(a => a.type === 'TEST_IN_SIMULATOR')).toBe(true);
+      expect(resCopy.actions?.some(a => a.type === 'ADD_NODE')).toBe(true);
+    });
+
+    it('generates a visual audit report when an image attachment is provided', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'Audite este print da minha landing page',
+        attachments: [
+          {
+            name: 'landing-page-hero.png',
+            type: 'image',
+            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA'
+          }
+        ]
+      });
+
+      expect(res.visualAudit).toBeDefined();
+      expect(res.visualAudit?.ctaContrastScore).toBeGreaterThan(0);
+      expect(res.visualAudit?.readabilityScore).toBeGreaterThan(0);
+      expect(res.visualAudit?.recommendations.length).toBeGreaterThan(0);
+    });
+
+    it('detects and issues template load action when templates are requested', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'Quero carregar o Template 1 de YouTube to VSL'
+      });
+
+      expect(res.actions).toBeDefined();
+      const loadTplAction = res.actions?.find(a => a.type === 'LOAD_TEMPLATE');
+      expect(loadTplAction).toBeDefined();
+      expect(loadTplAction?.payload.templateId).toBe('tpl-youtube-ads-vsl');
+    });
   });
 });

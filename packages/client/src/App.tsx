@@ -123,6 +123,34 @@ export function App() {
     });
   };
 
+  const [simulatorCopy, setSimulatorCopy] = useState<string | null>(null);
+
+  const handleOpenSimulatorWithCopy = (copy: string) => {
+    setSimulatorCopy(copy);
+    setIsSimulatorOpen(true);
+  };
+
+  const handleInjectIntoCanvas = (action: any) => {
+    const templateName = action?.nodeType || 'ai-writer';
+    const nodeDef = createNodeFromTemplate(templateName, {
+      x: 120 + ((nodes.length * 40) % 400),
+      y: 120 + ((nodes.length * 30) % 300)
+    });
+    if (action?.copyText) {
+      (nodeDef as any).config = {
+        ...((nodeDef as any).config || {}),
+        prompt: action.copyText,
+        output: action.copyText
+      };
+    }
+    addNode({
+      id: nodeDef.id,
+      type: 'unionNode',
+      position: nodeDef.position,
+      data: nodeDef as unknown as Record<string, unknown>
+    });
+  };
+
   const formatLastSaved = () => {
     if (!lastSavedAt) return 'Never saved';
     const d = new Date(lastSavedAt);
@@ -430,10 +458,13 @@ export function App() {
         <ConversionSimulatorModal
           isOpen={isSimulatorOpen}
           onClose={() => setIsSimulatorOpen(false)}
+          initialCopy={simulatorCopy}
         />
         <ProjectOracleDrawer
           isOpen={isOracleOpen}
           onClose={() => setIsOracleOpen(false)}
+          onOpenSimulatorWithCopy={handleOpenSimulatorWithCopy}
+          onInjectIntoCanvas={handleInjectIntoCanvas}
         />
       </main>
     </div>

@@ -65,7 +65,7 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       expect(screen.getAllByText(/UNION.AI Project Oracle/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Multimodal & Voice/i)).toBeDefined();
       expect(screen.getByText(/Como funciona o Data Bus e o DataPacket\?/i)).toBeDefined();
-      expect(screen.getByPlaceholderText(/Digite, fale por voz ou arraste imagens e PDFs aqui/i)).toBeDefined();
+      expect(screen.getByPlaceholderText(/Digite uma mensagem ou "\/" para comandos rápidos/i)).toBeDefined();
     });
 
     it('renders multimodal controls such as attachment and microphone buttons', () => {
@@ -106,5 +106,75 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
 
       expect(screen.getByText(/limpos com sucesso/i)).toBeDefined();
     });
+
+    it('renders persona selector and allows switching personas (Dote 3)', () => {
+      render(
+        <ProjectOracleDrawer isOpen={true} onClose={() => {}} />
+      );
+
+      const personaBtn = screen.getByTitle(/Clique para alternar persona de especialista/i);
+      expect(personaBtn).toBeDefined();
+      expect(screen.getByText(/Modo: Oracle Sábio/i)).toBeDefined();
+
+      // Open persona menu
+      fireEvent.click(personaBtn);
+
+      expect(screen.getByText(/Dr. Roberto Meirelles/i)).toBeDefined();
+      expect(screen.getByText(/Ana Lívia Siqueira/i)).toBeDefined();
+      expect(screen.getByText(/Mestre Direct Response/i)).toBeDefined();
+      expect(screen.getByText(/Engenheiro de Software & Bus/i)).toBeDefined();
+
+      // Click Dr. Roberto Meirelles (Skeptic)
+      const skepticBtn = screen.getByText(/Dr. Roberto Meirelles/i);
+      fireEvent.click(skepticBtn);
+
+      expect(screen.getByText(/Modo: Dr. Roberto Meirelles/i)).toBeDefined();
+    });
+
+    it('renders slash command palette when typing / (Dote 5)', () => {
+      render(
+        <ProjectOracleDrawer isOpen={true} onClose={() => {}} />
+      );
+
+      const input = screen.getByPlaceholderText(/Digite uma mensagem ou "\/" para comandos rápidos/i);
+      fireEvent.change(input, { target: { value: '/' } });
+
+      expect(screen.getByText(/Comandos Rápidos por Barra/i)).toBeDefined();
+      expect(screen.getByText(/\/simular/i)).toBeDefined();
+      expect(screen.getByText(/\/14blocos/i)).toBeDefined();
+      expect(screen.getByText(/\/vsl/i)).toBeDefined();
+      expect(screen.getByText(/\/autoheal/i)).toBeDefined();
+    });
+
+    it('renders 1-click Action Hub with Simulator and Canvas injection (Dotes 1 & 2)', () => {
+      const handleOpenSim = vi.fn();
+      const handleInject = vi.fn();
+
+      render(
+        <ProjectOracleDrawer 
+          isOpen={true} 
+          onClose={() => {}} 
+          onOpenSimulatorWithCopy={handleOpenSim}
+          onInjectIntoCanvas={handleInject}
+        />
+      );
+
+      const simBtn = screen.getByText(/Testar no Simulador/i);
+      const injectBtn = screen.getByText(/Injetar Nó no Canvas/i);
+      const copyBtn = screen.getByText(/Copiar/i);
+      const exportBtn = screen.getByText(/Exportar \.MD/i);
+
+      expect(simBtn).toBeDefined();
+      expect(injectBtn).toBeDefined();
+      expect(copyBtn).toBeDefined();
+      expect(exportBtn).toBeDefined();
+
+      fireEvent.click(simBtn);
+      expect(handleOpenSim).toHaveBeenCalled();
+
+      fireEvent.click(injectBtn);
+      expect(handleInject).toHaveBeenCalled();
+    });
   });
 });
+

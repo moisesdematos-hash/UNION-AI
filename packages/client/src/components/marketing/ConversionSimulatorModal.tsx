@@ -24,13 +24,15 @@ interface ConversionSimulatorModalProps {
   onClose: () => void;
   simulationResult?: ConversionSimulationResult | null;
   onAutoHeal?: (blockIndex: number, healedContent: string) => void;
+  initialCopy?: string | null;
 }
 
 export function ConversionSimulatorModal({
   isOpen,
   onClose,
   simulationResult,
-  onAutoHeal
+  onAutoHeal,
+  initialCopy
 }: ConversionSimulatorModalProps) {
   const [selectedPersona, setSelectedPersona] = useState<SyntheticPersona | null>(null);
   const [healingBlockIndex, setHealingBlockIndex] = useState<number | null>(null);
@@ -249,6 +251,11 @@ export function ConversionSimulatorModal({
                 <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   Chave de Ouro
                 </span>
+                {initialCopy && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate max-w-xs" title={initialCopy}>
+                    Copy Injetada pelo Oracle
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400">
                 Auditoria preditiva com 5 Personas Sintéticas • Cálculo de CPS • Auto-Cura de Fricção em 1 Clique

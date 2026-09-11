@@ -9,6 +9,7 @@ const OracleQuestionSchema = z.object({
   context: z.string().optional(),
   sessionId: z.string().optional(),
   userId: z.string().optional(),
+  personaMode: z.enum(['ORACLE', 'SKEPTIC', 'EXECUTIVE', 'COPYWRITER', 'ARCHITECT']).optional(),
   attachments: z.array(z.object({
     name: z.string(),
     type: z.enum(['image', 'pdf', 'document', 'audio']),
