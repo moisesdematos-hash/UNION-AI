@@ -1,0 +1,105 @@
+import { describe, it, expect } from 'vitest';
+import { SimulationEngine } from '../services/marketing/simulation-engine.js';
+import { ProjectOracleService } from '../services/chat/project-oracle-service.js';
+
+describe('SimulationEngine & ProjectOracle Service Tests', () => {
+  describe('SimulationEngine', () => {
+    it('returns the 5 built-in synthetic personas with valid schemas', () => {
+      const personas = SimulationEngine.getBuiltinPersonas();
+      expect(personas).toHaveLength(5);
+      expect(personas.map(p => p.archetype)).toEqual([
+        'SKEPTIC',
+        'BUSY_EXECUTIVE',
+        'BUDGET_SAVER',
+        'ANALYTICAL',
+        'EMOTIONAL'
+      ]);
+    });
+
+    it('simulates conversion scoring and returns CPS and Heatmap evaluations', async () => {
+      const result = await SimulationEngine.simulateConversion({
+        title: 'Sales Page Test',
+        sourceType: 'SALES_PAGE',
+        blocks: [
+          {
+            id: 'b-1',
+            name: 'Hero Section',
+            content: 'Como multiplicar o faturamento com IA autônoma em menos de 14 dias sem equipe.'
+          },
+          {
+            id: 'b-2',
+            name: 'Preço e Condição',
+            content: 'Apenas R$ 97 por mês.'
+          }
+        ]
+      });
+
+      expect(result.result.conversionProbabilityScore).toBeGreaterThanOrEqual(15);
+      expect(result.result.conversionProbabilityScore).toBeLessThanOrEqual(99);
+      expect(result.result.heatmap).toHaveLength(2);
+      expect(result.result.personas).toHaveLength(5);
+      expect(result.result.topStrengths.length).toBeGreaterThan(0);
+      expect(result.packet.type).toBe('JSON');
+      expect(result.creditsCost).toBeGreaterThan(0);
+    });
+
+    it('performs 1-click auto-healing on a block to eliminate friction', async () => {
+      const healed = await SimulationEngine.autoHealBlock({
+        blockId: 'b-2',
+        blockName: 'Preço e Oferta',
+        originalContent: 'Apenas R$ 97 por mês.',
+        personaArchetype: 'SKEPTIC',
+        frictionPoint: 'Falta de garantia explícita.',
+        suggestedAction: 'Adicione garantia incondicional.'
+      });
+
+      expect(healed.blockId).toBe('b-2');
+      expect(healed.healedContent).toContain('GARANTIA INCONDICIONAL');
+      expect(healed.improvementsMade.length).toBeGreaterThan(0);
+      expect(healed.estimatedScoreIncrease).toBeGreaterThan(0);
+    });
+  });
+
+  describe('ProjectOracleService', () => {
+    it('answers questions about Data Bus and references pertinent files', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'Como funciona o Data Bus e o DataPacket?'
+      });
+
+      expect(res.category).toBe('DATA_BUS');
+      expect(res.relevantFiles).toContain('packages/shared/src/types/data-bus.ts');
+      expect(res.answer).toContain('DataPacket');
+      expect(res.suggestedFollowUps.length).toBeGreaterThan(0);
+    });
+
+    it('answers questions about the Conversion Simulator and personas', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'O que é o simulador de conversão com heatmap?'
+      });
+
+      expect(res.category).toBe('SIMULATOR');
+      expect(res.answer).toContain('Dr. Roberto Meirelles');
+      expect(res.answer).toContain('Auto-Healing');
+      expect(res.suggestedFollowUps.length).toBeGreaterThan(0);
+    });
+
+    it('answers questions about the 14-block sales page copy', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'Quais são os 14 blocos da página de vendas?'
+      });
+
+      expect(res.category).toBe('MARKETING_ENGINES');
+      expect(res.answer).toContain('Bloco 1');
+      expect(res.answer).toContain('Bloco 14');
+    });
+
+    it('provides a general system overview for unspecified questions', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'O que o UNION.AI faz?'
+      });
+
+      expect(res.category).toBe('QUICK_START');
+      expect(res.answer).toContain('Project Oracle');
+    });
+  });
+});

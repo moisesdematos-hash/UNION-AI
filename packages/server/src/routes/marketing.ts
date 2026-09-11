@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { MarketingEngine } from '../services/marketing/marketing-engine.js';
+import { SimulationEngine } from '../services/marketing/simulation-engine.js';
 import { creditsService } from '../services/credits-service.js';
 
 export const marketingRouter = Router();
@@ -201,6 +202,81 @@ marketingRouter.post('/sales-page', async (req: AuthenticatedRequest, res: Respo
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate sales page copy'
+    });
+  }
+});
+
+const SimulateConversionRequestSchema = z.object({
+  title: z.string().optional(),
+  sourceType: z.enum(['SALES_PAGE', 'VSL', 'CUSTOM_COPY']),
+  blocks: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    content: z.string()
+  })),
+  targetNiche: z.string().optional()
+});
+
+const AutoHealRequestSchema = z.object({
+  blockId: z.string(),
+  blockName: z.string(),
+  originalContent: z.string(),
+  personaArchetype: z.string(),
+  frictionPoint: z.string(),
+  suggestedAction: z.string()
+});
+
+/**
+ * POST /api/marketing/simulate-conversion
+ * Evaluates copy/VSL against 5 synthetic personas and returns Heatmap + CPS score.
+ */
+marketingRouter.post('/simulate-conversion', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const data = SimulateConversionRequestSchema.parse(req.body);
+
+    const execution = await SimulationEngine.simulateConversion(data);
+
+    let creditsRemaining: number | undefined;
+    if (execution.creditsCost > 0) {
+      const deduction = creditsService.deductCredits(userId, execution.creditsCost, {
+        description: `Marketing Intelligence: AI Conversion Simulator (${execution.tokens.totalTokens} tokens)`
+      });
+      creditsRemaining = deduction.newBalance;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...execution,
+        creditsRemaining
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to simulate conversion'
+    });
+  }
+});
+
+/**
+ * POST /api/marketing/auto-heal-block
+ * 1-Click Auto-Healing for cold/drop-off blocks.
+ */
+marketingRouter.post('/auto-heal-block', async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const data = AutoHealRequestSchema.parse(_req.body);
+    const result = await SimulationEngine.autoHealBlock(data);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to auto-heal block'
     });
   }
 });

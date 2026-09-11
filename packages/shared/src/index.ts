@@ -17,3 +17,4 @@ export * from './types/automations.js';
 export * from './types/organizations.js';
 export * from './types/observability.js';
 export * from './types/templates.js';
+export * from './types/simulation.js';

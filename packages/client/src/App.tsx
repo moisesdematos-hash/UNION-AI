@@ -29,6 +29,9 @@ import { CreditsDrawer } from './components/credits/CreditsDrawer.js';
 import { TemplateLibraryModal } from './components/modals/TemplateLibraryModal.js';
 import { WelcomeModal } from './components/welcome/WelcomeModal.js';
 import { LandingPage } from './components/landing/LandingPage.js';
+import { ConversionSimulatorModal } from './components/marketing/ConversionSimulatorModal.js';
+import { ProjectOracleDrawer } from './components/chat/ProjectOracleDrawer.js';
+import { Target, Bot } from 'lucide-react';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
@@ -40,6 +43,8 @@ export function App() {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [isOracleOpen, setIsOracleOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
     return typeof window !== 'undefined' && localStorage.getItem('union_welcome_dismissed') !== 'true';
   });
@@ -319,6 +324,24 @@ export function App() {
               </button>
 
               <button
+                onClick={() => setIsSimulatorOpen(true)}
+                title="AI Conversion Simulator & Heatmap (Chave de Ouro)"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <Target className="h-3.5 w-3.5 text-amber-400" />
+                <span>Simulador CPS</span>
+              </button>
+
+              <button
+                onClick={() => setIsOracleOpen(true)}
+                title="Chat do Projeto (Project Oracle)"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 hover:from-cyan-500/30 hover:to-indigo-500/30 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <Bot className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Chat do Projeto</span>
+              </button>
+
+              <button
                 onClick={openExecutionPlanModal}
                 disabled={nodes.length === 0}
                 className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-union-accent hover:bg-union-accent/90 text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
@@ -403,6 +426,14 @@ export function App() {
             setIsWelcomeOpen(false);
             setIsTemplateModalOpen(true);
           }}
+        />
+        <ConversionSimulatorModal
+          isOpen={isSimulatorOpen}
+          onClose={() => setIsSimulatorOpen(false)}
+        />
+        <ProjectOracleDrawer
+          isOpen={isOracleOpen}
+          onClose={() => setIsOracleOpen(false)}
         />
       </main>
     </div>

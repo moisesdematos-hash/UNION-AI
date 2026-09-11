@@ -484,6 +484,27 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
     }
   },
 
+  'ai-conversion-simulator': {
+    type: 'ai-conversion-simulator',
+    label: 'AI Conversion Simulator & Heatmap',
+    category: 'AI',
+    description: 'Simula a taxa de conversão testando a copy contra 5 personas sintéticas com heatmap psicológico e auto-cura',
+    inputs: [
+      { id: 'in-copy', name: 'copy', label: 'Copy / VSL Blocks', type: 'DOCUMENT', isMulti: false, required: false },
+      { id: 'in-json', name: 'blocksJson', label: 'Blocks JSON', type: 'JSON', isMulti: false, required: false },
+      { id: 'in-text', name: 'text', label: 'Raw Copy Text', type: 'TEXT', isMulti: true, required: true }
+    ],
+    outputs: [
+      { id: 'out-simulation', name: 'simulationResult', label: 'Simulation & CPS Score', type: 'JSON', isMulti: true, required: true },
+      { id: 'out-healed', name: 'healedCopy', label: 'Auto-Healed Copy', type: 'DOCUMENT', isMulti: true, required: false }
+    ],
+    defaultConfig: {
+      sourceType: 'SALES_PAGE',
+      targetNiche: 'Marketing Digital e Infoprodutos',
+      autoHealDropOffs: true
+    }
+  },
+
   'output-export': {
     type: 'output-export',
     label: 'Publish & Export Destination',

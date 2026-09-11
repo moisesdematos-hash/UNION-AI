@@ -17,11 +17,15 @@ import {
   CheckCircle2,
   ExternalLink,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Target,
+  Bot
 } from 'lucide-react';
 import { OFFICIAL_TEMPLATES, WorkflowTemplate } from '@union/shared';
 import { useCanvasStore } from '../../store/canvasStore.js';
 import { LegalModal, LegalDocType } from '../modals/LegalModal.js';
+import { ConversionSimulatorModal } from '../marketing/ConversionSimulatorModal.js';
+import { ProjectOracleDrawer } from '../chat/ProjectOracleDrawer.js';
 
 interface LandingPageProps {
   onEnterWorkspace: () => void;
@@ -50,6 +54,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Newsletter State
   const [newsletterEmail, setNewsletterEmail] = useState<string>('');
   const [newsletterSuccess, setNewsletterSuccess] = useState<boolean>(false);
+
+  // Exclusive Features Modals State (Chave de Ouro & Project Oracle)
+  const [isSimulatorModalOpen, setIsSimulatorModalOpen] = useState<boolean>(false);
+  const [isOracleDrawerOpen, setIsOracleDrawerOpen] = useState<boolean>(false);
 
   const loadWorkflow = useCanvasStore((state) => state.loadWorkflow);
 
@@ -157,8 +165,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <a href="#pricing" className="hover:text-white transition-colors">Planos</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
             <button
+              onClick={() => setIsSimulatorModalOpen(true)}
+              className="hover:text-amber-300 transition-colors cursor-pointer text-amber-400 font-bold flex items-center gap-1"
+              title="Simulador de Conversão & Heatmap (Chave de Ouro)"
+            >
+              <Target className="h-3 w-3" />
+              <span>Simulador CPS</span>
+            </button>
+            <button
+              onClick={() => setIsOracleDrawerOpen(true)}
+              className="hover:text-cyan-300 transition-colors cursor-pointer text-cyan-400 font-bold flex items-center gap-1"
+              title="Chat do Projeto (Oracle)"
+            >
+              <Bot className="h-3 w-3" />
+              <span>Chat do Projeto</span>
+            </button>
+            <button
               onClick={() => openLegal('docs')}
-              className="hover:text-white transition-colors cursor-pointer text-cyan-400 font-semibold"
+              className="hover:text-white transition-colors cursor-pointer text-zinc-300 font-semibold"
             >
               Documentação
             </button>
@@ -455,6 +479,68 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">14 Blocos Sales Page</span>
               <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">12 Passos VSL</span>
               <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">Matriz Omnichannel</span>
+            </div>
+          </div>
+
+          {/* Bento Card 5: EXCLUSIVE CHAVE DE OURO - SIMULADOR & HEATMAP */}
+          <div className="md:col-span-3 p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/40 hover:border-amber-400 transition-all space-y-5 relative overflow-hidden shadow-2xl">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-amber-500/25">
+                  <Target className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      ★ CHAVE DE OURO EXCLUSIVA
+                    </span>
+                    <span className="text-xs font-mono text-zinc-400">Zero Concorrência</span>
+                  </div>
+                  <h4 className="text-xl font-extrabold text-white mt-1">
+                    AI Conversion Simulator & Heatmap Visualizer (com 1-Click Auto-Healing)
+                  </h4>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSimulatorModalOpen(true)}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-xs shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Target className="h-4 w-4" />
+                  <span>Testar Simulador Interativo</span>
+                </button>
+                <button
+                  onClick={() => setIsOracleDrawerOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-cyan-300 hover:text-white font-bold text-xs transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Bot className="h-4 w-4 text-cyan-400" />
+                  <span>Perguntar ao Oracle</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-4xl">
+              Esqueça adivinhações e testes A/B que custam fortunas. O UNION.AI 2.0 submete sua copy a <strong>5 Personas Sintéticas calibradas</strong> (o Cético Dr. Roberto, a Executiva Ana Lívia, o Econômico Carlos Mendes, a Analítica Mariana e o Emocional Lucas), calcula seu <strong>CPS (Conversion Probability Score de 0 a 100)</strong>, gera um <strong>termômetro psicológico bloco a bloco</strong> (HOT, WARM, COLD, DROP-OFF) e ativa a <strong>Auto-Cura em 1 Clique</strong> para neutralizar pontos críticos de abandono antes do tráfego rodar.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-left">
+                <div className="text-xs font-bold text-amber-400 font-mono">5 Personas Calibradas</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Auditoria psicográfica multivariável</div>
+              </div>
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-left">
+                <div className="text-xs font-bold text-cyan-400 font-mono">Score CPS 0-100</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Previsão estatística de fechamento</div>
+              </div>
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-left">
+                <div className="text-xs font-bold text-rose-400 font-mono">Heatmap Psicológico</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Detecção de quebras e desistências</div>
+              </div>
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-left">
+                <div className="text-xs font-bold text-emerald-400 font-mono">1-Click Auto-Healing</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Reescrita cirúrgica anti-atrito</div>
+              </div>
             </div>
           </div>
 
@@ -1143,6 +1229,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
         initialTab={legalModalTab}
+      />
+
+      {/* EXCLUSIVE CONVERSION SIMULATOR MODAL (CHAVE DE OURO) */}
+      <ConversionSimulatorModal
+        isOpen={isSimulatorModalOpen}
+        onClose={() => setIsSimulatorModalOpen(false)}
+      />
+
+      {/* PROJECT ORACLE DEEP CHAT DRAWER */}
+      <ProjectOracleDrawer
+        isOpen={isOracleDrawerOpen}
+        onClose={() => setIsOracleDrawerOpen(false)}
       />
 
     </div>

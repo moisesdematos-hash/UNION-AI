@@ -14,6 +14,7 @@ import { webhooksRouter } from './routes/webhooks.js';
 import { organizationsRouter } from './routes/organizations.js';
 import { observabilityRouter } from './routes/observability.js';
 import { templatesRouter } from './routes/templates.js';
+import { chatRouter } from './routes/chat.js';
 import { metricsCollector } from './services/metrics-collector.js';
 
 export function createApp() {
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/ai/router', aiRouterRouter);
   app.use('/api/ai', aiRouter);
   app.use('/api/marketing', marketingRouter);
+  app.use('/api/chat', chatRouter);
   app.use('/api/webhooks', webhooksRouter);
 
   // Global Error Handler
