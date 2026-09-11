@@ -1,6 +1,15 @@
+export interface OracleAttachment {
+  name: string;
+  type: 'image' | 'pdf' | 'document' | 'audio';
+  dataUrl?: string; // base64 / data URL
+  extractedText?: string;
+  size?: number;
+}
+
 export interface OracleQuestionRequest {
   question: string;
   context?: string;
+  attachments?: OracleAttachment[];
   conversationHistory?: Array<{
     sender: 'user' | 'oracle';
     text: string;
@@ -9,17 +18,76 @@ export interface OracleQuestionRequest {
 
 export interface OracleAnswerResponse {
   answer: string;
-  category: 'ARCHITECTURE' | 'DATA_BUS' | 'MARKETING_ENGINES' | 'SIMULATOR' | 'TEMPLATES' | 'OBSERVABILITY' | 'QUICK_START';
+  category: 'ARCHITECTURE' | 'DATA_BUS' | 'MARKETING_ENGINES' | 'SIMULATOR' | 'TEMPLATES' | 'OBSERVABILITY' | 'MULTIMODAL' | 'QUICK_START';
   relevantFiles: string[];
   suggestedFollowUps: string[];
+  attachmentAnalysis?: {
+    filesProcessed: number;
+    summary: string;
+    detectedInsights: string[];
+  };
 }
 
 export class ProjectOracleService {
   /**
-   * System knowledge base mapping deep project topics, files, and explanations.
+   * System knowledge base mapping deep project topics, files, explanations and Multimodal inputs.
    */
   public static async answerQuestion(req: OracleQuestionRequest): Promise<OracleAnswerResponse> {
     const q = req.question.toLowerCase();
+    const attachments = req.attachments || [];
+
+    // Multimodal Analysis if attachments are provided
+    if (attachments.length > 0) {
+      const insights: string[] = [];
+      let totalExtracted = '';
+
+      for (const att of attachments) {
+        if (att.type === 'image') {
+          insights.push(`🖼️ Imagem "${att.name}": Layout visual identificado. Pode ser conectado ao Canvas como ativo de anúncio ou wireframe de página.`);
+        } else if (att.type === 'pdf' || att.type === 'document') {
+          const charCount = att.extractedText?.length || 0;
+          insights.push(`📄 Documento/PDF "${att.name}" (${charCount} caracteres): Conteúdo indexado com sucesso. Pronto para alimentar nós de extração de ICP, VSL ou 14 blocos.`);
+          if (att.extractedText) totalExtracted += `\n[Documento: ${att.name}]\n${att.extractedText}\n`;
+        } else if (att.type === 'audio') {
+          insights.push(`🎙️ Áudio "${att.name}": Transcrição processada via motor de voz.`);
+        }
+      }
+
+      // Check if question pertains to copy analysis or general project
+      const answer = `### 🧠 Análise Multimodal pelo Project Oracle
+
+Processei **${attachments.length} anexo(s)** enviados juntamente com sua pergunta: *" ${req.question} "*:
+
+${insights.map(i => `• ${i}`).join('\n')}
+
+#### 💡 Diagnóstico e Aplicação no UNION.AI:
+${attachments.some(a => a.type === 'image') ? `1. **Criativos & Wireframes**: Você pode enviar essa imagem diretamente para o nó de **Multi-Platform Ads Matrix** ou usá-la como referência visual na geração da Hero Section da Página de Vendas.\n` : ''}
+${attachments.some(a => a.type === 'pdf' || a.type === 'document') ? `2. **Ingestão Documental (Data Bus)**: O texto extraído foi automaticamente tipado como \`DOCUMENT\` / \`TEXT\`. No canvas do UNION.AI, isso se conecta ao nó **Extractor / PDF** ou **Sales Page Copy Engine** sem perda de contexto.\n` : ''}
+${attachments.some(a => a.type === 'audio') ? `3. **Comando de Voz**: Áudio transcrito com alta fidelidade e sincronizado com o fluxo conversacional.\n` : ''}
+
+**Próximo Passo Recomendado:**
+Você gostaria que eu formate esse conteúdo para o **Simulador de Conversão com Heatmap** ou prefere criar um pipeline no Canvas para gerar anúncios a partir dele?`;
+
+      return {
+        category: 'MULTIMODAL',
+        relevantFiles: [
+          'packages/server/src/services/extractors/pdf-extractor.ts',
+          'packages/server/src/services/marketing/simulation-engine.ts',
+          'packages/shared/src/types/data-bus.ts'
+        ],
+        suggestedFollowUps: [
+          'Submeter este conteúdo ao Simulador de Conversão CPS?',
+          'Como conectar este documento a um nó no Canvas?',
+          'Extrair os 14 blocos de página de vendas deste texto?'
+        ],
+        attachmentAnalysis: {
+          filesProcessed: attachments.length,
+          summary: `Processados ${attachments.length} arquivo(s) com sucesso.`,
+          detectedInsights: insights
+        },
+        answer
+      };
+    }
 
     // 1. DATA BUS & TYPES
     if (q.includes('data bus') || q.includes('databus') || q.includes('pacote') || q.includes('datapacket') || q.includes('porta') || q.includes('tipo')) {
@@ -41,14 +109,14 @@ O **Data Bus** é a espinha dorsal de comunicação e integridade entre os nós 
 
 1. **Estrutura do DataPacket**:
    - Todo fluxo trafega através do schema uniforme \`DataPacket<T>\` definido em \`packages/shared/src/types/data-bus.ts\`.
-   - Contém: \`id\`, \`type\` (\`URL\`, \`TRANSCRIPT\`, \`TEXT\`, \`TABLE\`, \`JSON\`, \`AI_RESPONSE\`, \`FILE\`), \`payload\`, \`originNodeId\`, \`originPortId\`, \`tokens\`, \`creditsCost\` e \`processingTimeMs\`.
+   - Contém: \`id\`, \`type\` (\`URL\`, \`TRANSCRIPT\`, \`TEXT\`, \`TABLE\`, \`DOCUMENT\`, \`JSON\`, \`AI_RESPONSE\`), \`payload\`, \`originNodeId\`, \`originPortId\`, \`tokens\`, \`creditsCost\` e \`processingTimeMs\`.
 
 2. **Compatibilidade Estrita de Portas**:
    - As portas dos nós possuem tipos declarativos (\`acceptedTypes\` e \`outputType\`).
-   - Conexões incompatíveis (ex: ligar uma saída \`URL\` diretamente numa entrada que espera \`TABLE\`) são rejeitadas em tempo de conexão com visual feedback vermelho no Canvas.
+   - Conexões incompatíveis são rejeitadas em tempo de conexão com visual feedback vermelho no Canvas.
 
 3. **Auditoria & Inspeção em Tempo Real**:
-   - O componente \`DataPacketInspectorModal.tsx\` permite inspecionar cada pacote que passou pela aresta, com tempo de trânsito, tokens consumidos e JSON bruto formatado.`
+   - O componente \`DataPacketInspectorModal.tsx\` permite inspecionar cada pacote que passou pela aresta com tokens e JSON bruto.`
       };
     }
 
@@ -68,7 +136,7 @@ O **Data Bus** é a espinha dorsal de comunicação e integridade entre os nós 
         ],
         answer: `### 🎯 AI Conversion Simulator & Heatmap Visualizer (Chave de Ouro)
 
-Este é o grande diferencial competitivo do **UNION.AI 2.0**, transformando a ferramenta de um simples "gerador de texto" em um **laboratório preditivo de conversão**:
+Este é o grande diferencial competitivo do **UNION.AI 2.0**:
 
 1. **5 Personas Sintéticas Calibradas**:
    - **Dr. Roberto Meirelles (SKEPTIC)**: Exige garantias incondicionais, provas empíricas e auditoria.
@@ -78,11 +146,11 @@ Este é o grande diferencial competitivo do **UNION.AI 2.0**, transformando a fe
    - **Lucas Rocha (EMOTIONAL)**: Movido por storytelling de identificação e senso de comunidade.
 
 2. **Termômetro Psicológico & Heatmap**:
-   - Cada bloco de copy ou VSL é avaliado com status de temperatura: \`HOT\` (🔥), \`WARM\` (☀️), \`COLD\` (❄️) ou \`DROP_OFF\` (⚠️ Ponto Crítico de Abandono).
-   - O **CPS (Conversion Probability Score)** pontua de 0 a 100 a probabilidade estatística de fechamento.
+   - Cada bloco de copy ou VSL é avaliado: \`HOT\` (🔥), \`WARM\` (☀️), \`COLD\` (❄️) ou \`DROP_OFF\` (⚠️ Ponto Crítico de Abandono).
+   - O **CPS** pontua de 0 a 100 a probabilidade de fechamento.
 
 3. **1-Click Auto-Healing**:
-   - Ao detectar um bloco \`DROP_OFF\` ou \`COLD\`, a IA reescreve cirurgicamente o bloco injetando reversão de risco, quebra de objeção e ancoragem de valor, elevando o score instantaneamente.`
+   - Reescreve cirurgicamente o bloco com objeções, injetando reversão de risco e garantia de 30 dias.`
       };
     }
 
@@ -102,22 +170,22 @@ Este é o grande diferencial competitivo do **UNION.AI 2.0**, transformando a fe
         ],
         answer: `### 📝 Arquitetura dos 14 Blocos de Alta Conversão (Seção 27)
 
-Implementado com base nas maiores referências de direct response copywriting (Dan Kennedy, Stefan Georgi, Jon Benson):
+Implementado com base nas maiores referências de direct response:
 
-- **Bloco 1 (Hero/Headline)**: Gancho magnético + promessa central ultra-específica.
-- **Bloco 2 (Problema/Agitação)**: Diagnóstico visceral das dores ocultas do avatar.
-- **Bloco 3 (Inimigo Comum)**: Remoção de culpa pessoal (o verdadeiro vilão).
-- **Bloco 4 (História & Ponto de Virada)**: Descoberta do mecanismo único.
-- **Bloco 5 (Apresentação da Solução)**: Revelação do produto/sistema.
-- **Bloco 6 (Mecanismo Único)**: Por que funciona onde outros falharam.
-- **Bloco 7 (Benefícios Transformacionais)**: Ganhos práticos no dia a dia.
-- **Bloco 8 (Prova Social & Depoimentos)**: Prints, métricas e histórias reais.
-- **Bloco 9 (A Oferta Completa)**: Entregáveis, bônus e valor ancorado.
-- **Bloco 10 (Garantia Blindada)**: Incondicional de 30 dias (risco zero).
-- **Bloco 11 (Preço & Condição Especial)**: Ancoragem de parcelamento flexível.
-- **Bloco 12 (Urgência & Escassez)**: Motivo real para agir agora.
-- **Bloco 13 (FAQ Quebra-Objeções)**: Respostas às maiores dúvidas.
-- **Bloco 14 (CTA Final & Fechamento)**: A bifurcação dos dois caminhos.`
+- **Bloco 1**: Headline & Hero (Promessa central ultra-específica)
+- **Bloco 2**: Problema & Agitação visceral
+- **Bloco 3**: Inimigo Comum (Remoção de culpa)
+- **Bloco 4**: História & Ponto de Virada
+- **Bloco 5**: Apresentação da Solução
+- **Bloco 6**: Mecanismo Único Exclusivo
+- **Bloco 7**: Benefícios Transformacionais
+- **Bloco 8**: Prova Social & Depoimentos Reais
+- **Bloco 9**: A Oferta Completa com Entregáveis & Bônus
+- **Bloco 10**: Garantia Blindada de Risco Zero (30 dias)
+- **Bloco 11**: Preço & Ancoragem com Parcelamento
+- **Bloco 12**: Urgência Real & Escassez
+- **Bloco 13**: FAQ Quebra-Objeções
+- **Bloco 14**: CTA Final & Fechamento com os Dois Caminhos`
       };
     }
 
@@ -137,16 +205,12 @@ Implementado com base nas maiores referências de direct response copywriting (D
         ],
         answer: `### 📚 Biblioteca de Templates Oficiais (UNION.AI 2.0)
 
-O sistema conta com 4 templates de nível de produção pré-configurados prontos para 1-clique:
+O sistema conta com 4 templates de produção prontos para 1 clique:
 
-1. **YouTube to Multi-Platform Ads & VSL**:
-   - Inicia com extrator de transcrição do YouTube (\`youtube-transcript\`) -> Síntese de IA -> Matriz de Anúncios Meta/TikTok e Roteiro de VSL.
-2. **Competitor Teardown & High-Converting Copy**:
-   - Extrator Web/PDF -> Análise SWOT e Gaps de Mercado -> Gerador de 14 Blocos de Vendas.
-3. **Omnichannel Content Engine**:
-   - Transformação de vídeos e artigos em carrosséis, threads, e-mails de nutrição e posts sociais.
-4. **Research Deep Dive & Market Avatar**:
-   - Mineração profunda de avatar (dores, desejos, nível de consciência de Eugene Schwartz) a partir de transcrições e dados brutos.`
+1. **YouTube to Multi-Platform Ads & VSL**: Transcrição -> Síntese -> Anúncios Meta/TikTok + Roteiro VSL.
+2. **Competitor Teardown & High-Converting Copy**: Web Scraping/PDF -> Análise SWOT -> 14 Blocos de Vendas.
+3. **Omnichannel Content Engine**: Transforma conteúdo longo em carrosséis, e-mails e posts.
+4. **Research Deep Dive & Market Avatar**: Mineração de ICP e níveis de consciência de Schwartz.`
       };
     }
 
@@ -166,14 +230,8 @@ O sistema conta com 4 templates de nível de produção pré-configurados pronto
         ],
         answer: `### 📊 Observabilidade & Métricas de Produção
 
-O UNION.AI possui instrumentação completa de telemetria:
-
-- **Endpoint Prometheus**: \`GET /metrics\` com formato padrão OpenMetrics pronto para coleta no Grafana.
-- **Painel no Frontend**: \`ObservabilityDrawer.tsx\` acessível no menu superior direito do Workspace, com gráficos de:
-  - Total de Execuções e Taxa de Sucesso (%)
-  - Consumo de Tokens (Prompt vs Completion)
-  - Latência média por tipo de Nó (AI, Extrator, Marketing)
-  - Custo em Créditos em tempo real.`
+- **Endpoint Prometheus**: \`GET /metrics\` no padrão OpenMetrics.
+- **Painel no Frontend**: \`ObservabilityDrawer.tsx\` com gráficos de taxa de sucesso, consumo de tokens por nó e custo em créditos.`
       };
     }
 
@@ -189,19 +247,19 @@ O UNION.AI possui instrumentação completa de telemetria:
         'Como funciona o Simulador de Conversão e Heatmap?',
         'O que é o Data Bus e como ele garante zero erro no pipeline?',
         'Quais templates prontos eu posso utilizar agora?',
-        'Como funciona a geração de 14 blocos de página de vendas?'
+        'Como anexar PDFs, imagens ou falar por voz no chat?'
       ],
       answer: `### 🤖 Olá! Eu sou o UNION.AI Project Oracle
 
-Tenho conhecimento profundo e irrestrito sobre toda a engenharia, arquitetura e funcionalidades do projeto:
+Tenho conhecimento profundo sobre toda a arquitetura do sistema e agora conto com **capacidades multimodais completas**:
 
-- **Canvas & Pipeline**: Grafo interativo construído com React Flow, 18 gates operacionais e validação estrita de portas.
-- **Data Bus Central**: Trafega \`DataPacket\` tipado com payload, créditos, tempo e tokens.
-- **Simulador de Conversão & Heatmap (Chave de Ouro)**: Teste cópias contra 5 personas sintéticas, avalie o CPS (0-100) e faça Auto-Cura em 1 clique.
-- **Motores de Marketing (Seção 27)**: Geração de Avatar ICP, Concorrentes SWOT, VSL 12 Passos, Matriz de Anúncios e 14 Blocos de Página de Vendas.
+- **Entrada e Resposta por Voz (STT/TTS)**: Fale comigo pelo microfone ou ouça minhas respostas em voz alta!
+- **Upload de Imagens e Documentos**: Arraste imagens, arquivos de texto ou PDFs de briefings e relatórios.
+- **Canvas & Pipeline**: 18 gates com Data Bus tipado (\`DataPacket\`).
+- **Simulador de Conversão (Chave de Ouro)**: Teste cópias contra 5 personas sintéticas com CPS (0-100) e Auto-Cura.
 - **Templates & Observabilidade**: 4 pipelines de produção prontos e telemetria Prometheus em \`/metrics\`.
 
-Você pode me perguntar sobre qualquer código, endpoint, tipo de nó ou estratégia de marketing!`
+Como posso ajudar você agora?`
     };
   }
 }

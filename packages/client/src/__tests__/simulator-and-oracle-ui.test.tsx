@@ -63,9 +63,19 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       );
 
       expect(screen.getAllByText(/UNION.AI Project Oracle/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText(/Deep Knowledge/i)).toBeDefined();
+      expect(screen.getByText(/Multimodal & Voice/i)).toBeDefined();
       expect(screen.getByText(/Como funciona o Data Bus e o DataPacket\?/i)).toBeDefined();
-      expect(screen.getByPlaceholderText(/Pergunte qualquer coisa sobre o UNION.AI/i)).toBeDefined();
+      expect(screen.getByPlaceholderText(/Digite, fale por voz ou arraste imagens e PDFs aqui/i)).toBeDefined();
+    });
+
+    it('renders multimodal controls such as attachment and microphone buttons', () => {
+      render(
+        <ProjectOracleDrawer isOpen={true} onClose={() => {}} />
+      );
+
+      expect(screen.getByTitle(/Anexar Imagem, PDF ou Documento/i)).toBeDefined();
+      expect(screen.getByTitle(/Falar por microfone/i)).toBeDefined();
+      expect(screen.getByTitle(/Ativar leitura automática por voz/i)).toBeDefined();
     });
 
     it('calls onClose when clicking close button', () => {
@@ -74,7 +84,8 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
         <ProjectOracleDrawer isOpen={true} onClose={handleClose} />
       );
 
-      const closeBtn = screen.getAllByRole('button')[0];
+      const closeButtons = screen.getAllByRole('button');
+      const closeBtn = closeButtons.find(b => b.querySelector('svg.lucide-x')) || closeButtons[1];
       fireEvent.click(closeBtn);
       expect(handleClose).toHaveBeenCalled();
     });

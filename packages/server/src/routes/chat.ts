@@ -7,6 +7,13 @@ export const chatRouter = Router();
 const OracleQuestionSchema = z.object({
   question: z.string().min(1),
   context: z.string().optional(),
+  attachments: z.array(z.object({
+    name: z.string(),
+    type: z.enum(['image', 'pdf', 'document', 'audio']),
+    dataUrl: z.string().optional(),
+    extractedText: z.string().optional(),
+    size: z.number().optional()
+  })).optional(),
   conversationHistory: z.array(z.object({
     sender: z.enum(['user', 'oracle']),
     text: z.string()

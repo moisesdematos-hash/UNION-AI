@@ -101,5 +101,29 @@ describe('SimulationEngine & ProjectOracle Service Tests', () => {
       expect(res.category).toBe('QUICK_START');
       expect(res.answer).toContain('Project Oracle');
     });
+
+    it('processes multimodal attachments such as PDFs and images', async () => {
+      const res = await ProjectOracleService.answerQuestion({
+        question: 'Analise este briefing de lançamento',
+        attachments: [
+          {
+            name: 'briefing-copy.pdf',
+            type: 'pdf',
+            extractedText: 'Produto: Mentoria de IA. Oferta: R$ 997 à vista. Garantia: 30 dias.'
+          },
+          {
+            name: 'mockup.png',
+            type: 'image',
+            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA'
+          }
+        ]
+      });
+
+      expect(res.category).toBe('MULTIMODAL');
+      expect(res.answer).toContain('Análise Multimodal');
+      expect(res.answer).toContain('briefing-copy.pdf');
+      expect(res.attachmentAnalysis?.filesProcessed).toBe(2);
+      expect(res.attachmentAnalysis?.detectedInsights.length).toBeGreaterThan(0);
+    });
   });
 });
