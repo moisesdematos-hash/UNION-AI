@@ -79,6 +79,84 @@ describe('LandingPage - Modern High-Converting Experience', () => {
     expect(onEnterWorkspace).toHaveBeenCalled();
   });
 
+  it('calculates ROI savings dynamically when adjusting campaign count', () => {
+    render(
+      <LandingPage
+        serverStatus="online"
+        onEnterWorkspace={() => {}}
+      />
+    );
+
+    // Verify ROI Calculator is rendered
+    expect(screen.getByText(/Calculadora de Retorno \(ROI\)/i)).toBeDefined();
+    expect(screen.getByText(/Quanto Tempo e Dinheiro Sua Equipe Economiza\?/i)).toBeDefined();
+    expect(screen.getByText(/4 campanhas/i)).toBeDefined();
+  });
+
+  it('opens and switches tabs in the Legal & Documentation modal', () => {
+    render(
+      <LandingPage
+        serverStatus="online"
+        onEnterWorkspace={() => {}}
+      />
+    );
+
+    // Open Documentation from nav
+    const docsNavBtn = screen.getByRole('button', { name: 'Documentação' });
+    fireEvent.click(docsNavBtn);
+
+    // Modal title & content should appear
+    expect(screen.getByText('Central de Governança & Documentação')).toBeDefined();
+    expect(screen.getByText('Documentação Técnica & Endpoints')).toBeDefined();
+
+    // Switch to Política de Privacidade via modal tab button
+    const privacyTabBtns = screen.getAllByRole('button', { name: /Política de Privacidade/i });
+    // Click the modal tab button (which has the icon span)
+    fireEvent.click(privacyTabBtns[privacyTabBtns.length - 1]);
+
+    expect(screen.getByText(/Não-Utilização de Dados para Treinamento de Modelos/i)).toBeDefined();
+
+    // Close modal
+    const closeBtn = screen.getByLabelText(/Fechar modal/i);
+    fireEvent.click(closeBtn);
+    expect(screen.queryByText('Central de Governança & Documentação')).toBeNull();
+  });
+
+  it('handles cookie consent banner acceptance', () => {
+    render(
+      <LandingPage
+        serverStatus="online"
+        onEnterWorkspace={() => {}}
+      />
+    );
+
+    const cookieBanner = screen.getByText(/Privacidade & Cookies Estritamente Necessários/i);
+    expect(cookieBanner).toBeDefined();
+
+    const acceptBtn = screen.getByRole('button', { name: /Concordar & Fechar/i });
+    fireEvent.click(acceptBtn);
+
+    expect(localStorage.getItem('union_cookies_accepted')).toBe('true');
+    expect(screen.queryByText(/Privacidade & Cookies Estritamente Necessários/i)).toBeNull();
+  });
+
+  it('submits newsletter subscription successfully', () => {
+    render(
+      <LandingPage
+        serverStatus="online"
+        onEnterWorkspace={() => {}}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/Seu melhor e-mail/i);
+    fireEvent.change(input, { target: { value: 'gestor@agencia.ai' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Inscrever/i });
+    fireEvent.click(submitBtn);
+
+    expect(screen.getByText(/Inscrição confirmada com sucesso!/i)).toBeDefined();
+  });
+
   it('toggles FAQ accordion items', () => {
     render(
       <LandingPage

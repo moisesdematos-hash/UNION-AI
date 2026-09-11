@@ -10,10 +10,16 @@ import {
   Check,
   ChevronDown,
   Play,
-  MousePointerClick
+  MousePointerClick,
+  Calculator,
+  Shield,
+  Mail,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { OFFICIAL_TEMPLATES, WorkflowTemplate } from '@union/shared';
 import { useCanvasStore } from '../../store/canvasStore.js';
+import { LegalModal, LegalDocType } from '../modals/LegalModal.js';
 
 interface LandingPageProps {
   onEnterWorkspace: () => void;
@@ -27,6 +33,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('full-funnel-launch-machine');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+
+  // ROI Calculator Interactive States
+  const [weeklyCampaigns, setWeeklyCampaigns] = useState<number>(4);
+  const [hoursPerCampaign, setHoursPerCampaign] = useState<number>(6);
+
+  // Legal Modal & Cookie Banner States
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState<boolean>(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalDocType>('privacy');
+  const [showCookieBanner, setShowCookieBanner] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('union_cookies_accepted') !== 'true';
+  });
+
+  // Newsletter State
+  const [newsletterEmail, setNewsletterEmail] = useState<string>('');
+  const [newsletterSuccess, setNewsletterSuccess] = useState<boolean>(false);
 
   const loadWorkflow = useCanvasStore((state) => state.loadWorkflow);
 
@@ -47,6 +68,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     });
     onEnterWorkspace();
   };
+
+  const openLegal = (tab: LegalDocType) => {
+    setLegalModalTab(tab);
+    setIsLegalModalOpen(true);
+  };
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('union_cookies_accepted', 'true');
+    setShowCookieBanner(false);
+  };
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newsletterEmail && newsletterEmail.includes('@')) {
+      setNewsletterSuccess(true);
+      setNewsletterEmail('');
+    }
+  };
+
+  // Calculations for ROI
+  const totalManualHoursPerMonth = weeklyCampaigns * hoursPerCampaign * 4;
+  const automatedHoursPerMonth = weeklyCampaigns * 0.5 * 4;
+  const hoursSavedPerMonth = Math.max(0, totalManualHoursPerMonth - automatedHoursPerMonth);
+  const estimatedCostSavingReal = hoursSavedPerMonth * 75; // R$75/hora média de copywriter/gestor
 
   const faqs = [
     {
@@ -105,9 +150,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <nav className="hidden md:flex items-center space-x-6 text-xs font-medium text-zinc-400">
             <a href="#features" className="hover:text-white transition-colors">Recursos</a>
             <a href="#templates" className="hover:text-white transition-colors">Templates</a>
+            <a href="#roi" className="hover:text-white transition-colors">Calculadora ROI</a>
             <a href="#comparativo" className="hover:text-white transition-colors">Comparativo</a>
             <a href="#pricing" className="hover:text-white transition-colors">Planos</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+            <button
+              onClick={() => openLegal('docs')}
+              className="hover:text-white transition-colors cursor-pointer text-cyan-400 font-semibold"
+            >
+              Documentação
+            </button>
           </nav>
 
           {/* Action Buttons & Backend Status */}
@@ -487,6 +539,102 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       </section>
 
+      {/* CALCULADORA DE ROI & ECONOMIA INTERATIVA */}
+      <section id="roi" className="relative z-10 py-20 px-4 sm:px-6 max-w-5xl mx-auto space-y-12">
+        <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center justify-center gap-1.5">
+            <Calculator className="h-3.5 w-3.5" />
+            <span>Calculadora de Retorno (ROI)</span>
+          </h2>
+          <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Quanto Tempo e Dinheiro Sua Equipe Economiza?
+          </h3>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Simule o impacto de substituir o trabalho manual de cópia e escrita avulsa pela esteira determinística do UNION.AI 2.0.
+          </p>
+        </div>
+
+        <div className="p-6 sm:p-8 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          {/* Sliders Input */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-300 font-semibold">Campanhas / Funis produzidos por semana:</span>
+                <span className="font-mono text-sm font-bold text-union-accent px-2 py-0.5 rounded bg-union-accent/15 border border-union-accent/30">
+                  {weeklyCampaigns} campanhas
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={weeklyCampaigns}
+                onChange={(e) => setWeeklyCampaigns(Number(e.target.value))}
+                className="w-full accent-indigo-500 cursor-pointer h-2 bg-zinc-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                <span>1/sem</span>
+                <span>10/sem</span>
+                <span>20/sem</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-300 font-semibold">Tempo manual gasto por campanha (pesquisa + cópia):</span>
+                <span className="font-mono text-sm font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30">
+                  {hoursPerCampaign} horas
+                </span>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="16"
+                value={hoursPerCampaign}
+                onChange={(e) => setHoursPerCampaign(Number(e.target.value))}
+                className="w-full accent-cyan-400 cursor-pointer h-2 bg-zinc-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                <span>2 horas</span>
+                <span>8 horas</span>
+                <span>16 horas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Results Summary Box */}
+          <div className="lg:col-span-5 p-6 rounded-xl bg-gradient-to-br from-zinc-900 to-[#121626] border border-union-accent/40 space-y-4 text-center">
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                Economia Estimada por Mês:
+              </span>
+              <div className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono">
+                {hoursSavedPerMonth.toFixed(0)} Horas
+              </div>
+              <p className="text-xs text-zinc-400">
+                Redução de ~90% no tempo operacional de redação e montagem.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-zinc-800 space-y-1">
+              <span className="text-[10px] font-mono text-zinc-400 uppercase">Economia Financeira Estimada:</span>
+              <div className="text-2xl font-bold text-white font-mono">
+                R$ {estimatedCostSavingReal.toLocaleString('pt-BR')} /mês
+              </div>
+            </div>
+
+            <button
+              onClick={onEnterWorkspace}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+            >
+              Liberar Meu Tempo Agora
+            </button>
+          </div>
+
+        </div>
+      </section>
+
       {/* COMPARATIVO DEFINITIVO */}
       <section id="comparativo" className="relative z-10 py-20 px-4 sm:px-6 max-w-5xl mx-auto space-y-12">
         <div className="text-center space-y-3 max-w-2xl mx-auto">
@@ -755,8 +903,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
+      {/* NEWSLETTER LEAD CAPTURE STRIP */}
+      <section className="relative z-10 py-16 px-4 sm:px-6 max-w-4xl mx-auto">
+        <div className="p-8 rounded-2xl bg-zinc-900/80 border border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-1 text-center md:text-left">
+            <h4 className="text-base font-bold text-white flex items-center justify-center md:justify-start gap-2">
+              <Mail className="h-4 w-4 text-union-accent" />
+              <span>Receba Novos Templates & Insights de Engenharia IA</span>
+            </h4>
+            <p className="text-xs text-zinc-400">
+              Junte-se a +3.000 profissionais de dados e copywriters de alta performance. Sem spam.
+            </p>
+          </div>
+
+          <form onSubmit={handleNewsletterSubmit} className="flex w-full md:w-auto items-center gap-2">
+            {newsletterSuccess ? (
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Inscrição confirmada com sucesso!</span>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="email"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  placeholder="Seu melhor e-mail..."
+                  required
+                  className="px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 text-xs text-white placeholder-zinc-500 outline-none focus:border-union-accent w-full md:w-64"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 rounded-xl bg-union-accent hover:bg-union-accent/90 text-white font-semibold text-xs shadow-md transition-colors shrink-0 cursor-pointer"
+                >
+                  Inscrever
+                </button>
+              </>
+            )}
+          </form>
+        </div>
+      </section>
+
       {/* FINAL BOTTOM CTA */}
-      <section className="relative z-10 py-20 px-4 sm:px-6 max-w-4xl mx-auto text-center">
+      <section className="relative z-10 py-16 px-4 sm:px-6 max-w-4xl mx-auto text-center">
         <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-tr from-indigo-950/60 via-zinc-900 to-cyan-950/40 border border-indigo-500/30 space-y-6 shadow-2xl relative overflow-hidden">
           <div className="space-y-2">
             <h3 className="text-2xl sm:text-4xl font-extrabold text-white">
@@ -779,30 +968,152 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="relative z-10 py-8 border-t border-zinc-900 bg-black/60 text-xs text-zinc-500">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <div className="h-6 w-6 rounded-lg bg-union-accent flex items-center justify-center text-white">
-              <Sparkles className="h-3.5 w-3.5" />
+      {/* RICH MULTI-COLUMN FOOTER */}
+      <footer className="relative z-10 pt-16 pb-12 border-t border-zinc-900 bg-black/80 text-xs text-zinc-400">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-5 gap-8 pb-12 border-b border-zinc-900">
+          
+          {/* Col 1: Brand Info */}
+          <div className="md:col-span-2 space-y-3">
+            <div className="flex items-center space-x-2">
+              <div className="h-7 w-7 rounded-lg bg-union-accent flex items-center justify-center text-white shadow-md">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <span className="font-extrabold text-sm tracking-wide text-white">UNION.AI 2.0</span>
             </div>
-            <span className="font-bold text-zinc-300">UNION.AI</span>
-            <span>— Visual AI Workspace & Data Bus Engine</span>
+            <p className="text-zinc-500 text-xs leading-relaxed max-w-sm">
+              Plataforma de Engenharia Visual de IA, Orquestração em Grafo e Barramento de Dados para Operações de Marketing de Alto Impacto.
+            </p>
+            <div className="flex items-center space-x-2 text-[11px] font-mono text-emerald-400 pt-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>SLA 99.9% • Infraestrutura WAL Multi-Inquilino</span>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-6 text-zinc-400">
-            <span>Core v2.0 Enterprise</span>
+          {/* Col 2: Produto */}
+          <div className="space-y-2.5">
+            <h5 className="font-bold text-white text-xs uppercase tracking-wider">Produto</h5>
+            <ul className="space-y-2 text-zinc-400">
+              <li>
+                <button onClick={onEnterWorkspace} className="hover:text-white transition-colors cursor-pointer">
+                  Canvas Workspace
+                </button>
+              </li>
+              <li>
+                <a href="#templates" className="hover:text-white transition-colors">
+                  Templates Oficiais
+                </a>
+              </li>
+              <li>
+                <a href="#features" className="hover:text-white transition-colors">
+                  UNION Data Bus
+                </a>
+              </li>
+              <li>
+                <a href="#roi" className="hover:text-white transition-colors">
+                  Calculadora ROI
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: Engenharia & Docs */}
+          <div className="space-y-2.5">
+            <h5 className="font-bold text-white text-xs uppercase tracking-wider">Engenharia</h5>
+            <ul className="space-y-2 text-zinc-400">
+              <li>
+                <button onClick={() => openLegal('docs')} className="hover:text-white transition-colors cursor-pointer text-left">
+                  Documentação Técnica
+                </button>
+              </li>
+              <li>
+                <a href="/api/health" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+                  <span>API Healthcheck</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </li>
+              <li>
+                <a href="/metrics" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+                  <span>Métricas Prometheus</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 4: Governança & Legal */}
+          <div className="space-y-2.5">
+            <h5 className="font-bold text-white text-xs uppercase tracking-wider">Legal & Compliance</h5>
+            <ul className="space-y-2 text-zinc-400">
+              <li>
+                <button onClick={() => openLegal('privacy')} className="hover:text-white transition-colors cursor-pointer text-left">
+                  Política de Privacidade
+                </button>
+              </li>
+              <li>
+                <button onClick={() => openLegal('terms')} className="hover:text-white transition-colors cursor-pointer text-left">
+                  Termos de Uso
+                </button>
+              </li>
+              <li>
+                <button onClick={() => openLegal('security')} className="hover:text-white transition-colors cursor-pointer text-left">
+                  Segurança & LGPD
+                </button>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom copyright */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 flex flex-col sm:flex-row items-center justify-between text-zinc-500 text-[11px] gap-3">
+          <div>
+            © 2026 UNION.AI Technologies. Todos os direitos reservados.
+          </div>
+          <div className="flex items-center space-x-4">
+            <button onClick={() => openLegal('privacy')} className="hover:text-zinc-300">Privacidade</button>
             <span>•</span>
-            <button onClick={onEnterWorkspace} className="hover:text-white transition-colors cursor-pointer">
-              Workspace
-            </button>
+            <button onClick={() => openLegal('terms')} className="hover:text-zinc-300">Termos</button>
             <span>•</span>
-            <a href="/api/health" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
-              API Status
-            </a>
+            <button onClick={() => openLegal('security')} className="hover:text-zinc-300">Conformidade</button>
           </div>
         </div>
       </footer>
+
+      {/* FLOATING COOKIE & PRIVACY BANNER */}
+      {showCookieBanner && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-md p-4 rounded-2xl bg-zinc-950/95 border border-zinc-800 shadow-2xl backdrop-blur-md flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-start gap-3">
+            <Shield className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-xs">
+              <strong className="text-white font-semibold">Privacidade & Cookies Estritamente Necessários</strong>
+              <p className="text-zinc-400 leading-relaxed text-[11px]">
+                Utilizamos cookies e armazenamento local exclusivamente para manter sua sessão, preferências e integridade de execução de workflows em conformidade com a LGPD e GDPR.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end space-x-2 pt-1 border-t border-zinc-800/80">
+            <button
+              onClick={() => openLegal('privacy')}
+              className="text-[11px] text-zinc-400 hover:text-white px-2 py-1 transition-colors"
+            >
+              Ler Política
+            </button>
+            <button
+              onClick={handleAcceptCookies}
+              className="px-3.5 py-1.5 rounded-lg bg-union-accent hover:bg-union-accent/90 text-white font-semibold text-xs transition-colors cursor-pointer shadow-sm"
+            >
+              Concordar & Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* LEGAL & DOCUMENTATION MODAL */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        initialTab={legalModalTab}
+      />
 
     </div>
   );
