@@ -90,10 +90,13 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       expect(handleClose).toHaveBeenCalled();
     });
 
-    it('renders Limpar Chat button and clears messages upon click', () => {
+    it('renders Limpar Chat button, memory badge, and clears messages upon click', () => {
       render(
         <ProjectOracleDrawer isOpen={true} onClose={() => {}} />
       );
+
+      // Memory badge
+      expect(screen.getByText(/Memória Ativa/i)).toBeDefined();
 
       const clearBtn = screen.getByTitle(/Apagar mensagens e limpar o chat/i);
       expect(clearBtn).toBeDefined();
@@ -101,7 +104,7 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
 
       fireEvent.click(clearBtn);
 
-      expect(screen.getByText(/Chat limpo com sucesso!/i)).toBeDefined();
+      expect(screen.getByText(/limpos com sucesso/i)).toBeDefined();
     });
   });
 });

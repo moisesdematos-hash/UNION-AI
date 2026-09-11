@@ -125,5 +125,43 @@ describe('SimulationEngine & ProjectOracle Service Tests', () => {
       expect(res.attachmentAnalysis?.filesProcessed).toBe(2);
       expect(res.attachmentAnalysis?.detectedInsights.length).toBeGreaterThan(0);
     });
+
+    it('extracts and retains persistent long-term memories across session interactions', async () => {
+      const sessionId = 'test_sess_' + Date.now();
+
+      // Step 1: User introduces themselves and shares their business
+      const res1 = await ProjectOracleService.answerQuestion({
+        sessionId,
+        question: 'Olá, me chamo Fernando e meu negócio é Mentoria de Alta Performance.'
+      });
+
+      expect(res1.memoriesRetained).toBeDefined();
+      expect(res1.memoriesRetained?.some(m => m.key === 'Nome do Usuário' && m.value === 'Fernando')).toBe(true);
+      expect(res1.memoriesRetained?.some(m => m.key === 'Negócio / Nicho')).toBe(true);
+
+      // Step 2: Query stored history & memories directly
+      const history = ProjectOracleService.getSessionHistory(sessionId);
+      expect(history.length).toBe(2); // 1 user + 1 oracle
+      expect(history[0].sender).toBe('user');
+      expect(history[1].sender).toBe('oracle');
+
+      const memories = ProjectOracleService.getSessionMemories(sessionId);
+      expect(memories.length).toBeGreaterThanOrEqual(2);
+
+      // Step 3: User asks if the Oracle remembers them
+      const res2 = await ProjectOracleService.answerQuestion({
+        sessionId,
+        question: 'Você lembra qual é o meu nome?'
+      });
+
+      expect(res2.answer).toContain('Fernando');
+
+      // Step 4: Clear session
+      ProjectOracleService.clearSession(sessionId);
+      const clearedHistory = ProjectOracleService.getSessionHistory(sessionId);
+      expect(clearedHistory.length).toBe(0);
+      const clearedMemories = ProjectOracleService.getSessionMemories(sessionId);
+      expect(clearedMemories.length).toBe(0);
+    });
   });
 });

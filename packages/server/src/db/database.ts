@@ -61,6 +61,9 @@ export function resetTestDatabase(): void {
   db.prepare('DELETE FROM credit_transactions').run();
   db.prepare('DELETE FROM user_credits').run();
   db.prepare('DELETE FROM users').run();
+  db.prepare('DELETE FROM oracle_chat_memories').run();
+  db.prepare('DELETE FROM oracle_chat_messages').run();
+  db.prepare('DELETE FROM oracle_chat_sessions').run();
 }
 
 function initializeSchema(db: Database.Database): void {
@@ -277,6 +280,41 @@ function initializeSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_id);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS oracle_chat_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS oracle_chat_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      sender TEXT NOT NULL,
+      text TEXT NOT NULL,
+      category TEXT,
+      relevant_files_json TEXT DEFAULT '[]',
+      suggested_follow_ups_json TEXT DEFAULT '[]',
+      attachments_json TEXT DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES oracle_chat_sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_oracle_messages_session ON oracle_chat_messages(session_id, created_at ASC);
+
+    CREATE TABLE IF NOT EXISTS oracle_chat_memories (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      memory_key TEXT NOT NULL,
+      memory_value TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES oracle_chat_sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_oracle_memories_session ON oracle_chat_memories(session_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_oracle_memories_unique ON oracle_chat_memories(session_id, memory_key);
   `);
 
   try {

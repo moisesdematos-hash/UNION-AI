@@ -1,4 +1,6 @@
 import { env } from '../../config/env.js';
+import { getDatabase } from '../../db/database.js';
+import { randomUUID } from 'node:crypto';
 
 export interface OracleAttachment {
   name: string;
@@ -11,6 +13,8 @@ export interface OracleAttachment {
 export interface OracleQuestionRequest {
   question: string;
   context?: string;
+  sessionId?: string;
+  userId?: string;
   attachments?: OracleAttachment[];
   conversationHistory?: Array<{
     sender: 'user' | 'oracle';
@@ -23,11 +27,45 @@ export interface OracleAnswerResponse {
   category: 'ARCHITECTURE' | 'DATA_BUS' | 'MARKETING_ENGINES' | 'SIMULATOR' | 'TEMPLATES' | 'OBSERVABILITY' | 'MULTIMODAL' | 'QUICK_START';
   relevantFiles: string[];
   suggestedFollowUps: string[];
+  memoriesRetained?: Array<{ key: string; value: string }>;
   attachmentAnalysis?: {
     filesProcessed: number;
     summary: string;
     detectedInsights: string[];
   };
+}
+
+function extractMemoriesFromText(text: string): Array<{ key: string; value: string }> {
+  const memories: Array<{ key: string; value: string }> = [];
+
+  // Name extraction
+  const nameMatch = text.match(/(?:me chamo|meu nome [eé]|sou o|sou a)\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)?)(?=\s+e\b|\s+que\b|[.,;\n!?]|$)/i);
+  if (nameMatch && nameMatch[1]) {
+    const name = nameMatch[1].trim();
+    if (name.length >= 2 && !['um', 'uma', 'apenas', 'muito', 'o', 'a'].includes(name.toLowerCase())) {
+      memories.push({ key: 'Nome do Usuário', value: name });
+    }
+  }
+
+  // Business / Product extraction
+  const bizMatch = text.match(/(?:minha empresa [eé]|meu negócio [eé]|meu nicho [eé]|trabalho com|vendo|meu produto [eé])\s+([^.,;\n!?]{3,60})/i);
+  if (bizMatch && bizMatch[1]) {
+    memories.push({ key: 'Negócio / Nicho', value: bizMatch[1].trim() });
+  }
+
+  // Goal / Project extraction
+  const goalMatch = text.match(/(?:meu objetivo [eé]|quero criar|estou criando|planejo lançar)\s+([^.,;\n!?]{3,80})/i);
+  if (goalMatch && goalMatch[1]) {
+    memories.push({ key: 'Objetivo do Projeto', value: goalMatch[1].trim() });
+  }
+
+  // Preference extraction
+  const prefMatch = text.match(/(?:minha preferência [eé]|prefiro|gosto de trabalhar com)\s+([^.,;\n!?]{3,60})/i);
+  if (prefMatch && prefMatch[1]) {
+    memories.push({ key: 'Preferência', value: prefMatch[1].trim() });
+  }
+
+  return memories;
 }
 
 export class ProjectOracleService {
@@ -37,6 +75,71 @@ export class ProjectOracleService {
   public static async answerQuestion(req: OracleQuestionRequest): Promise<OracleAnswerResponse> {
     const q = req.question.toLowerCase();
     const attachments = req.attachments || [];
+    const sessionId = req.sessionId;
+    let storedMemories: Array<{ memory_key: string; memory_value: string }> = [];
+
+    // 1. Session Memory & Persistent Storage in SQLite
+    if (sessionId) {
+      try {
+        const db = getDatabase();
+        const now = Date.now();
+        db.prepare(`
+          INSERT INTO oracle_chat_sessions (id, user_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET updated_at = ?
+        `).run(sessionId, req.userId || null, now, now, now);
+
+        // Extract and upsert new persistent memories from text
+        const extracted = extractMemoriesFromText(req.question);
+        const upsertMem = db.prepare(`
+          INSERT INTO oracle_chat_memories (id, session_id, memory_key, memory_value, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(session_id, memory_key) DO UPDATE SET memory_value = excluded.memory_value, updated_at = excluded.updated_at
+        `);
+        for (const m of extracted) {
+          upsertMem.run(randomUUID(), sessionId, m.key, m.value, now, now);
+        }
+
+        // Save incoming user message
+        db.prepare(`
+          INSERT INTO oracle_chat_messages (id, session_id, sender, text, attachments_json, created_at)
+          VALUES (?, ?, 'user', ?, ?, ?)
+        `).run(randomUUID(), sessionId, req.question, JSON.stringify(attachments), now);
+
+        // Retrieve all retained memories for this session
+        storedMemories = db.prepare(`
+          SELECT memory_key, memory_value FROM oracle_chat_memories WHERE session_id = ?
+        `).all(sessionId) as Array<{ memory_key: string; memory_value: string }>;
+      } catch (err) {
+        console.warn('[ProjectOracle] Session persistence warning:', err);
+      }
+    }
+
+    const recordOracleResponse = (res: OracleAnswerResponse): OracleAnswerResponse => {
+      if (sessionId) {
+        try {
+          const db = getDatabase();
+          db.prepare(`
+            INSERT INTO oracle_chat_messages (id, session_id, sender, text, category, relevant_files_json, suggested_follow_ups_json, created_at)
+            VALUES (?, ?, 'oracle', ?, ?, ?, ?, ?)
+          `).run(
+            randomUUID(),
+            sessionId,
+            res.answer,
+            res.category,
+            JSON.stringify(res.relevantFiles),
+            JSON.stringify(res.suggestedFollowUps),
+            Date.now()
+          );
+        } catch (err) {
+          console.warn('[ProjectOracle] Oracle message record warning:', err);
+        }
+      }
+      return {
+        ...res,
+        memoriesRetained: storedMemories.map(m => ({ key: m.memory_key, value: m.memory_value }))
+      };
+    };
 
     // REAL GROQ LLM INVOCATION FOR ALL CHAT INTERACTIONS (WHEN ACTIVE)
     if (env.GROQ_API_KEY && env.NODE_ENV !== 'test') {
@@ -46,6 +149,13 @@ export class ProjectOracleService {
           attachmentContext = `\n[ANEXOS RECEBIDOS]:\n` + attachments.map(a => 
             `- Tipo: ${a.type.toUpperCase()}, Nome: "${a.name}" ${a.extractedText ? `\nConteúdo:\n${a.extractedText}` : ''}`
           ).join('\n') + '\n';
+        }
+
+        let memoryContext = '';
+        if (storedMemories.length > 0) {
+          memoryContext = `\n[MEMÓRIA ATIVA DE LONGO PRAZO DO USUÁRIO]:\n` +
+            storedMemories.map(m => `• ${m.memory_key}: "${m.memory_value}"`).join('\n') +
+            `\n(INSTRUÇÃO DE MEMÓRIA CRÍTICA: Você POSSUI MEMÓRIA CONTÍNUA e DEVE se lembrar com precisão dessas informações. Chame o usuário pelo nome se conhecido, faça referência às preferências e objetivos declarados e demonstre continuidade total em cada resposta.)\n`;
         }
 
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -59,7 +169,7 @@ export class ProjectOracleService {
             messages: [
               {
                 role: 'system',
-                content: `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista e onisciente sobre o sistema UNION.AI 2.0.
+                content: `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista, onisciente e COM MEMÓRIA CONTÍNUA sobre o sistema UNION.AI 2.0 e todas as conversas do usuário.
 Você possui conhecimento profundo sobre:
 1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
 2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
@@ -67,7 +177,8 @@ Você possui conhecimento profundo sobre:
 4. 4 Templates Oficiais pré-configurados.
 5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
 6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
-
+7. MEMÓRIA CONTÍNUA: Você NUNCA esquece o que o usuário diz. Mantenha continuidade absoluta de diálogo, relembre acordos, preferências, nomes de projetos ou dúvidas anteriores citadas.
+${memoryContext}
 Responda sempre com autoridade, clareza técnica e precisão em português formal, usando formatação rica em Markdown.`
               },
               ...(req.conversationHistory || []).map(h => ({
@@ -96,7 +207,7 @@ Responda sempre com autoridade, clareza técnica e precisão em português forma
             else if (q.includes('template') || q.includes('modelo')) cat = 'TEMPLATES';
             else if (q.includes('observabilidade') || q.includes('prometheus') || q.includes('métrica')) cat = 'OBSERVABILITY';
 
-            return {
+            return recordOracleResponse({
               category: cat,
               relevantFiles: [
                 'packages/shared/src/types/data-bus.ts',
@@ -115,12 +226,25 @@ Responda sempre com autoridade, clareza técnica e precisão em português forma
                 detectedInsights: attachments.map(a => `Análise ativa para ${a.name}`)
               } : undefined,
               answer: generatedAnswer
-            };
+            });
           }
         }
       } catch (err) {
         console.warn('[ProjectOracle] Groq API falhou, usando base offline determinística:', err);
       }
+    }
+
+    // 0. MEMORY RECALL CHECK (Offline / Deterministic)
+    if (storedMemories.length > 0 && (q.includes('qual é o meu nome') || q.includes('qual meu nome') || q.includes('quem sou eu') || q.includes('lembra') || q.includes('memória') || q.includes('me chamo'))) {
+      const nameMem = storedMemories.find(m => m.memory_key === 'Nome do Usuário');
+      return recordOracleResponse({
+        category: 'QUICK_START',
+        relevantFiles: ['packages/server/src/services/chat/project-oracle-service.ts'],
+        suggestedFollowUps: ['Como o Simulador de Conversão pode me ajudar no meu nicho?'],
+        answer: `Sim, com certeza me lembro! ${nameMem ? `Você se chama **${nameMem.memory_value}**.` : ''}\n\n🧠 **Aqui está o que tenho gravado na minha memória contínua:**\n` +
+          storedMemories.map(m => `• **${m.memory_key}**: ${m.memory_value}`).join('\n') +
+          `\n\nEstou com todas as suas informações gravadas para continuarmos de onde paramos!`
+      });
     }
 
     // Multimodal Analysis if attachments are provided
@@ -140,7 +264,6 @@ Responda sempre com autoridade, clareza técnica e precisão em português forma
         }
       }
 
-      // Check if question pertains to copy analysis or general project
       const answer = `### 🧠 Análise Multimodal pelo Project Oracle
 
 Processei **${attachments.length} anexo(s)** enviados juntamente com sua pergunta: *" ${req.question} "*:
@@ -155,7 +278,7 @@ ${attachments.some(a => a.type === 'audio') ? `3. **Comando de Voz**: Áudio tra
 **Próximo Passo Recomendado:**
 Você gostaria que eu formate esse conteúdo para o **Simulador de Conversão com Heatmap** ou prefere criar um pipeline no Canvas para gerar anúncios a partir dele?`;
 
-      return {
+      return recordOracleResponse({
         category: 'MULTIMODAL',
         relevantFiles: [
           'packages/server/src/services/extractors/pdf-extractor.ts',
@@ -173,12 +296,12 @@ Você gostaria que eu formate esse conteúdo para o **Simulador de Conversão co
           detectedInsights: insights
         },
         answer
-      };
+      });
     }
 
     // 1. DATA BUS & TYPES
     if (q.includes('data bus') || q.includes('databus') || q.includes('pacote') || q.includes('datapacket') || q.includes('porta') || q.includes('tipo')) {
-      return {
+      return recordOracleResponse({
         category: 'DATA_BUS',
         relevantFiles: [
           'packages/shared/src/types/data-bus.ts',
@@ -204,12 +327,12 @@ O **Data Bus** é a espinha dorsal de comunicação e integridade entre os nós 
 
 3. **Auditoria & Inspeção em Tempo Real**:
    - O componente \`DataPacketInspectorModal.tsx\` permite inspecionar cada pacote que passou pela aresta com tokens e JSON bruto.`
-      };
+      });
     }
 
     // 2. SIMULADOR & HEATMAP (CHAVE DE OURO)
     if (q.includes('simulador') || q.includes('conversão') || q.includes('heatmap') || q.includes('persona') || q.includes('cps') || q.includes('auto-heal') || q.includes('cura') || q.includes('diferencial')) {
-      return {
+      return recordOracleResponse({
         category: 'SIMULATOR',
         relevantFiles: [
           'packages/shared/src/types/simulation.ts',
@@ -238,12 +361,12 @@ Este é o grande diferencial competitivo do **UNION.AI 2.0**:
 
 3. **1-Click Auto-Healing**:
    - Reescreve cirurgicamente o bloco com objeções, injetando reversão de risco e garantia de 30 dias.`
-      };
+      });
     }
 
     // 3. 14 BLOCOS DA PÁGINA DE VENDAS & VSL
     if (q.includes('bloco') || q.includes('14 blocos') || q.includes('vsl') || q.includes('sales-page') || q.includes('copy') || q.includes('seção 27') || q.includes('secao 27')) {
-      return {
+      return recordOracleResponse({
         category: 'MARKETING_ENGINES',
         relevantFiles: [
           'packages/shared/src/types/sales-page.ts',
@@ -273,12 +396,12 @@ Implementado com base nas maiores referências de direct response:
 - **Bloco 12**: Urgência Real & Escassez
 - **Bloco 13**: FAQ Quebra-Objeções
 - **Bloco 14**: CTA Final & Fechamento com os Dois Caminhos`
-      };
+      });
     }
 
     // 4. TEMPLATES PRONTOS
     if (q.includes('template') || q.includes('modelo') || q.includes('pronto') || q.includes('biblioteca') || q.includes('iniciar')) {
-      return {
+      return recordOracleResponse({
         category: 'TEMPLATES',
         relevantFiles: [
           'packages/server/src/services/templates/template-service.ts',
@@ -298,12 +421,12 @@ O sistema conta com 4 templates de produção prontos para 1 clique:
 2. **Competitor Teardown & High-Converting Copy**: Web Scraping/PDF -> Análise SWOT -> 14 Blocos de Vendas.
 3. **Omnichannel Content Engine**: Transforma conteúdo longo em carrosséis, e-mails e posts.
 4. **Research Deep Dive & Market Avatar**: Mineração de ICP e níveis de consciência de Schwartz.`
-      };
+      });
     }
 
     // 5. OBSERVABILIDADE & PROMETHEUS
     if (q.includes('observabilidade') || q.includes('métrica') || q.includes('metric') || q.includes('prometheus') || q.includes('monitor') || q.includes('token')) {
-      return {
+      return recordOracleResponse({
         category: 'OBSERVABILITY',
         relevantFiles: [
           'packages/server/src/services/metrics-collector.ts',
@@ -319,75 +442,11 @@ O sistema conta com 4 templates de produção prontos para 1 clique:
 
 - **Endpoint Prometheus**: \`GET /metrics\` no padrão OpenMetrics.
 - **Painel no Frontend**: \`ObservabilityDrawer.tsx\` com gráficos de taxa de sucesso, consumo de tokens por nó e custo em créditos.`
-      };
-    }
-
-    // DEFAULT / RESUMO GERAL ou PERGUNTA ABERTA - CHAMADA REAL GROQ LLM SE CHAVE CONFIGURADA
-    if (env.GROQ_API_KEY) {
-      try {
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${env.GROQ_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'qwen/qwen3.8-27b',
-            messages: [
-              {
-                role: 'system',
-                content: `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista e onisciente sobre o sistema UNION.AI 2.0.
-O UNION.AI possui:
-1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
-2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
-3. 14 Blocos de Página de Vendas (Seção 27) e VSL de 12 etapas.
-4. 4 Templates Oficiais pré-configurados.
-5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
-6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
-
-Responda com autoridade, clareza técnica e precisão em português formal.`
-              },
-              ...(req.conversationHistory || []).map(h => ({
-                role: h.sender === 'user' ? 'user' : 'assistant',
-                content: h.text
-              })),
-              {
-                role: 'user',
-                content: req.question
-              }
-            ],
-            max_tokens: 800,
-            temperature: 0.6
-          })
-        });
-
-        if (groqRes.ok) {
-          const groqData = (await groqRes.json()) as any;
-          const generatedAnswer = groqData.choices?.[0]?.message?.content;
-          if (generatedAnswer) {
-            return {
-              category: 'QUICK_START',
-              relevantFiles: [
-                'packages/client/src/App.tsx',
-                'packages/server/src/services/chat/project-oracle-service.ts',
-                'packages/shared/src/types/data-bus.ts'
-              ],
-              suggestedFollowUps: [
-                'Como funciona o Simulador de Conversão e Heatmap?',
-                'O que é o Data Bus e como ele garante zero erro no pipeline?',
-                'Quais templates prontos eu posso utilizar agora?'
-              ],
-              answer: generatedAnswer
-            };
-          }
-        }
-      } catch (err) {
-        console.warn('[ProjectOracle] Erro na chamada do Groq real, usando fallback offline:', err);
-      }
+      });
     }
 
     // DEFAULT / RESUMO GERAL (FALLBACK DETERMINÍSTICO OFFLINE)
-    return {
+    return recordOracleResponse({
       category: 'QUICK_START',
       relevantFiles: [
         'MANUAL_DO_USUARIO.md',
@@ -402,15 +461,81 @@ Responda com autoridade, clareza técnica e precisão em português formal.`
       ],
       answer: `### 🤖 Olá! Eu sou o UNION.AI Project Oracle
 
-Tenho conhecimento profundo sobre toda a arquitetura do sistema e agora conto com **capacidades multimodais completas**:
+Tenho conhecimento profundo sobre toda a arquitetura do sistema, **memória persistente contínua** e **capacidades multimodais completas**:
 
-- **Entrada e Resposta por Voz (STT/TTS)**: Fale comigo pelo microfone ou ouça minhas respostas em voz alta!
-- **Upload de Imagens e Documentos**: Arraste imagens, arquivos de texto ou PDFs de briefings e relatórios.
-- **Canvas & Pipeline**: 18 gates com Data Bus tipado (\`DataPacket\`).
-- **Simulador de Conversão (Chave de Ouro)**: Teste cópias contra 5 personas sintéticas com CPS (0-100) e Auto-Cura.
-- **Templates & Observabilidade**: 4 pipelines de produção prontos e telemetria Prometheus em \`/metrics\`.
+- 🧠 **Memória Contínua Ativa**: Lembro de seu nome, suas metas, dados de projetos e preferências entre mensagens e sessões.
+- 🎙️ **Entrada e Resposta por Voz (STT/TTS)**: Fale comigo pelo microfone ou ouça minhas respostas em voz alta!
+- 📄 **Upload de Imagens e Documentos**: Arraste imagens, arquivos de texto ou PDFs de briefings e relatórios.
+- 🌐 **Canvas & Pipeline**: 18 gates com Data Bus tipado (\`DataPacket\`).
+- 🎯 **Simulador de Conversão (Chave de Ouro)**: Teste cópias contra 5 personas sintéticas com CPS (0-100) e Auto-Cura.
+- 📚 **Templates & Observabilidade**: 4 pipelines de produção prontos e telemetria Prometheus em \`/metrics\`.
 
 Como posso ajudar você agora?`
-    };
+    });
+  }
+
+  /**
+   * Retrieves full chat history for a given session from SQLite.
+   */
+  public static getSessionHistory(sessionId: string): Array<{
+    id: string;
+    sender: 'user' | 'oracle';
+    text: string;
+    category?: string;
+    relevantFiles?: string[];
+    suggestedFollowUps?: string[];
+    attachments?: OracleAttachment[];
+    createdAt: number;
+  }> {
+    const db = getDatabase();
+    const rows = db.prepare(`
+      SELECT * FROM oracle_chat_messages WHERE session_id = ? ORDER BY created_at ASC
+    `).all(sessionId) as any[];
+
+    return rows.map(r => ({
+      id: r.id,
+      sender: r.sender,
+      text: r.text,
+      category: r.category,
+      relevantFiles: JSON.parse(r.relevant_files_json || '[]'),
+      suggestedFollowUps: JSON.parse(r.suggested_follow_ups_json || '[]'),
+      attachments: JSON.parse(r.attachments_json || '[]'),
+      createdAt: r.created_at
+    }));
+  }
+
+  /**
+   * Retrieves active retained memories for a given session.
+   */
+  public static getSessionMemories(sessionId: string): Array<{ key: string; value: string }> {
+    const db = getDatabase();
+    const rows = db.prepare(`
+      SELECT memory_key, memory_value FROM oracle_chat_memories WHERE session_id = ?
+    `).all(sessionId) as Array<{ memory_key: string; memory_value: string }>;
+
+    return rows.map(r => ({ key: r.memory_key, value: r.memory_value }));
+  }
+
+  /**
+   * Manually store a persistent memory for a session.
+   */
+  public static saveMemory(sessionId: string, key: string, value: string): void {
+    const db = getDatabase();
+    const now = Date.now();
+    db.prepare(`
+      INSERT INTO oracle_chat_memories (id, session_id, memory_key, memory_value, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(session_id, memory_key) DO UPDATE SET memory_value = excluded.memory_value, updated_at = excluded.updated_at
+    `).run(randomUUID(), sessionId, key, value, now, now);
+  }
+
+  /**
+   * Permanently clears all messages and memories for a session.
+   */
+  public static clearSession(sessionId: string): void {
+    const db = getDatabase();
+    db.prepare(`DELETE FROM oracle_chat_memories WHERE session_id = ?`).run(sessionId);
+    db.prepare(`DELETE FROM oracle_chat_messages WHERE session_id = ?`).run(sessionId);
+    db.prepare(`DELETE FROM oracle_chat_sessions WHERE id = ?`).run(sessionId);
   }
 }

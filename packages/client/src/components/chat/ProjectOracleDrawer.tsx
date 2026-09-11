@@ -15,7 +15,8 @@ import {
   FileText,
   File,
   Sparkles,
-  Trash2
+  Trash2,
+  Brain
 } from 'lucide-react';
 
 export interface ChatAttachment {
@@ -42,6 +43,23 @@ interface ProjectOracleDrawerProps {
   onClose: () => void;
 }
 
+const STORAGE_CHAT_KEY = 'union_oracle_chat_history_v2';
+const STORAGE_SESSION_KEY = 'union_oracle_session_id_v2';
+const STORAGE_MEMORIES_KEY = 'union_oracle_memories_v2';
+
+const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome',
+  sender: 'oracle',
+  text: `Olá! Sou o **UNION.AI Project Oracle Supercharged** 🚀 com **Memória Contínua Ativa**.\n\nPossuo conhecimento profundo e capacidade de lembrar de todas as suas mensagens, dados e preferências:\n\n• 🧠 **Memória Contínua**: Lembro do seu nome, projeto, objetivos e preferências.\n• 🎙️ **Entrada e Resposta por Voz**: Fale comigo no microfone ou ouça minhas respostas em áudio.\n• 🖼️ **Upload de Imagens**: Arraste layouts, criativos e diagramas para análise.\n• 📄 **Leitura de PDFs e Documentos**: Submeta briefings, contratos e roteiros.\n• 🌐 **Arquitetura & Código**: Tire qualquer dúvida sobre os 18 gates, Data Bus, 4 templates e o novo Simulador de Conversão.\n\nComo posso ajudar você agora?`,
+  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  category: 'QUICK_START',
+  suggestedFollowUps: [
+    'Como funciona o Simulador de Conversão CPS?',
+    'O que é o Data Bus e os tipos de portas?',
+    'Quais são os 14 blocos de copy?'
+  ]
+};
+
 const DEFAULT_QUESTIONS = [
   'Como funciona o Data Bus e o DataPacket?',
   'O que é o Simulador de Conversão com Heatmap (Chave de Ouro)?',
@@ -51,20 +69,48 @@ const DEFAULT_QUESTIONS = [
 ];
 
 export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      sender: 'oracle',
-      text: `Olá! Sou o **UNION.AI Project Oracle Supercharged** 🚀.\n\nFui capacitado com **compreensão multimodal completa** e conhecimento de ponta a ponta do projeto:\n\n• 🎙️ **Entrada e Resposta por Voz**: Fale comigo no microfone ou ouça minhas respostas em áudio.\n• 🖼️ **Upload de Imagens**: Arraste layouts, criativos e diagramas para análise.\n• 📄 **Leitura de PDFs e Documentos**: Submeta briefings, contratos e roteiros.\n• 🌐 **Arquitetura & Código**: Tire qualquer dúvida sobre os 18 gates, Data Bus, 4 templates e o novo Simulador de Conversão.\n\nComo posso ajudar você agora?`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      category: 'QUICK_START',
-      suggestedFollowUps: [
-        'Como funciona o Simulador de Conversão CPS?',
-        'O que é o Data Bus e os tipos de portas?',
-        'Quais são os 14 blocos de copy?'
-      ]
+  // Session ID for server-side persistence
+  const [sessionId, setSessionId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        let sid = localStorage.getItem(STORAGE_SESSION_KEY);
+        if (!sid) {
+          sid = 'oracle_sess_' + Math.random().toString(36).substring(2, 11) + Date.now();
+          localStorage.setItem(STORAGE_SESSION_KEY, sid);
+        }
+        return sid;
+      } catch {}
     }
-  ]);
+    return 'oracle_sess_' + Date.now();
+  });
+
+  // Retained user memories (e.g. name, niche, goal)
+  const [activeMemories, setActiveMemories] = useState<Array<{ key: string; value: string }>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_MEMORIES_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+
+  // Messages with localStorage memory restore
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_CHAT_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return [DEFAULT_WELCOME_MESSAGE];
+  });
+
   const [inputQuery, setInputQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
@@ -76,6 +122,23 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<any>(null);
+
+  // Sync messages & active memories to local storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_CHAT_KEY, JSON.stringify(messages));
+      } catch {}
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_MEMORIES_KEY, JSON.stringify(activeMemories));
+      } catch {}
+    }
+  }, [activeMemories]);
 
   // Initialize Web Speech Recognition if available
   useEffect(() => {
@@ -232,7 +295,7 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Clear chat history, cancel voice/tts, reset attachments
+  // Clear chat history, session memory, cancel voice/tts, reset attachments
   const clearChat = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -247,11 +310,24 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    setActiveMemories([]);
+
+    // Clear client-side local storage
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_CHAT_KEY);
+        localStorage.removeItem(STORAGE_MEMORIES_KEY);
+        const newSid = 'oracle_sess_' + Math.random().toString(36).substring(2, 11) + Date.now();
+        localStorage.setItem(STORAGE_SESSION_KEY, newSid);
+        setSessionId(newSid);
+      } catch {}
+    }
+
     setMessages([
       {
         id: `welcome-${Date.now()}`,
         sender: 'oracle',
-        text: `🧹 **Chat limpo com sucesso!** O histórico de conversas foi resetado.\n\nComo posso ajudar você agora? Pergunte qualquer detalhe sobre o código, arquitetura, simulador de conversão, ou envie arquivos e áudio.`,
+        text: `🧹 **Chat e memória limpos com sucesso!** O histórico de conversas e todas as memórias retidas foram reiniciados.\n\nComo posso ajudar você agora? Pergunte qualquer detalhe sobre o código, arquitetura, simulador de conversão, ou envie arquivos e áudio.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         category: 'QUICK_START',
         suggestedFollowUps: [
@@ -261,6 +337,15 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
         ]
       }
     ]);
+
+    // Clear server-side SQLite session memory (non-blocking)
+    try {
+      fetch('/api/chat/clear-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      }).catch(() => {});
+    } catch {}
   };
 
   const handleSendMessage = async (queryText?: string) => {
@@ -288,7 +373,8 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
         body: JSON.stringify({ 
           question: text || 'Analise os arquivos anexados e me dê orientações.',
           attachments: currentAttachments,
-          conversationHistory: messages.slice(-10).map(m => ({
+          sessionId,
+          conversationHistory: messages.slice(-30).map(m => ({
             sender: m.sender,
             text: m.text
           }))
@@ -297,6 +383,11 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
 
       const resData = await response.json();
       if (resData.success && resData.data) {
+        // Update active retained memories if returned by the Oracle
+        if (Array.isArray(resData.data.memoriesRetained) && resData.data.memoriesRetained.length > 0) {
+          setActiveMemories(resData.data.memoriesRetained);
+        }
+
         const oracleMsg: ChatMessage = {
           id: `oracle-${Date.now()}`,
           sender: 'oracle',
@@ -367,15 +458,22 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
             <Bot className="w-6 h-6 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-bold text-white">UNION.AI Project Oracle</h2>
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 <Sparkles className="w-3 h-3 text-cyan-300" />
                 Multimodal & Voice
               </span>
+              <span 
+                title={activeMemories.length > 0 ? `Memória ativa: ${activeMemories.map(m => `${m.key}: ${m.value}`).join(' • ')}` : 'Memória contínua ativa e persistente'}
+                className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+              >
+                <Brain className="w-3 h-3 text-emerald-400" />
+                Memória Ativa {activeMemories.length > 0 ? `(${activeMemories.length})` : 'Persistente'}
+              </span>
             </div>
             <p className="text-xs text-slate-400">
-              Voz (STT/TTS) • Imagens • PDFs • Documentos • Código-Fonte Completo
+              Voz (STT/TTS) • Imagens • PDFs • Documentos • Memória Contínua
             </p>
           </div>
         </div>
@@ -410,6 +508,21 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
           </button>
         </div>
       </div>
+
+      {/* Active Retained Memories Banner */}
+      {activeMemories.length > 0 && (
+        <div className="px-6 py-2 bg-emerald-950/40 border-b border-emerald-900/50 flex items-center gap-2 text-xs text-emerald-300 overflow-x-auto">
+          <Brain className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-semibold shrink-0 text-emerald-200">Memória Ativa:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {activeMemories.map((mem, idx) => (
+              <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-900/60 text-emerald-200 text-[11px] border border-emerald-700/60 shadow-sm">
+                <strong className="text-emerald-300">{mem.key}:</strong> {mem.value}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Prompts Bar */}
       <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
