@@ -38,6 +38,91 @@ export class ProjectOracleService {
     const q = req.question.toLowerCase();
     const attachments = req.attachments || [];
 
+    // REAL GROQ LLM INVOCATION FOR ALL CHAT INTERACTIONS (WHEN ACTIVE)
+    if (env.GROQ_API_KEY && env.NODE_ENV !== 'test') {
+      try {
+        let attachmentContext = '';
+        if (attachments.length > 0) {
+          attachmentContext = `\n[ANEXOS RECEBIDOS]:\n` + attachments.map(a => 
+            `- Tipo: ${a.type.toUpperCase()}, Nome: "${a.name}" ${a.extractedText ? `\nConteúdo:\n${a.extractedText}` : ''}`
+          ).join('\n') + '\n';
+        }
+
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'qwen/qwen3.8-27b',
+            messages: [
+              {
+                role: 'system',
+                content: `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista e onisciente sobre o sistema UNION.AI 2.0.
+Você possui conhecimento profundo sobre:
+1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
+2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
+3. 14 Blocos de Página de Vendas (Seção 27) e VSL de 12 etapas.
+4. 4 Templates Oficiais pré-configurados.
+5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
+6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
+
+Responda sempre com autoridade, clareza técnica e precisão em português formal, usando formatação rica em Markdown.`
+              },
+              ...(req.conversationHistory || []).map(h => ({
+                role: h.sender === 'user' ? 'user' : 'assistant',
+                content: h.text
+              })),
+              {
+                role: 'user',
+                content: `${attachmentContext}${req.question}`
+              }
+            ],
+            max_tokens: 1200,
+            temperature: 0.6
+          })
+        });
+
+        if (groqRes.ok) {
+          const groqData = (await groqRes.json()) as any;
+          const generatedAnswer = groqData.choices?.[0]?.message?.content;
+          if (generatedAnswer) {
+            let cat: OracleAnswerResponse['category'] = 'QUICK_START';
+            if (attachments.length > 0) cat = 'MULTIMODAL';
+            else if (q.includes('simulador') || q.includes('conversão') || q.includes('heatmap') || q.includes('cps')) cat = 'SIMULATOR';
+            else if (q.includes('data bus') || q.includes('databus') || q.includes('pacote') || q.includes('porta')) cat = 'DATA_BUS';
+            else if (q.includes('14 blocos') || q.includes('vsl') || q.includes('copy')) cat = 'MARKETING_ENGINES';
+            else if (q.includes('template') || q.includes('modelo')) cat = 'TEMPLATES';
+            else if (q.includes('observabilidade') || q.includes('prometheus') || q.includes('métrica')) cat = 'OBSERVABILITY';
+
+            return {
+              category: cat,
+              relevantFiles: [
+                'packages/shared/src/types/data-bus.ts',
+                'packages/shared/src/types/simulation.ts',
+                'packages/server/src/services/marketing/simulation-engine.ts',
+                'packages/client/src/App.tsx'
+              ],
+              suggestedFollowUps: [
+                'Como testar esta copy no Simulador de Conversão?',
+                'Como funciona o Data Bus e a integridade de dados?',
+                'Quais templates prontos eu posso utilizar agora?'
+              ],
+              attachmentAnalysis: attachments.length > 0 ? {
+                filesProcessed: attachments.length,
+                summary: `Processados ${attachments.length} arquivo(s) com IA da Groq em tempo real.`,
+                detectedInsights: attachments.map(a => `Análise ativa para ${a.name}`)
+              } : undefined,
+              answer: generatedAnswer
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('[ProjectOracle] Groq API falhou, usando base offline determinística:', err);
+      }
+    }
+
     // Multimodal Analysis if attachments are provided
     if (attachments.length > 0) {
       const insights: string[] = [];

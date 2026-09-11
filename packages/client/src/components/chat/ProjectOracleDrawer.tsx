@@ -14,7 +14,8 @@ import {
   Paperclip,
   FileText,
   File,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 export interface ChatAttachment {
@@ -231,6 +232,37 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Clear chat history, cancel voice/tts, reset attachments
+  const clearChat = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    if (isRecording) {
+      speechRecognitionRef.current?.stop();
+      setIsRecording(false);
+    }
+    setAttachments([]);
+    setInputQuery('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: 'oracle',
+        text: `🧹 **Chat limpo com sucesso!** O histórico de conversas foi resetado.\n\nComo posso ajudar você agora? Pergunte qualquer detalhe sobre o código, arquitetura, simulador de conversão, ou envie arquivos e áudio.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        category: 'QUICK_START',
+        suggestedFollowUps: [
+          'Como funciona o Simulador de Conversão CPS?',
+          'O que é o Data Bus e os tipos de portas?',
+          'Quais são os 14 blocos de copy?'
+        ]
+      }
+    ]);
+  };
+
   const handleSendMessage = async (queryText?: string) => {
     const text = (queryText || inputQuery).trim();
     if ((!text && attachments.length === 0) || isLoading) return;
@@ -255,7 +287,11 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           question: text || 'Analise os arquivos anexados e me dê orientações.',
-          attachments: currentAttachments
+          attachments: currentAttachments,
+          conversationHistory: messages.slice(-10).map(m => ({
+            sender: m.sender,
+            text: m.text
+          }))
         })
       });
 
@@ -345,6 +381,16 @@ export function ProjectOracleDrawer({ isOpen, onClose }: ProjectOracleDrawerProp
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Clear Chat Button */}
+          <button
+            onClick={clearChat}
+            title="Apagar mensagens e limpar o chat"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-300 hover:text-rose-100 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 transition cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+            <span className="hidden sm:inline">Limpar Chat</span>
+          </button>
+
           {/* Toggle Auto Voice Read */}
           <button
             onClick={() => setAutoSpeechEnabled(!autoSpeechEnabled)}

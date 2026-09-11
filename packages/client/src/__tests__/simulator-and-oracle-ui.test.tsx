@@ -89,5 +89,19 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       fireEvent.click(closeBtn);
       expect(handleClose).toHaveBeenCalled();
     });
+
+    it('renders Limpar Chat button and clears messages upon click', () => {
+      render(
+        <ProjectOracleDrawer isOpen={true} onClose={() => {}} />
+      );
+
+      const clearBtn = screen.getByTitle(/Apagar mensagens e limpar o chat/i);
+      expect(clearBtn).toBeDefined();
+      expect(screen.getByText(/Limpar Chat/i)).toBeDefined();
+
+      fireEvent.click(clearBtn);
+
+      expect(screen.getByText(/Chat limpo com sucesso!/i)).toBeDefined();
+    });
   });
 });
