@@ -13,7 +13,8 @@ import {
   CloudOff,
   Save,
   AlertCircle,
-  Coins
+  Coins,
+  BookOpen
 } from 'lucide-react';
 import { UnionCanvas } from './components/canvas/UnionCanvas.js';
 import { useCanvasStore } from './store/canvasStore.js';
@@ -25,11 +26,15 @@ import { ExecutionPlanModal } from './components/modals/ExecutionPlanModal.js';
 import { ExecutionHistoryDrawer } from './components/history/ExecutionHistoryDrawer.js';
 import { CreditsDrawer } from './components/credits/CreditsDrawer.js';
 import { TemplateLibraryModal } from './components/modals/TemplateLibraryModal.js';
+import { WelcomeModal } from './components/welcome/WelcomeModal.js';
 
 export function App() {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('union_welcome_dismissed') !== 'true';
+  });
   const { 
     nodes, 
     edges, 
@@ -251,6 +256,15 @@ export function App() {
           ) : (
             <div className="flex items-center space-x-2">
               <button
+                onClick={() => setIsWelcomeOpen(true)}
+                title="Guia Completo & Apresentação UNION.AI"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 border border-union-accent/30 hover:border-union-accent text-cyan-300 hover:text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+              >
+                <BookOpen className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Guia & Visão Geral</span>
+              </button>
+
+              <button
                 onClick={() => setIsTemplateModalOpen(true)}
                 title="Abrir Biblioteca de Templates (Gate 18)"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-union-accent text-zinc-200 hover:text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
@@ -336,6 +350,14 @@ export function App() {
         <TemplateLibraryModal 
           isOpen={isTemplateModalOpen} 
           onClose={() => setIsTemplateModalOpen(false)} 
+        />
+        <WelcomeModal
+          isOpen={isWelcomeOpen}
+          onClose={() => setIsWelcomeOpen(false)}
+          onOpenTemplates={() => {
+            setIsWelcomeOpen(false);
+            setIsTemplateModalOpen(true);
+          }}
         />
       </main>
     </div>
