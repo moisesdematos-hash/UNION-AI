@@ -121,7 +121,7 @@ export function App() {
                 title="Click to rename workflow"
               />
               <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-union-accent/10 text-union-accent border border-union-accent/20">
-                Gate 18 Active (MVP Verified)
+                Gate 18 Active (UNION.AI 2.0)
               </span>
             </div>
             <p className="text-[11px] text-union-muted">Visual AI Workspace & Real Data Bus Engine</p>

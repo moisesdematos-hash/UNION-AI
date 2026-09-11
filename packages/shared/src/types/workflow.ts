@@ -11,19 +11,41 @@ export const ViewportSchema = z.object({
 
 export type Viewport = z.infer<typeof ViewportSchema>;
 
+export const WorkflowGroupSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string().default('#6366f1'),
+  nodeIds: z.array(z.string()).default([]),
+  isCollapsed: z.boolean().default(false)
+});
+
+export type WorkflowGroup = z.infer<typeof WorkflowGroupSchema>;
+
 export const WorkflowDefinitionSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
   nodes: z.array(NodeDefinitionSchema).default([]),
   connections: z.array(ConnectionDefinitionSchema).default([]),
+  groups: z.array(WorkflowGroupSchema).optional().default([]),
   viewport: ViewportSchema.default({ x: 0, y: 0, zoom: 1 }),
   version: z.number().int().positive().default(1),
   createdAt: z.number(),
   updatedAt: z.number()
 });
 
-export type WorkflowDefinition = z.infer<typeof WorkflowDefinitionSchema>;
+export interface WorkflowDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  nodes: z.infer<typeof NodeDefinitionSchema>[];
+  connections: z.infer<typeof ConnectionDefinitionSchema>[];
+  groups?: WorkflowGroup[];
+  viewport: Viewport;
+  version: number;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export const ExecutionEventTypeEnum = z.enum([
   'WORKFLOW_QUEUED',

@@ -28,6 +28,13 @@ const AdsRequestSchema = z.object({
   campaignName: z.string().optional()
 });
 
+const SalesPageRequestSchema = z.object({
+  context: z.string().min(1),
+  productName: z.string().optional(),
+  targetAudience: z.string().optional(),
+  offerPrice: z.string().optional()
+});
+
 /**
  * POST /api/marketing/avatar
  * Generates an in-depth customer persona and ICP profile.
@@ -160,6 +167,40 @@ marketingRouter.post('/ads', async (req: AuthenticatedRequest, res: Response) =>
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate ads matrix'
+    });
+  }
+});
+
+/**
+ * POST /api/marketing/sales-page
+ * Generates full 14-Block High-Converting Sales Page copy (UNION.AI 2.0 / Seção 27).
+ */
+marketingRouter.post('/sales-page', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const data = SalesPageRequestSchema.parse(req.body);
+
+    const execution = await MarketingEngine.generateSalesPageCopy(data);
+
+    let creditsRemaining: number | undefined;
+    if (execution.creditsCost > 0) {
+      const deduction = creditsService.deductCredits(userId, execution.creditsCost, {
+        description: `Marketing Intelligence: 14-Block Sales Page Copy (${execution.tokens.totalTokens} tokens)`
+      });
+      creditsRemaining = deduction.newBalance;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...execution,
+        creditsRemaining
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate sales page copy'
     });
   }
 });

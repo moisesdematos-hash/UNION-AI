@@ -156,6 +156,7 @@ function initializeSchema(db: Database.Database): void {
       viewport_x REAL DEFAULT 0,
       viewport_y REAL DEFAULT 0,
       viewport_zoom REAL DEFAULT 1,
+      groups_json TEXT NOT NULL DEFAULT '[]',
       version INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -277,4 +278,10 @@ function initializeSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
   `);
+
+  try {
+    db.exec(`ALTER TABLE workflows ADD COLUMN groups_json TEXT NOT NULL DEFAULT '[]'`);
+  } catch {
+    // Column already exists
+  }
 }

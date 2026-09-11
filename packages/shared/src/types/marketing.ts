@@ -74,3 +74,29 @@ export const AdsMatrixSchema = z.object({
 });
 
 export type AdsMatrix = z.infer<typeof AdsMatrixSchema>;
+
+export const SalesPageFaqItemSchema = z.object({
+  question: z.string(),
+  answer: z.string()
+});
+
+export const SalesPageCopySchema = z.object({
+  title: z.string(),
+  headline: z.string(),
+  subheadline: z.string(),
+  problem: z.string(),
+  consequences: z.string(),
+  opportunity: z.string(),
+  mechanism: z.string(),
+  benefits: z.array(z.string()).min(1),
+  proof: z.array(z.string()).min(1),
+  offer: z.string(),
+  bonuses: z.array(z.string()).default([]),
+  guarantee: z.string(),
+  objections: z.array(z.string()).default([]),
+  faq: z.array(SalesPageFaqItemSchema).default([]),
+  cta: z.string()
+});
+
+export type SalesPageCopy = z.infer<typeof SalesPageCopySchema>;
+

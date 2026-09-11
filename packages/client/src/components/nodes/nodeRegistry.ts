@@ -440,6 +440,64 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
     defaultConfig: {
       exportFormat: 'markdown-pack'
     }
+  },
+
+  'extractor-pdf': {
+    type: 'extractor-pdf',
+    label: 'PDF & Document Extractor',
+    category: 'EXTRACTOR',
+    description: 'Extrai texto limpo, páginas individuais, metadados e tabelas estruturadas de documentos PDF',
+    inputs: [
+      { id: 'in-document', name: 'document', label: 'Document Input', type: 'DOCUMENT', isMulti: false, required: false },
+      { id: 'in-text', name: 'rawText', label: 'Document Text', type: 'TEXT', isMulti: true, required: false }
+    ],
+    outputs: [
+      { id: 'out-text', name: 'cleanText', label: 'Clean Text', type: 'TEXT', isMulti: true, required: true },
+      { id: 'out-doc', name: 'document', label: 'Parsed Document', type: 'DOCUMENT', isMulti: true, required: true },
+      { id: 'out-tables', name: 'tables', label: 'Extracted Tables', type: 'TABLE', isMulti: true, required: false }
+    ],
+    defaultConfig: {
+      fileName: 'proposta-comercial.pdf',
+      extractTables: true,
+      splitPages: true
+    }
+  },
+
+  'marketing-sales-page': {
+    type: 'marketing-sales-page',
+    label: '14-Block Sales Page Copywriter',
+    category: 'AI',
+    description: 'Gera copy completa de página de vendas em 14 blocos psicológicos de altíssima conversão',
+    inputs: [
+      { id: 'in-avatar', name: 'avatar', label: 'Avatar / ICP', type: 'JSON', isMulti: false, required: false },
+      { id: 'in-vsl', name: 'vslScript', label: 'VSL / Briefing', type: 'DOCUMENT', isMulti: false, required: false },
+      { id: 'in-context', name: 'context', label: 'Offer Briefing', type: 'TEXT', isMulti: true, required: true }
+    ],
+    outputs: [
+      { id: 'out-copy', name: 'salesPageCopy', label: 'Full Sales Page Copy', type: 'DOCUMENT', isMulti: true, required: true },
+      { id: 'out-json', name: 'blocksJson', label: '14-Block JSON', type: 'JSON', isMulti: true, required: true }
+    ],
+    defaultConfig: {
+      productName: 'UNION.AI Enterprise Workspace',
+      targetAudience: 'Infoprodutores e Agências de Performance',
+      offerPrice: '12x de R$ 97,00 ou R$ 997 à vista'
+    }
+  },
+
+  'output-export': {
+    type: 'output-export',
+    label: 'Publish & Export Destination',
+    category: 'OUTPUT',
+    description: 'Exporta ativos consolidados em Markdown, JSON ou publicação direta via Webhook/API',
+    inputs: [
+      { id: 'in-artifacts', name: 'artifacts', label: 'Marketing Artifacts', type: 'DOCUMENT', isMulti: true, required: true },
+      { id: 'in-metadata', name: 'metadata', label: 'Run Metadata', type: 'JSON', isMulti: false, required: false }
+    ],
+    outputs: [],
+    defaultConfig: {
+      format: 'markdown-bundle',
+      includeMetadata: true
+    }
   }
 };
 

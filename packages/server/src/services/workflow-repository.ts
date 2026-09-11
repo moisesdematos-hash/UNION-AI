@@ -4,6 +4,7 @@ import {
   WorkflowDefinition, 
   NodeDefinition, 
   ConnectionDefinition,
+  WorkflowGroup,
   NodeDefinitionSchema,
   ConnectionDefinitionSchema,
   WorkflowRun,
@@ -67,8 +68,8 @@ export class WorkflowRepository {
     const now = Date.now();
 
     this.db.prepare(`
-      INSERT INTO workflows (id, project_id, name, description, viewport_x, viewport_y, viewport_zoom, version, created_at, updated_at)
-      VALUES (?, ?, ?, ?, 0, 0, 1, 1, ?, ?)
+      INSERT INTO workflows (id, project_id, name, description, viewport_x, viewport_y, viewport_zoom, groups_json, version, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 0, 0, 1, '[]', 1, ?, ?)
     `).run(id, projectId, name.trim(), description || null, now, now);
 
     return {
@@ -77,6 +78,7 @@ export class WorkflowRepository {
       description,
       nodes: [],
       connections: [],
+      groups: [],
       viewport: { x: 0, y: 0, zoom: 1 },
       version: 1,
       createdAt: now,
@@ -86,7 +88,7 @@ export class WorkflowRepository {
 
   getWorkflow(workflowId: string, userId: string): WorkflowDefinition | null {
     const wfRow = this.db.prepare(`
-      SELECT w.id, w.name, w.description, w.viewport_x, w.viewport_y, w.viewport_zoom, w.version, w.created_at, w.updated_at
+      SELECT w.id, w.name, w.description, w.viewport_x, w.viewport_y, w.viewport_zoom, w.groups_json, w.version, w.created_at, w.updated_at
       FROM workflows w
       JOIN projects p ON w.project_id = p.id
       WHERE w.id = ? AND p.user_id = ?
@@ -97,6 +99,7 @@ export class WorkflowRepository {
       viewport_x: number;
       viewport_y: number;
       viewport_zoom: number;
+      groups_json: string | null;
       version: number;
       created_at: number;
       updated_at: number;
@@ -167,6 +170,9 @@ export class WorkflowRepository {
       return ConnectionDefinitionSchema.parse(rawConn);
     });
 
+    const rawGroups = wfRow.groups_json ? JSON.parse(wfRow.groups_json) : [];
+    const groups: WorkflowGroup[] = Array.isArray(rawGroups) ? rawGroups : [];
+
     return {
       id: wfRow.id,
       name: wfRow.name,
@@ -180,7 +186,8 @@ export class WorkflowRepository {
       createdAt: wfRow.created_at,
       updatedAt: wfRow.updated_at,
       nodes,
-      connections
+      connections,
+      groups
     };
   }
 
@@ -193,6 +200,7 @@ export class WorkflowRepository {
       viewport?: { x: number; y: number; zoom: number };
       nodes: NodeDefinition[];
       connections: ConnectionDefinition[];
+      groups?: WorkflowGroup[];
     }
   ): WorkflowDefinition {
     const existing = this.getWorkflow(workflowId, userId);
@@ -205,15 +213,16 @@ export class WorkflowRepository {
     const name = state.name || existing.name;
     const description = state.description !== undefined ? state.description : existing.description;
     const viewport = state.viewport || existing.viewport;
+    const groups = state.groups || existing.groups || [];
 
     // Atomic transaction for workflow state, nodes and connections
     const syncTransaction = this.db.transaction(() => {
       // 1. Update workflow metadata
       this.db.prepare(`
         UPDATE workflows
-        SET name = ?, description = ?, viewport_x = ?, viewport_y = ?, viewport_zoom = ?, version = ?, updated_at = ?
+        SET name = ?, description = ?, viewport_x = ?, viewport_y = ?, viewport_zoom = ?, groups_json = ?, version = ?, updated_at = ?
         WHERE id = ?
-      `).run(name, description || null, viewport.x, viewport.y, viewport.zoom, newVersion, now, workflowId);
+      `).run(name, description || null, viewport.x, viewport.y, viewport.zoom, JSON.stringify(groups), newVersion, now, workflowId);
 
       // 2. Clear old nodes & connections
       this.db.prepare('DELETE FROM workflow_connections WHERE workflow_id = ?').run(workflowId);

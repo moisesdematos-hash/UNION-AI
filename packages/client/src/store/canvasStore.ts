@@ -31,7 +31,8 @@ import {
   WorkflowRunStatus,
   WorkflowVersion,
   UserCredits,
-  CreditTransaction
+  CreditTransaction,
+  WorkflowGroup
 } from '@union/shared';
 import { createNodeFromTemplate } from '../components/nodes/nodeRegistry.js';
 import { StorageService, AUTH_TOKEN_KEY } from '../services/storageService.js';
@@ -82,6 +83,13 @@ export interface CanvasState {
   runsHistory: WorkflowRun[];
   versionsList: WorkflowVersion[];
   isHistoryDrawerOpen: boolean;
+
+  // UNION.AI 2.0: Workflow Visual Groups & Collapse
+  groups: WorkflowGroup[];
+  createGroup: (name: string, nodeIds: string[], color?: string) => void;
+  deleteGroup: (groupId: string) => void;
+  toggleGroupCollapse: (groupId: string) => void;
+  updateGroup: (groupId: string, partial: Partial<WorkflowGroup>) => void;
 
   // Actions
   executeWorkflow: (mode?: ExecutionMode, targetNodeId?: string) => Promise<WorkflowExecutionSummary>;
@@ -179,6 +187,39 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   userCredits: null,
   creditTransactions: [],
   isCreditsDrawerOpen: false,
+
+  groups: [],
+  createGroup: (name: string, nodeIds: string[], color = '#6366f1') => {
+    const newGroup: WorkflowGroup = {
+      id: `group-${Date.now()}`,
+      name: name.trim() || 'Visual Group',
+      color,
+      nodeIds,
+      isCollapsed: false
+    };
+    set((state) => ({ groups: [...state.groups, newGroup] }));
+    get().scheduleAutosave();
+  },
+  deleteGroup: (groupId: string) => {
+    set((state) => ({ groups: state.groups.filter((g) => g.id !== groupId) }));
+    get().scheduleAutosave();
+  },
+  toggleGroupCollapse: (groupId: string) => {
+    set((state) => ({
+      groups: state.groups.map((g) =>
+        g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g
+      )
+    }));
+    get().scheduleAutosave();
+  },
+  updateGroup: (groupId: string, partial: Partial<WorkflowGroup>) => {
+    set((state) => ({
+      groups: state.groups.map((g) =>
+        g.id === groupId ? { ...g, ...partial } : g
+      )
+    }));
+    get().scheduleAutosave();
+  },
 
   updateNodeData: (nodeId, partialData) => {
     set((state) => ({
@@ -819,13 +860,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   saveWorkflow: async (_forceServerSync = false) => {
-    const { nodes, edges, viewport, activeWorkflowId, workflowName, autosaveTimer } = get();
+    const { nodes, edges, groups, viewport, activeWorkflowId, workflowName, autosaveTimer } = get();
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
     }
     set({ saveStatus: 'saving' });
 
-    const wf = canvasToWorkflowDefinition(nodes, edges, viewport);
+    const wf = canvasToWorkflowDefinition(nodes, edges, viewport, groups);
     wf.id = activeWorkflowId;
     wf.name = workflowName;
 
@@ -846,11 +887,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   loadWorkflow: (workflowDef: WorkflowDefinition) => {
-    const { nodes, edges, viewport } = workflowDefinitionToCanvas(workflowDef);
+    const { nodes, edges, viewport, groups } = workflowDefinitionToCanvas(workflowDef);
     set({
       nodes,
       edges,
       viewport,
+      groups,
       activeWorkflowId: workflowDef.id,
       workflowName: workflowDef.name || 'Untitled Workflow',
       saveStatus: 'saved',
@@ -986,8 +1028,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   createVersionSnapshot: async (name: string, description?: string) => {
-    const { nodes, edges, viewport, activeWorkflowId, workflowName } = get();
-    const wf = canvasToWorkflowDefinition(nodes, edges, viewport);
+    const { nodes, edges, groups, viewport, activeWorkflowId, workflowName } = get();
+    const wf = canvasToWorkflowDefinition(nodes, edges, viewport, groups);
     wf.id = activeWorkflowId;
     wf.name = workflowName;
 
@@ -999,7 +1041,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       versionNumber,
       name: name.trim() || `Snapshot v${versionNumber}`,
       description,
-      snapshot: wf,
+      snapshot: {
+        ...wf,
+        groups: wf.groups || []
+      },
       createdAt: Date.now()
     };
 
@@ -1230,21 +1275,22 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 export function canvasToWorkflowDefinition(
   nodes: Node[],
   edges: Edge[],
-  viewport: Viewport
+  viewport: Viewport,
+  groups: WorkflowGroup[] = []
 ): WorkflowDefinition {
   const workflowNodes: NodeDefinition[] = nodes.map((n) => {
-    const data = (n.data || {}) as any;
+    const data = (n.data || {}) as Record<string, unknown>;
     return {
       id: n.id,
-      type: data.type || 'source-text',
-      label: data.label || n.id,
-      category: data.category || 'SOURCE',
+      type: (data.type as string) || n.type || 'unknown',
+      label: (data.label as string) || n.id,
+      category: (data.category as any) || 'SOURCE',
       position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
-      inputs: data.inputs || [],
-      outputs: data.outputs || [],
-      config: data.config || {},
-      state: data.state || 'IDLE',
-      executionInfo: data.executionInfo
+      inputs: (data.inputs as any) || [],
+      outputs: (data.outputs as any) || [],
+      config: (data.config as any) || {},
+      state: (data.state as any) || 'IDLE',
+      executionInfo: data.executionInfo as any
     };
   });
 
@@ -1267,17 +1313,19 @@ export function canvasToWorkflowDefinition(
     updatedAt: Date.now(),
     viewport,
     nodes: workflowNodes,
-    connections: workflowConnections
+    connections: workflowConnections,
+    groups
   };
 }
 
 /**
- * Converts a typed WorkflowDefinition back into React Flow nodes, edges and viewport.
+ * Converts a typed WorkflowDefinition back into React Flow nodes, edges, viewport, and groups.
  */
 export function workflowDefinitionToCanvas(wf: WorkflowDefinition): {
   nodes: Node[];
   edges: Edge[];
   viewport: Viewport;
+  groups: WorkflowGroup[];
 } {
   const nodes: Node[] = (wf.nodes || []).map((n) => ({
     id: n.id,
@@ -1302,7 +1350,7 @@ export function workflowDefinitionToCanvas(wf: WorkflowDefinition): {
   return {
     nodes,
     edges,
-    viewport: wf.viewport || { x: 0, y: 0, zoom: 1 }
+    viewport: wf.viewport || { x: 0, y: 0, zoom: 1 },
+    groups: wf.groups || []
   };
 }
-

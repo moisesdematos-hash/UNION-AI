@@ -310,5 +310,123 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
         state: 'connected'
       }
     ]
+  },
+  {
+    id: 'full-funnel-launch-machine',
+    name: 'Full Funnel Launch Machine',
+    description: 'Esteira completa de ponta a ponta: Briefing, Avatar, Roteiro VSL em 12 Etapas, Copy de Página de Vendas de 14 Blocos e Anúncios Omnichannel.',
+    category: 'MARKETING',
+    tags: ['full-funnel', 'sales-page', 'vsl', 'avatar', 'ads-matrix'],
+    icon: 'Sparkles',
+    estimatedCredits: 0.25,
+    nodes: [
+      {
+        id: 'tpl-ff-brief',
+        type: 'source-text',
+        label: 'Product Launch Briefing',
+        category: 'INPUT',
+        position: { x: 80, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Briefing Text', type: 'TEXT', isMulti: false, required: true }
+        ],
+        config: { text: 'Plataforma SaaS para orquestração visual de Inteligência Artificial' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-ff-ava',
+        type: 'marketing-avatar',
+        label: 'Target Avatar Profile',
+        category: 'AI',
+        position: { x: 380, y: 150 },
+        inputs: [
+          { id: 'in-briefing', name: 'briefing', label: 'Briefing', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-avatar', name: 'avatar', label: 'Avatar Insights', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-ff-vsl',
+        type: 'marketing-vsl',
+        label: '12-Step Video Sales Letter',
+        category: 'AI',
+        position: { x: 680, y: 150 },
+        inputs: [
+          { id: 'in-avatar', name: 'avatar', label: 'Avatar Insights', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-vsl', name: 'vsl', label: 'VSL Script', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: { targetDurationMinutes: 15 },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-ff-sp',
+        type: 'marketing-sales-page',
+        label: '14-Block Sales Page Copy',
+        category: 'AI',
+        position: { x: 980, y: 150 },
+        inputs: [
+          { id: 'in-vsl', name: 'vsl', label: 'Core VSL Angle', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-sales-page', name: 'salesPage', label: 'Sales Page Copy', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-ff-ads',
+        type: 'marketing-ads',
+        label: 'Omnichannel Ads Matrix',
+        category: 'AI',
+        position: { x: 1280, y: 150 },
+        inputs: [
+          { id: 'in-vsl', name: 'vsl', label: 'Ad Angles & Hook', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-ads', name: 'ads', label: 'Ad Creatives', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: { platforms: ['META', 'GOOGLE', 'TIKTOK'] },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-conn-ff-1',
+        sourceNodeId: 'tpl-ff-brief',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-ff-ava',
+        targetPortId: 'in-briefing',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-ff-2',
+        sourceNodeId: 'tpl-ff-ava',
+        sourcePortId: 'out-avatar',
+        targetNodeId: 'tpl-ff-vsl',
+        targetPortId: 'in-avatar',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-ff-3',
+        sourceNodeId: 'tpl-ff-vsl',
+        sourcePortId: 'out-vsl',
+        targetNodeId: 'tpl-ff-sp',
+        targetPortId: 'in-vsl',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-ff-4',
+        sourceNodeId: 'tpl-ff-vsl',
+        sourcePortId: 'out-vsl',
+        targetNodeId: 'tpl-ff-ads',
+        targetPortId: 'in-vsl',
+        state: 'connected'
+      }
+    ]
   }
 ];

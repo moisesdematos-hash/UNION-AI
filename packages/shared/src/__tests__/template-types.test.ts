@@ -9,7 +9,7 @@ import { WorkflowDefinition } from '../types/workflow.js';
 
 describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
   it('should validate all official templates against WorkflowTemplateSchema', () => {
-    expect(OFFICIAL_TEMPLATES.length).toBe(3);
+    expect(OFFICIAL_TEMPLATES.length).toBe(4);
 
     for (const template of OFFICIAL_TEMPLATES) {
       const parsed = WorkflowTemplateSchema.parse(template);
@@ -44,10 +44,11 @@ describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
     }
   });
 
-  it('should contain the three signature production templates', () => {
+  it('should contain the signature production templates', () => {
     const ids = OFFICIAL_TEMPLATES.map(t => t.id);
     expect(ids).toContain('youtube-content-factory');
     expect(ids).toContain('competitor-intel-report');
     expect(ids).toContain('marketing-vsl-engine');
+    expect(ids).toContain('full-funnel-launch-machine');
   });
 });

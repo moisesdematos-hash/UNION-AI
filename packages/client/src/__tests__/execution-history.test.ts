@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { useCanvasStore } from '../store/canvasStore.js';
 import { StorageService } from '../services/storageService.js';
 import { WorkflowRun, WorkflowVersion, WorkflowExecutionSummary } from '@union/shared';
@@ -47,7 +47,8 @@ describe('Gate 12: Execution History & Workflow Versioning Engine', () => {
         updatedAt: Date.now(),
         viewport: { x: 0, y: 0, zoom: 1 },
         nodes: [],
-        connections: []
+        connections: [],
+        groups: []
       },
       createdAt: Date.now()
     };
