@@ -1,3 +1,5 @@
+import { env } from '../../config/env.js';
+
 export interface OracleAttachment {
   name: string;
   type: 'image' | 'pdf' | 'document' | 'audio';
@@ -235,7 +237,71 @@ O sistema conta com 4 templates de produção prontos para 1 clique:
       };
     }
 
-    // DEFAULT / RESUMO GERAL
+    // DEFAULT / RESUMO GERAL ou PERGUNTA ABERTA - CHAMADA REAL GROQ LLM SE CHAVE CONFIGURADA
+    if (env.GROQ_API_KEY) {
+      try {
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'qwen/qwen3.8-27b',
+            messages: [
+              {
+                role: 'system',
+                content: `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista e onisciente sobre o sistema UNION.AI 2.0.
+O UNION.AI possui:
+1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
+2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
+3. 14 Blocos de Página de Vendas (Seção 27) e VSL de 12 etapas.
+4. 4 Templates Oficiais pré-configurados.
+5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
+6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
+
+Responda com autoridade, clareza técnica e precisão em português formal.`
+              },
+              ...(req.conversationHistory || []).map(h => ({
+                role: h.sender === 'user' ? 'user' : 'assistant',
+                content: h.text
+              })),
+              {
+                role: 'user',
+                content: req.question
+              }
+            ],
+            max_tokens: 800,
+            temperature: 0.6
+          })
+        });
+
+        if (groqRes.ok) {
+          const groqData = (await groqRes.json()) as any;
+          const generatedAnswer = groqData.choices?.[0]?.message?.content;
+          if (generatedAnswer) {
+            return {
+              category: 'QUICK_START',
+              relevantFiles: [
+                'packages/client/src/App.tsx',
+                'packages/server/src/services/chat/project-oracle-service.ts',
+                'packages/shared/src/types/data-bus.ts'
+              ],
+              suggestedFollowUps: [
+                'Como funciona o Simulador de Conversão e Heatmap?',
+                'O que é o Data Bus e como ele garante zero erro no pipeline?',
+                'Quais templates prontos eu posso utilizar agora?'
+              ],
+              answer: generatedAnswer
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('[ProjectOracle] Erro na chamada do Groq real, usando fallback offline:', err);
+      }
+    }
+
+    // DEFAULT / RESUMO GERAL (FALLBACK DETERMINÍSTICO OFFLINE)
     return {
       category: 'QUICK_START',
       relevantFiles: [

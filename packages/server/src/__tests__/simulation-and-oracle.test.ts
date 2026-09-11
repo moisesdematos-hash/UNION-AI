@@ -99,7 +99,7 @@ describe('SimulationEngine & ProjectOracle Service Tests', () => {
       });
 
       expect(res.category).toBe('QUICK_START');
-      expect(res.answer).toContain('Project Oracle');
+      expect(res.answer.includes('UNION.AI') || res.answer.includes('Project Oracle')).toBe(true);
     });
 
     it('processes multimodal attachments such as PDFs and images', async () => {

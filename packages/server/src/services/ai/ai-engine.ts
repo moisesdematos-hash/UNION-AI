@@ -6,6 +6,7 @@ import {
   MODEL_PRICING_CATALOG,
   calculateModelCreditCost
 } from '@union/shared';
+import { env } from '../../config/env.js';
 
 export class AiEngine {
   /**
@@ -61,8 +62,53 @@ export class AiEngine {
     const promptText = `${request.systemPrompt ? `[SYSTEM]\n${request.systemPrompt}\n\n` : ''}${contextStr ? `[CONTEXT]\n${contextStr}\n\n` : ''}[USER]\n${request.userPrompt}`;
     const promptTokens = this.estimateTokens(promptText);
 
-    // Generate specialized content based on role
-    const { content, structured } = this.generateRoleOutput(request, contextStr);
+    let content = '';
+    let structured: Record<string, unknown> | undefined;
+
+    // Call Real Groq LLM when available
+    if (env.GROQ_API_KEY && env.NODE_ENV !== 'test') {
+      try {
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'qwen/qwen3.8-27b',
+            messages: [
+              {
+                role: 'system',
+                content: request.systemPrompt || `Você é um agente de inteligência artificial de elite especializado em marketing digital, análise de mercado e geração de cópias persuasivas para o UNION.AI.`
+              },
+              {
+                role: 'user',
+                content: `${contextStr ? `[CONTEXTO DE DADOS]\n${contextStr}\n\n` : ''}${request.userPrompt}`
+              }
+            ],
+            max_tokens: 1200,
+            temperature: request.options?.temperature ?? 0.7
+          })
+        });
+
+        if (groqRes.ok) {
+          const groqData = (await groqRes.json()) as any;
+          const liveAnswer = groqData.choices?.[0]?.message?.content;
+          if (liveAnswer) {
+            content = liveAnswer;
+          }
+        }
+      } catch (err) {
+        console.warn('[AiEngine] Fallback offline ativado:', err);
+      }
+    }
+
+    // Deterministic fallback if offline or test
+    if (!content) {
+      const generated = this.generateRoleOutput(request, contextStr);
+      content = generated.content;
+      structured = generated.structured;
+    }
 
     const completionTokens = this.estimateTokens(content);
     const totalTokens = promptTokens + completionTokens;
