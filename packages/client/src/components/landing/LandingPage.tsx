@@ -15,7 +15,9 @@ import {
   Shield,
   Mail,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { OFFICIAL_TEMPLATES, WorkflowTemplate } from '@union/shared';
 import { useCanvasStore } from '../../store/canvasStore.js';
@@ -159,6 +161,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="hover:text-white transition-colors cursor-pointer text-cyan-400 font-semibold"
             >
               Documentação
+            </button>
+            <button
+              onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
+              className="hover:text-white transition-colors cursor-pointer text-zinc-400 flex items-center gap-1"
+              title="Rolar diretamente até o final da página"
+            >
+              <span>Fim</span>
+              <ArrowDown className="h-3 w-3" />
             </button>
           </nav>
 
@@ -1078,6 +1088,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </footer>
+
+      {/* FLOATING QUICK SCROLL CONTROLS (TO BOTTOM & TO TOP) */}
+      <div className="fixed bottom-6 left-6 z-40 flex flex-col space-y-2">
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="h-9 w-9 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 hover:text-white shadow-lg flex items-center justify-center transition-all cursor-pointer hover:scale-105"
+          title="Rolar para o Topo da Página"
+          aria-label="Rolar para o topo"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
+          className="h-9 w-9 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 hover:text-white shadow-lg flex items-center justify-center transition-all cursor-pointer hover:scale-105"
+          title="Rolar até a Última Página / Rodapé"
+          aria-label="Rolar até o final"
+        >
+          <ArrowDown className="h-4 w-4" />
+        </button>
+      </div>
 
       {/* FLOATING COOKIE & PRIVACY BANNER */}
       {showCookieBanner && (

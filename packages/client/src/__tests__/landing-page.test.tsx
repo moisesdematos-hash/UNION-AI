@@ -194,4 +194,26 @@ describe('LandingPage - Modern High-Converting Experience', () => {
     expect(screen.getByText('R$ 99')).toBeDefined();
     expect(screen.getByText('R$ 249')).toBeDefined();
   });
+
+  it('provides quick scroll to bottom and scroll to top controls', () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    render(
+      <LandingPage
+        serverStatus="online"
+        onEnterWorkspace={() => {}}
+      />
+    );
+
+    // Scroll to bottom button in floating controls
+    const scrollBottomBtn = screen.getByLabelText(/Rolar até o final/i);
+    fireEvent.click(scrollBottomBtn);
+    expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+
+    // Scroll to top button in floating controls
+    const scrollTopBtn = screen.getByLabelText(/Rolar para o topo/i);
+    fireEvent.click(scrollTopBtn);
+    expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ top: 0, behavior: 'smooth' }));
+
+    scrollToSpy.mockRestore();
+  });
 });
