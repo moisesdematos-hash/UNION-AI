@@ -7,6 +7,7 @@ import {
   NodeDefinitionSchema, 
   ConnectionDefinitionSchema, 
   ViewportSchema,
+  WorkflowGroupSchema,
   WorkflowEngine
 } from '@union/shared';
 
@@ -25,7 +26,8 @@ const SaveWorkflowStateSchema = z.object({
   description: z.string().optional(),
   viewport: ViewportSchema.optional(),
   nodes: z.array(NodeDefinitionSchema).default([]),
-  connections: z.array(ConnectionDefinitionSchema).default([])
+  connections: z.array(ConnectionDefinitionSchema).default([]),
+  groups: z.array(WorkflowGroupSchema).optional().default([])
 });
 
 workflowsRouter.post('/', (req: AuthenticatedRequest, res: Response) => {

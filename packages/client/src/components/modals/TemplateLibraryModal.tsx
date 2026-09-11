@@ -59,6 +59,7 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
         nodes: template.nodes,
         connections: template.connections,
         viewport: { x: 0, y: 0, zoom: 1 },
+        groups: [],
         version: 1,
         createdAt: Date.now(),
         updatedAt: Date.now()

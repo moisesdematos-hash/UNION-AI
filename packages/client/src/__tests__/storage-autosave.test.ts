@@ -22,6 +22,7 @@ describe('Gate 11: Storage, Persistence & Autosave Engine', () => {
       createdAt: 1000,
       updatedAt: 2000,
       viewport: { x: 50, y: 100, zoom: 1.2 },
+      groups: [],
       nodes: [
         {
           id: 'node-src-1',
@@ -68,6 +69,7 @@ describe('Gate 11: Storage, Persistence & Autosave Engine', () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       viewport: { x: 10, y: 20, zoom: 1.5 },
+      groups: [],
       nodes: [originalNode],
       connections: []
     };
@@ -131,6 +133,7 @@ describe('Gate 11: Storage, Persistence & Autosave Engine', () => {
       createdAt: 500,
       updatedAt: 1000,
       viewport: { x: 15, y: 25, zoom: 0.8 },
+      groups: [],
       nodes: [
         {
           id: 'restored-node-1',

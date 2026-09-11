@@ -27,7 +27,7 @@ export const WorkflowDefinitionSchema = z.object({
   description: z.string().optional(),
   nodes: z.array(NodeDefinitionSchema).default([]),
   connections: z.array(ConnectionDefinitionSchema).default([]),
-  groups: z.array(WorkflowGroupSchema).optional().default([]),
+  groups: z.array(WorkflowGroupSchema).default([]),
   viewport: ViewportSchema.default({ x: 0, y: 0, zoom: 1 }),
   version: z.number().int().positive().default(1),
   createdAt: z.number(),
@@ -40,7 +40,7 @@ export interface WorkflowDefinition {
   description?: string;
   nodes: z.infer<typeof NodeDefinitionSchema>[];
   connections: z.infer<typeof ConnectionDefinitionSchema>[];
-  groups?: WorkflowGroup[];
+  groups: WorkflowGroup[];
   viewport: Viewport;
   version: number;
   createdAt: number;
