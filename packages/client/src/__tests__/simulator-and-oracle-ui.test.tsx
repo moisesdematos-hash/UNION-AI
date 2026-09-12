@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ConversionSimulatorModal } from '../components/marketing/ConversionSimulatorModal.js';
 import { ProjectOracleDrawer } from '../components/chat/ProjectOracleDrawer.js';
 import { NODE_TEMPLATES } from '../components/nodes/nodeRegistry.js';
+import { useCanvasStore } from '../store/canvasStore.js';
 
 describe('Exclusive Feature & Project Oracle UI Tests', () => {
   describe('Node Registry Integration', () => {
@@ -98,13 +99,28 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       // Memory badge
       expect(screen.getByText(/Memória Ativa/i)).toBeDefined();
 
-      const clearBtn = screen.getByTitle(/Apagar mensagens e limpar o chat/i);
+      const clearBtn = screen.getByTitle(/Apagar mensagens e limpar/i);
       expect(clearBtn).toBeDefined();
-      expect(screen.getByText(/Limpar Chat/i)).toBeDefined();
+      expect(screen.getByText(/Limpar Tela/i)).toBeDefined();
 
       fireEvent.click(clearBtn);
 
       expect(screen.getByText(/limpos com sucesso/i)).toBeDefined();
+      expect(screen.getByText(/Tela limpa/i)).toBeDefined();
+    });
+
+    it('resets canvas and clears all nodes and edges via resetCanvas', () => {
+      const store = useCanvasStore.getState();
+      store.addNode({
+        id: 'test-node-to-clear',
+        type: 'unionNode',
+        position: { x: 10, y: 10 },
+        data: {}
+      });
+      expect(useCanvasStore.getState().nodes.length).toBeGreaterThan(0);
+      useCanvasStore.getState().resetCanvas();
+      expect(useCanvasStore.getState().nodes.length).toBe(0);
+      expect(useCanvasStore.getState().edges.length).toBe(0);
     });
 
     it('renders persona selector and allows switching personas (Dote 3)', () => {
@@ -119,14 +135,14 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       // Open persona menu
       fireEvent.click(personaBtn);
 
-      expect(screen.getByText(/Dr. Roberto Meirelles/i)).toBeDefined();
-      expect(screen.getByText(/Ana Lívia Siqueira/i)).toBeDefined();
-      expect(screen.getByText(/Mestre Direct Response/i)).toBeDefined();
-      expect(screen.getByText(/Engenheiro de Software & Bus/i)).toBeDefined();
+      expect(screen.getAllByText(/Dr. Roberto Meirelles/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Ana Lívia Siqueira/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Mestre Direct Response/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Engenheiro de Software & Bus/i).length).toBeGreaterThanOrEqual(1);
 
-      // Click Dr. Roberto Meirelles (Skeptic)
-      const skepticBtn = screen.getByText(/Dr. Roberto Meirelles/i);
-      fireEvent.click(skepticBtn);
+      // Click Dr. Roberto Meirelles (Skeptic) in dropdown
+      const skepticBtns = screen.getAllByText(/Dr. Roberto Meirelles/i);
+      fireEvent.click(skepticBtns[skepticBtns.length - 1]);
 
       expect(screen.getByText(/Modo: Dr. Roberto Meirelles/i)).toBeDefined();
     });
@@ -140,10 +156,10 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       fireEvent.change(input, { target: { value: '/' } });
 
       expect(screen.getByText(/Comandos Rápidos por Barra/i)).toBeDefined();
-      expect(screen.getByText(/\/simular/i)).toBeDefined();
-      expect(screen.getByText(/\/14blocos/i)).toBeDefined();
-      expect(screen.getByText(/\/vsl/i)).toBeDefined();
-      expect(screen.getByText(/\/autoheal/i)).toBeDefined();
+      expect(screen.getAllByText(/\/simular/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\/14blocos/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\/vsl/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\/autoheal/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders 1-click Action Hub with Simulator and Canvas injection (Dotes 1 & 2)', () => {

@@ -715,6 +715,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     get().scheduleAutosave();
   },
 
+
+
   validateCurrentWorkflow: () => {
     const { nodes, edges, viewport } = get();
     const wf = canvasToWorkflowDefinition(nodes, edges, viewport);

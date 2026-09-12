@@ -545,21 +545,7 @@ export function ProjectOracleDrawer({
       } catch {}
     }
 
-    setMessages([
-      {
-        id: `welcome-${Date.now()}`,
-        sender: 'oracle',
-        text: `🧹 **Chat e memória limpos com sucesso!** O histórico de conversas e todas as memórias retidas foram reiniciados.\n\nComo posso ajudar você agora? Pergunte qualquer detalhe sobre o código, arquitetura, simulador de conversão, ou envie arquivos e áudio.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        category: 'QUICK_START',
-        personaMode,
-        suggestedFollowUps: [
-          'Como funciona o Simulador de Conversão CPS?',
-          'O que é o Data Bus e os tipos de portas?',
-          'Quais são os 14 blocos de copy?'
-        ]
-      }
-    ]);
+    setMessages([]);
 
     // Clear server-side SQLite session memory (non-blocking)
     try {
@@ -809,14 +795,14 @@ export function ProjectOracleDrawer({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Clear Chat Button */}
+          {/* Clear Chat / Limpar Tela Button */}
           <button
             onClick={clearChat}
-            title="Apagar mensagens e limpar o chat"
+            title="Apagar mensagens e limpar o chat (Limpar Tela)"
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-300 hover:text-rose-100 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 transition cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden sm:inline">Limpar Chat</span>
+            <span className="hidden sm:inline">Limpar Tela</span>
           </button>
 
           {/* Toggle Auto Voice Read */}
@@ -872,7 +858,18 @@ export function ProjectOracleDrawer({
 
       {/* Messages Feed */}
       <div className="flex-1 p-6 overflow-y-auto space-y-4 select-text">
-        {messages.map((msg) => {
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center text-slate-500 py-24 px-4 select-none">
+            <div className="w-14 h-14 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-center mb-3 text-cyan-400 shadow-lg">
+              <Trash2 className="w-6 h-6 text-cyan-400/80" />
+            </div>
+            <p className="text-sm font-bold text-slate-200">Tela limpa</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">
+              Todas as mensagens e histórico foram limpos com sucesso. Digite uma mensagem, use comandos <span className="text-cyan-400 font-mono">/</span> ou fale por voz para começar.
+            </p>
+          </div>
+        ) : (
+          messages.map((msg) => {
           const msgPersona = msg.personaMode ? PERSONA_CONFIGS[msg.personaMode] : activePersonaCfg;
 
           return (
@@ -1121,7 +1118,7 @@ export function ProjectOracleDrawer({
               </div>
             </div>
           );
-        })}
+        }))}
 
         {isLoading && (
           <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 max-w-[70%]">

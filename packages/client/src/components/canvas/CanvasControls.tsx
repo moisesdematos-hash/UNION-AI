@@ -9,7 +9,8 @@ import {
   Undo2, 
   Redo2, 
   Trash2, 
-  Copy 
+  Copy,
+  Eraser
 } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore.js';
 
@@ -25,7 +26,8 @@ export function CanvasControls() {
     undo,
     redo,
     deleteSelected,
-    duplicateSelected
+    duplicateSelected,
+    resetCanvas
   } = useCanvasStore();
 
   const handleCenter = () => {
@@ -136,6 +138,13 @@ export function CanvasControls() {
           className="p-2 rounded-xl text-union-muted hover:text-union-accentRose hover:bg-union-accentRose/10 transition-colors"
         >
           <Trash2 className="h-4 w-4" />
+        </button>
+        <button
+          onClick={resetCanvas}
+          title="Limpar Tela (Remover Todos os Nós)"
+          className="p-2 rounded-xl text-union-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+        >
+          <Eraser className="h-4 w-4" />
         </button>
       </div>
     </div>
