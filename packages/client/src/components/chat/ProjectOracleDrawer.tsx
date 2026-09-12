@@ -721,7 +721,7 @@ export function ProjectOracleDrawer({
         setDragOver(false);
         handleFileUpload(e.dataTransfer.files);
       }}
-      className={`fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-slate-900/95 backdrop-blur-xl border-l border-cyan-500/30 shadow-2xl flex flex-col text-slate-100 animate-in slide-in-from-right duration-200 ${
+      className={`fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-slate-900/95 backdrop-blur-xl border-l border-cyan-500/30 shadow-2xl flex flex-col text-slate-100 select-text animate-in slide-in-from-right duration-200 ${
         dragOver ? 'ring-4 ring-cyan-500/60' : ''
       }`}
     >
@@ -871,7 +871,7 @@ export function ProjectOracleDrawer({
       </div>
 
       {/* Messages Feed */}
-      <div className="flex-1 p-6 overflow-y-auto space-y-4">
+      <div className="flex-1 p-6 overflow-y-auto space-y-4 select-text">
         {messages.map((msg) => {
           const msgPersona = msg.personaMode ? PERSONA_CONFIGS[msg.personaMode] : activePersonaCfg;
 
@@ -880,7 +880,7 @@ export function ProjectOracleDrawer({
               key={msg.id}
               className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
             >
-              <div className="flex items-center gap-2 mb-1 px-1">
+              <div className="flex items-center gap-2 mb-1 px-1 select-none">
                 {msg.sender === 'oracle' && (
                   <span className="text-sm">{msgPersona?.icon || '🤖'}</span>
                 )}
@@ -905,15 +905,15 @@ export function ProjectOracleDrawer({
               </div>
 
               <div
-                className={`p-4 rounded-2xl max-w-[94%] text-sm leading-relaxed shadow-lg ${
+                className={`p-4 rounded-2xl max-w-[94%] text-sm leading-relaxed shadow-lg select-text ${
                   msg.sender === 'user'
-                    ? 'bg-cyan-600 text-white rounded-tr-none'
-                    : 'bg-slate-950/85 border border-slate-800 text-slate-200 rounded-tl-none'
+                    ? 'bg-cyan-600 text-white rounded-tr-none selection:bg-black/30 selection:text-white'
+                    : 'bg-slate-950/85 border border-slate-800 text-slate-200 rounded-tl-none selection:bg-cyan-500/40 selection:text-white'
                 }`}
               >
                 {/* Render User Attachments if any */}
                 {msg.attachments && msg.attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3 pb-2 border-b border-white/20">
+                  <div className="flex flex-wrap gap-2 mb-3 pb-2 border-b border-white/20 select-none">
                     {msg.attachments.map((att, idx) => (
                       <div
                         key={idx}
@@ -932,7 +932,7 @@ export function ProjectOracleDrawer({
                   </div>
                 )}
 
-                <div className="whitespace-pre-line font-sans prose prose-invert max-w-none text-sm">
+                <div className="whitespace-pre-line font-sans prose prose-invert max-w-none text-sm select-text cursor-text selection:bg-cyan-500/40 selection:text-white">
                   {msg.text}
                 </div>
 

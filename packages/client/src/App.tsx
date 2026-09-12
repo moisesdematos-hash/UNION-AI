@@ -170,9 +170,9 @@ export function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-union-bg text-union-text overflow-hidden select-none">
+    <div className="flex flex-col h-screen w-screen bg-union-bg text-union-text overflow-hidden">
       {/* Top Header */}
-      <header className="h-14 border-b border-union-border bg-union-surface/80 backdrop-blur px-6 flex items-center justify-between z-20">
+      <header className="h-14 border-b border-union-border bg-union-surface/80 backdrop-blur px-6 flex items-center justify-between z-20 select-none">
         <div className="flex items-center space-x-3">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-union-accent to-union-accentCyan flex items-center justify-center shadow-lg shadow-union-accent/20">
             <Sparkles className="h-4 w-4 text-white" />
@@ -385,7 +385,7 @@ export function App() {
       {/* Main Workspace Frame */}
       <main className="flex-1 flex overflow-hidden relative">
         {/* Left Toolbar */}
-        <aside className="w-14 border-r border-union-border bg-union-surface flex flex-col items-center py-4 space-y-4 z-10">
+        <aside className="w-14 border-r border-union-border bg-union-surface flex flex-col items-center py-4 space-y-4 z-10 select-none">
           <button 
             onClick={handleQuickAddNode}
             title="Quick Add Node"
@@ -433,7 +433,7 @@ export function App() {
         />
 
         {/* Canvas Area */}
-        <section className="flex-1 h-full w-full relative">
+        <section className="flex-1 h-full w-full relative select-none">
           <UnionCanvas />
         </section>
 

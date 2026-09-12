@@ -17,6 +17,11 @@
   code, pre {
     font-family: 'JetBrains Mono', monospace;
   }
+
+  ::selection {
+    background-color: rgba(6, 182, 212, 0.35);
+    color: #ffffff;
+  }
 }
 
 /* Custom scrollbars */
