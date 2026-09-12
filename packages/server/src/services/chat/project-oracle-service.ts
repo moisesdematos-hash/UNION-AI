@@ -100,37 +100,69 @@ function detectActions(q: string, answer: string, cat: string): OracleAction[] {
   }
 
   // Load Template action
-  if (lowerQ.includes('template 1') || lowerQ.includes('youtube to vsl') || (lowerQ.includes('template') && lowerQ.includes('youtube'))) {
+  if (lowerQ.includes('template 1') || lowerQ.includes('youtube to vsl') || (lowerQ.includes('template') && lowerQ.includes('youtube')) || lowerQ.includes('youtube content factory')) {
     actions.push({
       id: 'act-load-tpl-1',
       type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar Template 1 (YouTube Ads & VSL)',
+      label: '⚡ Carregar 1: YouTube Content Factory',
       description: 'Instancia o fluxo oficial 1 diretamente no Canvas',
-      payload: { templateId: 'tpl-youtube-ads-vsl' }
+      payload: { templateId: 'youtube-content-factory' }
     });
-  } else if (lowerQ.includes('template 2') || lowerQ.includes('concorrente') || (lowerQ.includes('template') && lowerQ.includes('swot'))) {
+  } else if (lowerQ.includes('template 2') || lowerQ.includes('concorrente') || (lowerQ.includes('template') && lowerQ.includes('swot')) || lowerQ.includes('competitor')) {
     actions.push({
       id: 'act-load-tpl-2',
       type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar Template 2 (Competitor Teardown)',
+      label: '⚡ Carregar 2: Competitor Intelligence Matrix',
       description: 'Instancia o fluxo oficial 2 diretamente no Canvas',
-      payload: { templateId: 'tpl-competitor-teardown' }
+      payload: { templateId: 'competitor-intel-report' }
     });
-  } else if (lowerQ.includes('template 3') || lowerQ.includes('omnichannel')) {
+  } else if (lowerQ.includes('template 3') || lowerQ.includes('marketing vsl') || lowerQ.includes('vsl engine')) {
     actions.push({
       id: 'act-load-tpl-3',
       type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar Template 3 (Omnichannel Engine)',
+      label: '⚡ Carregar 3: Autonomous Marketing VSL Engine',
       description: 'Instancia o fluxo oficial 3 diretamente no Canvas',
-      payload: { templateId: 'tpl-omnichannel-engine' }
+      payload: { templateId: 'marketing-vsl-engine' }
     });
-  } else if (lowerQ.includes('template 4') || lowerQ.includes('avatar') || lowerQ.includes('icp')) {
+  } else if (lowerQ.includes('template 4') || lowerQ.includes('full funnel') || lowerQ.includes('launch machine')) {
     actions.push({
       id: 'act-load-tpl-4',
       type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar Template 4 (Avatar & ICP Research)',
+      label: '⚡ Carregar 4: Full Funnel Launch Machine',
       description: 'Instancia o fluxo oficial 4 diretamente no Canvas',
-      payload: { templateId: 'tpl-avatar-research' }
+      payload: { templateId: 'full-funnel-launch-machine' }
+    });
+  } else if (lowerQ.includes('template 5') || lowerQ.includes('sales page') || lowerQ.includes('14 blocos') || lowerQ.includes('cps')) {
+    actions.push({
+      id: 'act-load-tpl-5',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar 5: Sales Page 14-Blocos & Simulador CPS',
+      description: 'Instancia a esteira padronizada de alta conversão no Canvas',
+      payload: { templateId: 'sales-page-cps-machine' }
+    });
+  } else if (lowerQ.includes('template 6') || lowerQ.includes('rag') || lowerQ.includes('documento') || lowerQ.includes('pdf')) {
+    actions.push({
+      id: 'act-load-tpl-6',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar 6: Chat com Documentos & RAG',
+      description: 'Instancia a esteira de RAG e PDF com Chat Assistant',
+      payload: { templateId: 'document-rag-chat' }
+    });
+  } else if (lowerQ.includes('template 7') || lowerQ.includes('react') || lowerQ.includes('agente autônomo') || lowerQ.includes('autonomous')) {
+    actions.push({
+      id: 'act-load-tpl-7',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar 7: Agente Autônomo Reflexivo (ReAct)',
+      description: 'Instancia o agente autônomo com simulador CPS',
+      payload: { templateId: 'autonomous-react-agent' }
+    });
+  } else if (lowerQ.includes('template 8') || lowerQ.includes('cron') || lowerQ.includes('schedule') || lowerQ.includes('recorrente') || lowerQ.includes('automacao')) {
+    actions.push({
+      id: 'act-load-tpl-8',
+      type: 'LOAD_TEMPLATE',
+      label: '⚡ Carregar 8: Automação Recorrente (Cron Schedule)',
+      description: 'Instancia o fluxo de automação agendada diária',
+      payload: { templateId: 'recurring-automation-pipeline' }
     });
   }
 

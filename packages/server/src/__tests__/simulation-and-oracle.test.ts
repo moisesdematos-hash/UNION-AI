@@ -221,7 +221,7 @@ describe('SimulationEngine & ProjectOracle Service Tests', () => {
       expect(res.actions).toBeDefined();
       const loadTplAction = res.actions?.find(a => a.type === 'LOAD_TEMPLATE');
       expect(loadTplAction).toBeDefined();
-      expect(loadTplAction?.payload.templateId).toBe('tpl-youtube-ads-vsl');
+      expect(loadTplAction?.payload.templateId).toBe('youtube-content-factory');
     });
   });
 });

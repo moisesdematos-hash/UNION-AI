@@ -31,7 +31,8 @@ import { WelcomeModal } from './components/welcome/WelcomeModal.js';
 import { LandingPage } from './components/landing/LandingPage.js';
 import { ConversionSimulatorModal } from './components/marketing/ConversionSimulatorModal.js';
 import { ProjectOracleDrawer } from './components/chat/ProjectOracleDrawer.js';
-import { Target, Bot } from 'lucide-react';
+import { ConnectionStandardsModal } from './components/modals/ConnectionStandardsModal.js';
+import { Target, Bot, Workflow } from 'lucide-react';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
@@ -43,6 +44,7 @@ export function App() {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isConnectionStandardsOpen, setIsConnectionStandardsOpen] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isOracleOpen, setIsOracleOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
@@ -131,6 +133,29 @@ export function App() {
   };
 
   const handleInjectIntoCanvas = (action: any) => {
+    if (action?.type === 'LOAD_TEMPLATE' && action?.payload?.templateId) {
+      const templateId = action.payload.templateId;
+      import('@union/shared').then(({ OFFICIAL_TEMPLATES }) => {
+        const found = OFFICIAL_TEMPLATES.find(t => t.id === templateId);
+        if (found) {
+          useCanvasStore.getState().loadWorkflow({
+            id: `wf-${Date.now()}`,
+            name: found.name,
+            description: found.description,
+            nodes: found.nodes,
+            connections: found.connections,
+            viewport: { x: 0, y: 0, zoom: 1 },
+            groups: [],
+            version: 1,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          useCanvasStore.getState().scheduleAutosave();
+        }
+      });
+      return;
+    }
+
     const templateName = action?.nodeType || 'ai-writer';
     const nodeDef = createNodeFromTemplate(templateName, {
       x: 120 + ((nodes.length * 40) % 400),
@@ -352,6 +377,15 @@ export function App() {
               </button>
 
               <button
+                onClick={() => setIsConnectionStandardsOpen(true)}
+                title="Padronização de Conexões & 8 Esteiras Oficiais (1-Click)"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <Workflow className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Padronizar Conexões</span>
+              </button>
+
+              <button
                 onClick={() => setIsSimulatorOpen(true)}
                 title="AI Conversion Simulator & Heatmap (Chave de Ouro)"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
@@ -446,6 +480,15 @@ export function App() {
         <TemplateLibraryModal 
           isOpen={isTemplateModalOpen} 
           onClose={() => setIsTemplateModalOpen(false)} 
+        />
+        <ConnectionStandardsModal
+          isOpen={isConnectionStandardsOpen}
+          onClose={() => setIsConnectionStandardsOpen(false)}
+          onOpenSimulator={(copy) => {
+            setIsConnectionStandardsOpen(false);
+            if (copy) setSimulatorCopy(copy);
+            setIsSimulatorOpen(true);
+          }}
         />
         <WelcomeModal
           isOpen={isWelcomeOpen}

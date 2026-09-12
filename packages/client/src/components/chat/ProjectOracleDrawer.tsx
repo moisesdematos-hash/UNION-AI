@@ -151,6 +151,20 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     actionText: 'Sabatine minha oferta apontando todas as objeções e falhas'
   },
   {
+    command: '/conexoes',
+    label: 'Guia de Conexões e Portas',
+    description: 'Exibe a matriz de compatibilidade e regras de fios do Data Bus',
+    icon: '⚡',
+    actionText: 'Mostre o guia completo de conexões de blocos, portas e tipos de dados'
+  },
+  {
+    command: '/esteira',
+    label: 'Padronizar Esteira no Canvas',
+    description: 'Monta uma das 8 esteiras oficiais padronizadas no canvas com 1 clique',
+    icon: '🚀',
+    actionText: 'Quais são as 8 esteiras padronizadas que posso carregar agora no canvas?'
+  },
+  {
     command: '/autoheal',
     label: 'Auto-Cura e Diagnóstico',
     description: 'Diagnostica integridade do Data Bus e repara nós desconectados',

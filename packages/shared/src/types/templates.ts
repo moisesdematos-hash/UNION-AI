@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import { NodeDefinitionSchema } from './nodes.js';
 import { ConnectionDefinitionSchema } from './connections.js';
 
@@ -26,6 +26,7 @@ export const WorkflowTemplateSchema = z.object({
 export type WorkflowTemplate = z.infer<typeof WorkflowTemplateSchema>;
 
 export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
+  // 1. YouTube Content Factory
   {
     id: 'youtube-content-factory',
     name: 'YouTube Content Factory',
@@ -121,6 +122,8 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
       }
     ]
   },
+
+  // 2. Competitor Intelligence Matrix
   {
     id: 'competitor-intel-report',
     name: 'Competitor Intelligence Matrix',
@@ -216,6 +219,8 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
       }
     ]
   },
+
+  // 3. Autonomous Marketing VSL Engine
   {
     id: 'marketing-vsl-engine',
     name: 'Autonomous Marketing VSL Engine',
@@ -311,6 +316,8 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
       }
     ]
   },
+
+  // 4. Full Funnel Launch Machine
   {
     id: 'full-funnel-launch-machine',
     name: 'Full Funnel Launch Machine',
@@ -425,6 +432,369 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
         sourcePortId: 'out-vsl',
         targetNodeId: 'tpl-ff-ads',
         targetPortId: 'in-vsl',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 5. Máquina de Páginas de Vendas (14 Blocos + Simulador CPS)
+  {
+    id: 'sales-page-cps-machine',
+    name: 'Sales Page 14-Blocos & Simulador CPS',
+    description: 'Esteira padronizada para geração de copy de 14 blocos psicológicos conectada diretamente ao Simulador Preditivo de Conversão.',
+    category: 'MARKETING',
+    tags: ['sales-page', '14-blocos', 'cps', 'simulador', 'conversao'],
+    icon: 'TrendingUp',
+    estimatedCredits: 0.20,
+    nodes: [
+      {
+        id: 'tpl-sp-src',
+        type: 'source-text',
+        label: 'Briefing da Oferta',
+        category: 'INPUT',
+        position: { x: 80, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Briefing Text', type: 'TEXT', isMulti: false, required: true }
+        ],
+        config: { text: 'Curso online de alta conversão para criação de infoprodutos com IA' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-sp-ava',
+        type: 'marketing-avatar',
+        label: 'Avatar & Dores Viscerais',
+        category: 'AI',
+        position: { x: 380, y: 150 },
+        inputs: [
+          { id: 'in-briefing', name: 'briefing', label: 'Briefing', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-avatar', name: 'avatar', label: 'Perfil do Avatar', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-sp-copy',
+        type: 'marketing-sales-page',
+        label: 'Página de Vendas 14-Blocos',
+        category: 'AI',
+        position: { x: 680, y: 150 },
+        inputs: [
+          { id: 'in-vsl', name: 'vsl', label: 'Avatar / Ângulo', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-sales-page', name: 'salesPage', label: 'Copy 14-Blocos', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-sp-sim',
+        type: 'ai-conversion-simulator',
+        label: 'Simulador CPS & Heatmap',
+        category: 'AI',
+        position: { x: 980, y: 150 },
+        inputs: [
+          { id: 'in-text', name: 'text', label: 'Texto da Copy', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-simulation', name: 'simulationResult', label: 'Resultado CPS', type: 'JSON', isMulti: true, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-conn-sp-1',
+        sourceNodeId: 'tpl-sp-src',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-sp-ava',
+        targetPortId: 'in-briefing',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-sp-2',
+        sourceNodeId: 'tpl-sp-ava',
+        sourcePortId: 'out-avatar',
+        targetNodeId: 'tpl-sp-copy',
+        targetPortId: 'in-vsl',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-sp-3',
+        sourceNodeId: 'tpl-sp-copy',
+        sourcePortId: 'out-sales-page',
+        targetNodeId: 'tpl-sp-sim',
+        targetPortId: 'in-text',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 6. Chat Inteligente com Documentos & RAG
+  {
+    id: 'document-rag-chat',
+    name: 'Chat Inteligente com Documentos (RAG)',
+    description: 'Extração estruturada de documentos e PDFs conectada a assistente conversacional inteligente com zero alucinação.',
+    category: 'RESEARCH',
+    tags: ['pdf', 'documentos', 'rag', 'chat-assistant'],
+    icon: 'Search',
+    estimatedCredits: 0.10,
+    nodes: [
+      {
+        id: 'tpl-doc-src',
+        type: 'source-pdf',
+        label: 'Documento / E-book PDF',
+        category: 'SOURCE',
+        position: { x: 80, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-doc', name: 'document', label: 'Arquivo PDF', type: 'DOCUMENT', isMulti: false, required: true }
+        ],
+        config: { fileName: 'relatorio-mercado.pdf' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-doc-ext',
+        type: 'extractor-document-text',
+        label: 'Extrator de Texto Puro',
+        category: 'EXTRACTOR',
+        position: { x: 380, y: 150 },
+        inputs: [
+          { id: 'in-doc', name: 'doc', label: 'Documento', type: 'DOCUMENT', isMulti: false, required: true }
+        ],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Texto Extraído', type: 'TEXT', isMulti: false, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-doc-prompt',
+        type: 'source-text',
+        label: 'Pergunta / Briefing',
+        category: 'INPUT',
+        position: { x: 380, y: 350 },
+        inputs: [],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Pergunta', type: 'TEXT', isMulti: false, required: true }
+        ],
+        config: { text: 'Quais são as 3 conclusões e dados mais importantes deste documento?' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-doc-chat',
+        type: 'ai-chat',
+        label: 'Assistente Especialista (RAG)',
+        category: 'AI',
+        position: { x: 680, y: 220 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexto do Arquivo', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Pergunta', type: 'TEXT', isMulti: false, required: true }
+        ],
+        outputs: [
+          { id: 'out-response', name: 'response', label: 'Resposta Estruturada', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: { model: 'auto' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-conn-doc-1',
+        sourceNodeId: 'tpl-doc-src',
+        sourcePortId: 'out-doc',
+        targetNodeId: 'tpl-doc-ext',
+        targetPortId: 'in-doc',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-doc-2',
+        sourceNodeId: 'tpl-doc-ext',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-doc-chat',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-doc-3',
+        sourceNodeId: 'tpl-doc-prompt',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-doc-chat',
+        targetPortId: 'in-prompt',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 7. Agente Autônomo com Raciocínio (ReAct)
+  {
+    id: 'autonomous-react-agent',
+    name: 'Agente Autônomo Reflexivo (ReAct)',
+    description: 'Agente inteligente com ciclo de pensamento, execução com ferramentas e critério de parada autônomo.',
+    category: 'AUTOMATION',
+    tags: ['react', 'agente', 'autonomo', 'raciocinio'],
+    icon: 'Sparkles',
+    estimatedCredits: 0.16,
+    nodes: [
+      {
+        id: 'tpl-agt-goal',
+        type: 'source-text',
+        label: 'Objetivo / Meta Estratégica',
+        category: 'INPUT',
+        position: { x: 80, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Meta', type: 'TEXT', isMulti: false, required: true }
+        ],
+        config: { text: 'Analisar tendências de infoprodutos de IA e gerar proposta irresistível de mentoria' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-agt-react',
+        type: 'ai-agent-autonomous',
+        label: 'Agente Autônomo (ReAct)',
+        category: 'AI',
+        position: { x: 380, y: 150 },
+        inputs: [
+          { id: 'in-goal', name: 'goal', label: 'Meta', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-result', name: 'result', label: 'Solução Final', type: 'AI_RESPONSE', isMulti: true, required: true },
+          { id: 'out-logs', name: 'steps', label: 'Passos de Raciocínio', type: 'JSON', isMulti: true, required: false }
+        ],
+        config: { maxSteps: 5 },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-agt-sim',
+        type: 'ai-conversion-simulator',
+        label: 'Simulador CPS de Conversão',
+        category: 'AI',
+        position: { x: 680, y: 150 },
+        inputs: [
+          { id: 'in-text', name: 'text', label: 'Solução da IA', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-simulation', name: 'simulationResult', label: 'Nota CPS & Feedback', type: 'JSON', isMulti: true, required: true }
+        ],
+        config: {},
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-conn-agt-1',
+        sourceNodeId: 'tpl-agt-goal',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-agt-react',
+        targetPortId: 'in-goal',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-agt-2',
+        sourceNodeId: 'tpl-agt-react',
+        sourcePortId: 'out-result',
+        targetNodeId: 'tpl-agt-sim',
+        targetPortId: 'in-text',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 8. Automação Recorrente no Piloto Automático (Schedule Trigger)
+  {
+    id: 'recurring-automation-pipeline',
+    name: 'Automação Recorrente (Cron Schedule)',
+    description: 'Pipeline acionado automaticamente em intervalos regulares para raspar dados, sintetizar com IA e exportar ativos.',
+    category: 'AUTOMATION',
+    tags: ['cron', 'schedule', 'automacao', 'recorrente'],
+    icon: 'Sparkles',
+    estimatedCredits: 0.14,
+    nodes: [
+      {
+        id: 'tpl-auto-cron',
+        type: 'trigger-schedule',
+        label: 'Agendador Recorrente (Cron)',
+        category: 'SOURCE',
+        position: { x: 80, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-tick', name: 'tick', label: 'Disparo Programado', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: { cronExpression: '0 9 * * *' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-auto-src',
+        type: 'source-website',
+        label: 'Rastreador de Notícias / Mercado',
+        category: 'SOURCE',
+        position: { x: 380, y: 150 },
+        inputs: [
+          { id: 'in-url', name: 'url', label: 'Disparo ou URL', type: 'METADATA', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Conteúdo Atualizado', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: { url: 'https://news.ycombinator.com' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-auto-wri',
+        type: 'ai-writer',
+        label: 'Redator de Newsletter Diária',
+        category: 'AI',
+        position: { x: 680, y: 150 },
+        inputs: [
+          { id: 'in-briefing', name: 'briefing', label: 'Notícias do Dia', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-content', name: 'content', label: 'Newsletter Pronta', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: { format: 'executive-summary' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-auto-exp',
+        type: 'output-content',
+        label: 'Exportador de Pacote',
+        category: 'OUTPUT',
+        position: { x: 980, y: 150 },
+        inputs: [
+          { id: 'in-results', name: 'results', label: 'Conteúdo Final', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        outputs: [],
+        config: { exportFormat: 'markdown-pack' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-conn-auto-1',
+        sourceNodeId: 'tpl-auto-cron',
+        sourcePortId: 'out-tick',
+        targetNodeId: 'tpl-auto-src',
+        targetPortId: 'in-url',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-auto-2',
+        sourceNodeId: 'tpl-auto-src',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-auto-wri',
+        targetPortId: 'in-briefing',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-conn-auto-3',
+        sourceNodeId: 'tpl-auto-wri',
+        sourcePortId: 'out-content',
+        targetNodeId: 'tpl-auto-exp',
+        targetPortId: 'in-results',
         state: 'connected'
       }
     ]

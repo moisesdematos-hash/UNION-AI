@@ -9,13 +9,13 @@ import { WorkflowDefinition } from '../types/workflow.js';
 
 describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
   it('should validate all official templates against WorkflowTemplateSchema', () => {
-    expect(OFFICIAL_TEMPLATES.length).toBe(4);
+    expect(OFFICIAL_TEMPLATES.length).toBe(8);
 
     for (const template of OFFICIAL_TEMPLATES) {
       const parsed = WorkflowTemplateSchema.parse(template);
       expect(parsed.id).toBe(template.id);
-      expect(parsed.nodes.length).toBeGreaterThanOrEqual(4);
-      expect(parsed.connections.length).toBeGreaterThanOrEqual(3);
+      expect(parsed.nodes.length).toBeGreaterThanOrEqual(3);
+      expect(parsed.connections.length).toBeGreaterThanOrEqual(2);
       expect(parsed.estimatedCredits).toBeGreaterThan(0);
       expect(TemplateCategoryEnum.safeParse(parsed.category).success).toBe(true);
     }
@@ -50,5 +50,9 @@ describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
     expect(ids).toContain('competitor-intel-report');
     expect(ids).toContain('marketing-vsl-engine');
     expect(ids).toContain('full-funnel-launch-machine');
+    expect(ids).toContain('sales-page-cps-machine');
+    expect(ids).toContain('document-rag-chat');
+    expect(ids).toContain('autonomous-react-agent');
+    expect(ids).toContain('recurring-automation-pipeline');
   });
 });

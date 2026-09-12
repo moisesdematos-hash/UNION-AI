@@ -211,3 +211,20 @@ Para monitoramento em ambientes corporativos e DevOps:
 ---
 
 *Manual homologado para o UNION.AI MVP Verified — Versão 1.0 (2026).*
+
+---
+
+## 13. GUIA RÁPIDO DE CONEXÕES DE BLOCOS & OBJETIVOS
+
+Para visualizar a matriz completa de conexões recomendadas, portas compatíveis e diagramas prontos para esteiras de marketing, criação de conteúdo e automação com IA, consulte o arquivo dedicado:
+👉 **GUIA_CONEXOES_E_OBJETIVOS.md** (localizado na raiz do projeto).
+
+### Resumo das 8 Principais Esteiras:
+1. **YouTube Content Factory**: YouTube Source ➔ AI Content Writer ➔ Exporter.
+2. **Máquina de Páginas de Vendas (14 Blocos)**: Text Prompt ➔ Marketing Avatar ➔ Sales Page Copywriter ➔ Simulador CPS.
+3. **Esteira de VSL & Anúncios**: Marketing Avatar ➔ VSL Scriptwriter (12 Passos) ➔ Multi-Platform Ad Matrix.
+4. **Espionagem de Concorrência**: Website Crawler ➔ Competitor Intelligence ➔ AI Market Analyst.
+5. **Chat com Documentos / RAG**: PDF Document ➔ PDF Extractor ➔ AI Chat Assistant.
+6. **Roteador Inteligente de Custos**: Text Prompt ➔ Smart AI Router ➔ Fast/Deep Branch.
+7. **Agente Autônomo com Raciocínio**: Text Prompt ➔ Autonomous Agent (ReAct) ➔ Simulador CPS.
+8. **Automação Recorrente**: Schedule Trigger (Cron) / Webhook ➔ Extrator ➔ AI Writer ➔ Export.
