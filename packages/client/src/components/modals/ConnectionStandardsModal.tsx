@@ -8,7 +8,8 @@ import {
   Sparkles, 
   Play, 
   Layers, 
-  Bot
+  Bot,
+  Target
 } from 'lucide-react';
 import { OFFICIAL_TEMPLATES, WorkflowTemplate } from '@union/shared';
 import { useCanvasStore } from '../../store/canvasStore.js';
@@ -17,11 +18,14 @@ interface ConnectionStandardsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenSimulator?: (copy?: string) => void;
+  onOpenForge?: () => void;
 }
 
 export const ConnectionStandardsModal: React.FC<ConnectionStandardsModalProps> = ({
   isOpen,
-  onClose
+  onClose,
+  onOpenSimulator,
+  onOpenForge
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'MARKETING' | 'CONTENT' | 'RESEARCH' | 'AUTOMATION'>('ALL');
   const [activeTab, setActiveTab] = useState<'esteiras' | 'portas' | 'arquitetura'>('esteiras');
@@ -134,6 +138,20 @@ export const ConnectionStandardsModal: React.FC<ConnectionStandardsModalProps> =
             <Sparkles className="h-3.5 w-3.5" />
             <span>Diretriz Universal (4 Fases)</span>
           </button>
+
+          {onOpenForge && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenForge();
+              }}
+              className="ml-auto flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
+              title="Abrir Union Forge & Aceleradores"
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <span>Abrir Union Forge ⚡</span>
+            </button>
+          )}
         </div>
 
         {/* Modal Content */}
@@ -207,22 +225,36 @@ export const ConnectionStandardsModal: React.FC<ConnectionStandardsModalProps> =
                         <span>{tpl.nodes.length} nós</span> | <span>{tpl.connections.length} fios tipados</span>
                       </div>
 
-                      <button
-                        onClick={() => handleApplyPipeline(tpl)}
-                        className={appliedId === tpl.id ? 'px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer bg-emerald-600 text-white' : 'px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-md shadow-cyan-600/20 hover:scale-[1.02]'}
-                      >
-                        {appliedId === tpl.id ? (
-                          <>
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Aplicado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-3.5 w-3.5 fill-current" />
-                            <span>Montar no Canvas</span>
-                          </>
+                      <div className="flex items-center gap-2">
+                        {onOpenSimulator && (
+                          <button
+                            onClick={() => {
+                              onClose();
+                              onOpenSimulator(`Esteira: ${tpl.name}\n${tpl.description}`);
+                            }}
+                            className="p-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all cursor-pointer"
+                            title="Testar promessa desta esteira no Simulador CPS"
+                          >
+                            <Target className="h-3.5 w-3.5" />
+                          </button>
                         )}
-                      </button>
+                        <button
+                          onClick={() => handleApplyPipeline(tpl)}
+                          className={appliedId === tpl.id ? 'px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer bg-emerald-600 text-white' : 'px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-md shadow-cyan-600/20 hover:scale-[1.02]'}
+                        >
+                          {appliedId === tpl.id ? (
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>Aplicado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3.5 w-3.5 fill-current" />
+                              <span>Montar no Canvas</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

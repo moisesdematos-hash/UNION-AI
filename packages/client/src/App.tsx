@@ -32,7 +32,8 @@ import { LandingPage } from './components/landing/LandingPage.js';
 import { ConversionSimulatorModal } from './components/marketing/ConversionSimulatorModal.js';
 import { ProjectOracleDrawer } from './components/chat/ProjectOracleDrawer.js';
 import { ConnectionStandardsModal } from './components/modals/ConnectionStandardsModal.js';
-import { Target, Bot, Workflow } from 'lucide-react';
+import { UnionForgeModal } from './components/modals/UnionForgeModal.js';
+import { Target, Bot, Workflow, Zap } from 'lucide-react';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
@@ -45,6 +46,7 @@ export function App() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isConnectionStandardsOpen, setIsConnectionStandardsOpen] = useState(false);
+  const [isUnionForgeOpen, setIsUnionForgeOpen] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isOracleOpen, setIsOracleOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
@@ -386,6 +388,15 @@ export function App() {
               </button>
 
               <button
+                onClick={() => setIsUnionForgeOpen(true)}
+                title="Union Forge: Criação Direta (E-books, Imagens, Produtos) & Aceleradores Virais"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <Zap className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+                <span>⚡ Union Forge</span>
+              </button>
+
+              <button
                 onClick={() => setIsSimulatorOpen(true)}
                 title="AI Conversion Simulator & Heatmap (Chave de Ouro)"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
@@ -488,6 +499,23 @@ export function App() {
             setIsConnectionStandardsOpen(false);
             if (copy) setSimulatorCopy(copy);
             setIsSimulatorOpen(true);
+          }}
+          onOpenForge={() => {
+            setIsConnectionStandardsOpen(false);
+            setIsUnionForgeOpen(true);
+          }}
+        />
+        <UnionForgeModal
+          isOpen={isUnionForgeOpen}
+          onClose={() => setIsUnionForgeOpen(false)}
+          onOpenSimulator={(copy) => {
+            setIsUnionForgeOpen(false);
+            if (copy) setSimulatorCopy(copy);
+            setIsSimulatorOpen(true);
+          }}
+          onOpenStandards={() => {
+            setIsUnionForgeOpen(false);
+            setIsConnectionStandardsOpen(true);
           }}
         />
         <WelcomeModal
