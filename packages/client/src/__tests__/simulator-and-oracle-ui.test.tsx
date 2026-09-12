@@ -141,8 +141,8 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
       expect(screen.getAllByText(/Engenheiro de Software & Bus/i).length).toBeGreaterThanOrEqual(1);
 
       // Click Dr. Roberto Meirelles (Skeptic) in dropdown
-      const skepticBtns = screen.getAllByText(/Dr. Roberto Meirelles/i);
-      fireEvent.click(skepticBtns[skepticBtns.length - 1]);
+      const skepticBtn = screen.getByRole('button', { name: /Dr\. Roberto Meirelles/i });
+      fireEvent.click(skepticBtn);
 
       expect(screen.getByText(/Modo: Dr. Roberto Meirelles/i)).toBeDefined();
     });
