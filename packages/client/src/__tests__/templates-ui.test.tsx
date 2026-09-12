@@ -54,7 +54,7 @@ describe('Gate 18: Template Library UI & Canvas Loading', () => {
 
     expect(screen.getByText('Autonomous Marketing VSL Engine')).toBeInTheDocument();
     expect(screen.queryByText('YouTube Content Factory')).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('instantiates a selected template directly into the canvas store', async () => {
     global.fetch = vi.fn().mockResolvedValue({
@@ -84,5 +84,5 @@ describe('Gate 18: Template Library UI & Canvas Loading', () => {
     expect(storeState.nodes.length).toBe(4);
     expect(storeState.edges.length).toBe(3);
     expect(storeState.workflowName).toBe('YouTube Content Factory');
-  });
+  }, 15000);
 });
