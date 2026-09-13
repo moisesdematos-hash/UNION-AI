@@ -25,6 +25,8 @@ import {
   Printer,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   ShieldCheck
 } from 'lucide-react';
 import { EbookReaderModal } from '../modals/EbookReaderModal.js';
@@ -173,6 +175,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [showReaderModal, setShowReaderModal] = useState(false);
   const [customViewerEbook, setCustomViewerEbook] = useState<any>(null);
+  const [viewerChapterIdx, setViewerChapterIdx] = useState(0);
   const [showChaptersList, setShowChaptersList] = useState(false);
   const [isNodeCollapsed, setIsNodeCollapsed] = useState(false);
   const [isPortsCollapsed, setIsPortsCollapsed] = useState(false);
@@ -502,6 +505,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       className={`rounded-2xl bg-union-card border transition-all duration-200 text-union-text shadow-2xl backdrop-blur ${
         nodeData.type === 'ai-ebook-forge' 
           ? 'w-96 min-w-[300px] max-w-[580px] resize-x overflow-hidden border-amber-500/50 shadow-amber-950/20 ring-1 ring-amber-500/30' 
+          : nodeData.type === 'output-modal-viewer'
+          ? `${isNodeCollapsed ? 'w-[640px] h-auto' : 'w-[640px] h-[640px] min-w-[420px] min-h-[420px] max-w-[960px] max-h-[960px]'} resize overflow-hidden flex flex-col border-emerald-500/50 shadow-emerald-950/30 ring-1 ring-emerald-500/30`
           : 'w-72'
       } ${categoryStyle.border} ${selected ? 'ring-2 ring-union-accent shadow-union-accent/20' : ''}`}
     >
@@ -577,7 +582,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       {/* 2. Ports Section (Inputs on Left, Outputs on Right) */}
       {!isNodeCollapsed ? (
         <div className="px-3.5 py-2.5 border-b border-union-border/40 space-y-2">
-          {nodeData.type === 'ai-ebook-forge' && (
+          {(nodeData.type === 'ai-ebook-forge' || nodeData.type === 'output-modal-viewer') && (
             <button
               onClick={() => setIsPortsCollapsed(!isPortsCollapsed)}
               className="w-full flex items-center justify-between text-[10px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer pb-1"
@@ -721,7 +726,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
       {/* 3. Interactive Body / Configuration */}
       {!isNodeCollapsed && (
-        <div className="p-3.5 space-y-2.5 text-xs">
+        <div className={`p-3.5 space-y-2.5 text-xs ${nodeData.type === 'output-modal-viewer' ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
         {/* Source Nodes Configuration & Extraction Trigger */}
         {nodeData.category === 'SOURCE' && (
           <div className="space-y-2">
@@ -1244,7 +1249,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
         {/* Output Nodes / Modal Viewer */}
         {nodeData.category === 'OUTPUT' && (
-          <div className="space-y-2.5">
+          <div className={`space-y-2.5 ${nodeData.type === 'output-modal-viewer' ? 'flex-1 flex flex-col min-h-0' : ''}`}>
             {nodeData.type === 'output-modal-viewer' ? (() => {
               const incoming = edges.filter(e => e.target === id);
               const { nodes } = useCanvasStore.getState();
@@ -1280,92 +1285,244 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                 }
               };
 
+              const chapters: Array<any> = resolvedEbook?.chapters || [];
+              const activeIdx = Math.max(0, Math.min(viewerChapterIdx, Math.max(0, chapters.length - 1)));
+              const currentChapter = chapters[activeIdx];
+              const totalWordsCount = resolvedEbook?.totalWords || resolvedEbook?.totalWordCount || 0;
+
               return (
-                <div className="space-y-2">
+                <div className="flex-1 flex flex-col min-h-0 space-y-2.5">
                   {sourceNode ? (
-                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1.5 truncate max-w-[180px]">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                          <span className="truncate">Origem: {String((sourceNode.data as any)?.label || 'Nó')}</span>
-                        </span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-zinc-300 shrink-0">
-                          {incoming.length} Conexão{incoming.length > 1 ? 'ões' : ''}
-                        </span>
+                    <div className="flex-1 flex flex-col min-h-0 space-y-2.5">
+                      {/* 1. Header with Connection Info & E-book Title */}
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 shrink-0 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1.5 truncate max-w-[280px]">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                            <span className="truncate">Origem: {String((sourceNode.data as any)?.label || 'Nó')}</span>
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                              {incoming.length} Conexão{incoming.length > 1 ? 'ões' : ''}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-300">
+                              Leitor Quadrado 3x
+                            </span>
+                          </div>
+                        </div>
+
+                        {hasOutput && (
+                          <div className="flex items-baseline justify-between gap-2 pt-0.5">
+                            <h4 className="text-xs font-bold text-white truncate max-w-[320px]">
+                              {resolvedEbook?.title}
+                            </h4>
+                            <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-300 shrink-0">
+                              <span className="text-emerald-400 font-bold">
+                                ✓ {Number(totalWordsCount).toLocaleString('pt-BR')} palavras
+                              </span>
+                              <span>•</span>
+                              <span>{chapters.length} capítulo{chapters.length !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {hasOutput ? (
-                        <div className="space-y-2 pt-0.5">
-                          <div className="p-2 rounded-lg bg-black/40 border border-emerald-500/20">
-                            <span className="text-[11px] font-bold text-white block truncate">
-                              {resolvedEbook?.title}
-                            </span>
-                            <div className="flex items-center gap-2 mt-1 text-[9px] font-mono text-zinc-400">
-                              <span className="text-emerald-400 font-bold">
-                                ✓ {resolvedEbook?.totalWords || resolvedEbook?.totalWordCount || 0} palavras
-                              </span>
-                              <span>•</span>
-                              <span>{resolvedEbook?.chapters?.length || 1} capítulo(s)</span>
+                        <div className="flex-1 flex flex-col min-h-0 space-y-2">
+                          {/* 2. Chapter Tabs Selector */}
+                          {chapters.length > 1 && (
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 scrollbar-thin">
+                              {chapters.map((ch: any, idx: number) => (
+                                <button
+                                  key={ch.chapterNumber || idx}
+                                  onClick={() => setViewerChapterIdx(idx)}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono whitespace-nowrap transition-all cursor-pointer ${
+                                    activeIdx === idx && viewerChapterIdx !== -1
+                                      ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-sm shadow-emerald-500/20 font-bold'
+                                      : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5'
+                                  }`}
+                                >
+                                  Capítulo {ch.chapterNumber}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setViewerChapterIdx(-1)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono whitespace-nowrap transition-all cursor-pointer ${
+                                  viewerChapterIdx === -1
+                                    ? 'bg-teal-500/25 text-teal-300 border border-teal-500/50 font-bold'
+                                    : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5'
+                                }`}
+                              >
+                                Visão Completa .MD
+                              </button>
                             </div>
+                          )}
+
+                          {/* 3. Spacious Live Reading Screen */}
+                          <div className="flex-1 min-h-[220px] rounded-xl bg-black/80 border border-emerald-500/25 p-3.5 overflow-y-auto flex flex-col font-sans select-text scrollbar-thin scrollbar-thumb-emerald-500/30 shadow-inner">
+                            {viewerChapterIdx === -1 ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                                  <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
+                                    <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
+                                    Documento Consolidado Integral
+                                  </span>
+                                  <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                    {totalWordsCount} palavras totais
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-zinc-300 leading-relaxed font-mono whitespace-pre-wrap selection:bg-emerald-500/40">
+                                  {resolvedEbook?.fullMarkdown || 'Nenhum markdown integral disponível.'}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                                  <div>
+                                    <span className="text-[9px] uppercase font-mono tracking-wider text-emerald-400 block">
+                                      Capítulo {currentChapter?.chapterNumber || 1} de {chapters.length || 1}
+                                    </span>
+                                    <h5 className="text-xs font-bold text-white">
+                                      {currentChapter?.title || 'Capítulo'}
+                                    </h5>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-400">
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 font-semibold">
+                                      {currentChapter?.wordCount || 0} palavras
+                                    </span>
+                                    {currentChapter?.pagesRange && (
+                                      <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-300">
+                                        Págs {currentChapter.pagesRange}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="text-[11px] text-zinc-200 leading-relaxed whitespace-pre-wrap selection:bg-emerald-500/40 pt-1">
+                                  {currentChapter?.content || 'Carregando conteúdo do capítulo...'}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
-                          <button
-                            onClick={handleOpenModal}
-                            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs font-sans flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-                          >
-                            <BookOpen className="h-4 w-4 text-black" />
-                            <span>👁️ Abrir Resultado no Modal</span>
-                          </button>
+                          {/* 4. Controls & Action Buttons */}
+                          <div className="space-y-2 shrink-0 pt-0.5">
+                            {chapters.length > 1 && viewerChapterIdx !== -1 && (
+                              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 px-1">
+                                <button
+                                  disabled={activeIdx <= 0}
+                                  onClick={() => setViewerChapterIdx(activeIdx - 1)}
+                                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/10 transition-colors cursor-pointer flex items-center gap-1"
+                                >
+                                  <ChevronLeft className="h-3 w-3" /> Capítulo Anterior
+                                </button>
+                                <span className="text-[9px] text-zinc-400">
+                                  Capítulo {activeIdx + 1} de {chapters.length}
+                                </span>
+                                <button
+                                  disabled={activeIdx >= chapters.length - 1}
+                                  onClick={() => setViewerChapterIdx(activeIdx + 1)}
+                                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/10 transition-colors cursor-pointer flex items-center gap-1"
+                                >
+                                  Próximo Capítulo <ChevronRight className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
 
-                          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                            {/* Primary CTA */}
                             <button
-                              onClick={() => {
-                                const md = resolvedEbook?.fullMarkdown || '';
-                                navigator.clipboard.writeText(md);
-                              }}
-                              className="py-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1 transition-colors"
+                              onClick={handleOpenModal}
+                              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs font-sans flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
                             >
-                              <Copy className="h-3 w-3" />
-                              <span>Copiar .MD</span>
+                              <BookOpen className="h-4 w-4 text-black" />
+                              <span>👁️ Abrir Resultado no Modal</span>
                             </button>
-                            <button
-                              onClick={() => {
-                                const md = resolvedEbook?.fullMarkdown || '';
-                                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `${(resolvedEbook?.title || 'resultado').toLowerCase().replace(/\s+/g, '_')}.md`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-                              }}
-                              className="py-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1 transition-colors"
-                            >
-                              <Download className="h-3 w-3" />
-                              <span>Baixar .MD</span>
-                            </button>
+
+                            {/* Quick Export Tools */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => {
+                                  const md = resolvedEbook?.fullMarkdown || currentChapter?.content || '';
+                                  navigator.clipboard.writeText(md);
+                                }}
+                                className="py-1.5 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <Copy className="h-3.5 w-3.5 text-zinc-400" />
+                                <span>Copiar .MD</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const md = resolvedEbook?.fullMarkdown || currentChapter?.content || '';
+                                  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${(resolvedEbook?.title || 'resultado').toLowerCase().replace(/\s+/g, '_')}.md`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                                className="py-1.5 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <Download className="h-3.5 w-3.5 text-zinc-400" />
+                                <span>Baixar .MD</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-3 text-center rounded-lg bg-black/20 border border-white/5 space-y-1">
-                          <span className="text-[10px] font-mono text-zinc-400 block">
-                            Aguardando conclusão do nó...
-                          </span>
-                          <span className="text-[9px] text-zinc-500 block">
-                            Execute o nó "{String((sourceNode.data as any)?.label || 'anterior')}" para visualizar o modal aqui.
-                          </span>
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center rounded-xl bg-black/40 border border-emerald-500/20 space-y-3">
+                          <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center animate-pulse">
+                            <BookOpen className="h-6 w-6 text-emerald-400" />
+                          </div>
+                          <div className="space-y-1 max-w-sm">
+                            <span className="text-xs font-bold text-white block">
+                              Aguardando conclusão do nó...
+                            </span>
+                            <span className="text-[10px] font-mono text-emerald-400 block">
+                              Origem: {String((sourceNode.data as any)?.label || 'Nó')}
+                            </span>
+                            <p className="text-[11px] text-zinc-400 leading-relaxed pt-1">
+                              Execute o nó "{String((sourceNode.data as any)?.label || 'anterior')}" para visualizar o modal aqui.
+                            </p>
+                          </div>
+                          <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-mono text-zinc-400">
+                            📐 Visualizador Quadrado 3x • Pronto para Leitura
+                          </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="p-4 text-center rounded-xl border-2 border-dashed border-union-border/60 bg-union-surface/30 space-y-1.5">
-                      <BookOpen className="h-5 w-5 text-emerald-400/60 mx-auto" />
-                      <span className="text-xs font-bold text-zinc-300 block">
-                        Aguardando Conexão
-                      </span>
-                      <p className="text-[10px] text-zinc-500 leading-relaxed max-w-[200px] mx-auto">
-                        Ligue a saída de um E-book, AI Writer ou Resumo aqui para abrir em modal.
-                      </p>
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-950/10 space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                        <BookOpen className="h-8 w-8 text-emerald-400" />
+                      </div>
+                      <div className="space-y-1.5 max-w-md">
+                        <span className="text-sm font-bold text-white block">
+                          Aguardando Conexão
+                        </span>
+                        <p className="text-xs text-zinc-400 leading-relaxed">
+                          Ligue a saída de um <strong>E-book</strong>, <strong>AI Writer</strong> ou <strong>Resumo</strong> aqui para abrir em modal.
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-black/40 border border-white/10 text-left space-y-1.5 w-full max-w-sm text-[10px] font-mono text-zinc-300">
+                        <div className="text-emerald-400 font-bold flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3" />
+                          <span>Visualizador Quadrado (3x de Área):</span>
+                        </div>
+                        <div className="text-zinc-400 flex items-center gap-2">
+                          <span>•</span>
+                          <span>Leitor de capítulos integrado diretamente no Canvas</span>
+                        </div>
+                        <div className="text-zinc-400 flex items-center gap-2">
+                          <span>•</span>
+                          <span>Botão para abrir resultado no Modal Leitor Completo</span>
+                        </div>
+                        <div className="text-zinc-400 flex items-center gap-2">
+                          <span>•</span>
+                          <span>Redimensionável (arraste o canto inferior direito)</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -155,4 +155,107 @@ describe('Output Modal Viewer Node', () => {
     // Modal is opened displaying the chapter title in sidebar and content
     expect(screen.getAllByText('Fundamentos da Automação Cognitiva').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('renders with 3x square dimensions (w-[640px] h-[640px]) and supports live chapter tabs preview', () => {
+    const multiChapterEbook = {
+      title: 'Guia Definitivo do Canvas com IA',
+      targetNiche: 'Tecnologia',
+      totalWords: 5200,
+      totalWordCount: 5200,
+      chapters: [
+        {
+          chapterNumber: 1,
+          title: 'Arquitetura de Nós Reativos',
+          wordCount: 1300,
+          pagesRange: '1-3',
+          content: 'No capítulo 1 desvendamos a conexão de nós reativos no Canvas.'
+        },
+        {
+          chapterNumber: 2,
+          title: 'Geração Dinâmica de Conteúdo',
+          wordCount: 1450,
+          pagesRange: '4-6',
+          content: 'No capítulo 2 explicamos os prompts encadeados de alta fidelidade.'
+        }
+      ],
+      fullMarkdown: '# Guia Definitivo do Canvas com IA\n\nCapítulo 1...\nCapítulo 2...'
+    };
+
+    const viewerData = {
+      id: 'viewer-square',
+      type: 'output-modal-viewer',
+      label: 'Visualizador de Saída',
+      category: 'OUTPUT' as const,
+      state: 'IDLE' as const,
+      inputs: [{ id: 'in-ebook', name: 'ebook', label: 'E-book', type: 'DOCUMENT' as const, isMulti: false, required: false }],
+      outputs: [],
+      config: {}
+    };
+
+    useCanvasStore.setState({
+      nodes: [
+        {
+          id: 'ebook-source',
+          type: 'unionNode',
+          position: { x: 0, y: 0 },
+          data: {
+            id: 'ebook-source',
+            label: 'Union E-book Forge',
+            config: {
+              generatedEbook: multiChapterEbook
+            }
+          } as any
+        },
+        {
+          id: 'viewer-square',
+          type: 'unionNode',
+          position: { x: 400, y: 0 },
+          data: viewerData as any
+        }
+      ],
+      edges: [
+        { id: 'edge-sq', source: 'ebook-source', target: 'viewer-square', sourceHandle: 'out-ebook', targetHandle: 'in-ebook' }
+      ]
+    });
+
+    const { container } = render(
+      <ReactFlowProvider>
+        <UnionNode
+          id="viewer-square"
+          data={viewerData as any}
+          selected={false}
+          type="unionNode"
+          zIndex={1}
+          isConnectable={true}
+          positionAbsoluteX={400}
+          positionAbsoluteY={0}
+          dragging={false}
+          deletable={true}
+          selectable={true}
+          draggable={true}
+        />
+      </ReactFlowProvider>
+    );
+
+    // Verify 3x square classes
+    const nodeEl = container.querySelector('#union-node-viewer-square');
+    expect(nodeEl).toBeInTheDocument();
+    expect(nodeEl?.className).toContain('w-[640px]');
+    expect(nodeEl?.className).toContain('h-[640px]');
+
+    // Verify chapter 1 is rendered initially
+    expect(screen.getByText('Arquitetura de Nós Reativos')).toBeInTheDocument();
+    expect(screen.getByText(/No capítulo 1 desvendamos a conexão/i)).toBeInTheDocument();
+
+    // Verify chapter tabs exist
+    const ch2Tab = screen.getByText('Capítulo 2');
+    expect(ch2Tab).toBeInTheDocument();
+
+    // Click chapter 2 tab
+    fireEvent.click(ch2Tab);
+
+    // Verify chapter 2 is now displayed in the live reader pane
+    expect(screen.getByText('Geração Dinâmica de Conteúdo')).toBeInTheDocument();
+    expect(screen.getByText(/No capítulo 2 explicamos os prompts encadeados/i)).toBeInTheDocument();
+  });
 });
