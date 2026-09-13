@@ -545,6 +545,23 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
       format: 'markdown-bundle',
       includeMetadata: true
     }
+  },
+
+  'output-modal-viewer': {
+    type: 'output-modal-viewer',
+    label: 'Visualizador de Saída (Modal / Reader)',
+    category: 'OUTPUT',
+    description: 'Recebe e-books, documentos ou textos da saída de qualquer nó e exibe num modal interativo, leitor lateral e exportação PDF',
+    inputs: [
+      { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+      { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false },
+      { id: 'in-data', name: 'data', label: 'Dados Gerais', type: 'JSON', isMulti: false, required: false }
+    ],
+    outputs: [],
+    defaultConfig: {
+      autoOpen: false,
+      title: 'Visualizador de Saída'
+    }
   }
 };
 

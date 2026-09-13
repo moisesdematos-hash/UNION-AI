@@ -172,6 +172,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
   const [config, setConfig] = useState(nodeData.config || {});
   const [isExtracting, setIsExtracting] = useState(false);
   const [showReaderModal, setShowReaderModal] = useState(false);
+  const [customViewerEbook, setCustomViewerEbook] = useState<any>(null);
   const [showChaptersList, setShowChaptersList] = useState(false);
   const [isNodeCollapsed, setIsNodeCollapsed] = useState(false);
   const [isPortsCollapsed, setIsPortsCollapsed] = useState(false);
@@ -1240,6 +1241,142 @@ export function UnionNode({ id, data, selected }: NodeProps) {
             </button>
           </div>
         )}
+
+        {/* Output Nodes / Modal Viewer */}
+        {nodeData.category === 'OUTPUT' && (
+          <div className="space-y-2.5">
+            {nodeData.type === 'output-modal-viewer' ? (() => {
+              const incoming = edges.filter(e => e.target === id);
+              const { nodes } = useCanvasStore.getState();
+              const sourceNode = incoming.length > 0 ? nodes.find(n => n.id === incoming[0].source) : null;
+              const sData = sourceNode?.data as Record<string, any> | undefined;
+              const sCfg = sData?.config as Record<string, any> | undefined;
+
+              const rawEbook = sCfg?.generatedEbook;
+              const rawText = sCfg?.fullOutput || sCfg?.text || sCfg?.extractedSummary || '';
+              const hasOutput = Boolean(rawEbook || (rawText && String(rawText).trim().length > 0));
+
+              const resolvedEbook = rawEbook || (hasOutput ? {
+                title: sCfg?.title || sCfg?.videoTitle || sData?.label || 'Documento Consolidado',
+                targetNiche: sCfg?.targetNiche || sCfg?.niche || 'Conteúdo Estratégico',
+                totalWords: String(rawText).split(/\s+/).filter(Boolean).length || 500,
+                totalWordCount: String(rawText).split(/\s+/).filter(Boolean).length || 500,
+                fullMarkdown: String(rawText),
+                chapters: [
+                  {
+                    chapterNumber: 1,
+                    title: 'Documento Integral',
+                    wordCount: String(rawText).split(/\s+/).filter(Boolean).length || 500,
+                    pagesRange: '1-2',
+                    content: String(rawText)
+                  }
+                ]
+              } : null);
+
+              const handleOpenModal = () => {
+                if (resolvedEbook) {
+                  setCustomViewerEbook(resolvedEbook);
+                  setShowReaderModal(true);
+                }
+              };
+
+              return (
+                <div className="space-y-2">
+                  {sourceNode ? (
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1.5 truncate max-w-[180px]">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                          <span className="truncate">Origem: {String((sourceNode.data as any)?.label || 'Nó')}</span>
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-zinc-300 shrink-0">
+                          {incoming.length} Conexão{incoming.length > 1 ? 'ões' : ''}
+                        </span>
+                      </div>
+
+                      {hasOutput ? (
+                        <div className="space-y-2 pt-0.5">
+                          <div className="p-2 rounded-lg bg-black/40 border border-emerald-500/20">
+                            <span className="text-[11px] font-bold text-white block truncate">
+                              {resolvedEbook?.title}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1 text-[9px] font-mono text-zinc-400">
+                              <span className="text-emerald-400 font-bold">
+                                ✓ {resolvedEbook?.totalWords || resolvedEbook?.totalWordCount || 0} palavras
+                              </span>
+                              <span>•</span>
+                              <span>{resolvedEbook?.chapters?.length || 1} capítulo(s)</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleOpenModal}
+                            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs font-sans flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                          >
+                            <BookOpen className="h-4 w-4 text-black" />
+                            <span>👁️ Abrir Resultado no Modal</span>
+                          </button>
+
+                          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                            <button
+                              onClick={() => {
+                                const md = resolvedEbook?.fullMarkdown || '';
+                                navigator.clipboard.writeText(md);
+                              }}
+                              className="py-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1 transition-colors"
+                            >
+                              <Copy className="h-3 w-3" />
+                              <span>Copiar .MD</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                const md = resolvedEbook?.fullMarkdown || '';
+                                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${(resolvedEbook?.title || 'resultado').toLowerCase().replace(/\s+/g, '_')}.md`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                              className="py-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1 transition-colors"
+                            >
+                              <Download className="h-3 w-3" />
+                              <span>Baixar .MD</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 text-center rounded-lg bg-black/20 border border-white/5 space-y-1">
+                          <span className="text-[10px] font-mono text-zinc-400 block">
+                            Aguardando conclusão do nó...
+                          </span>
+                          <span className="text-[9px] text-zinc-500 block">
+                            Execute o nó "{String((sourceNode.data as any)?.label || 'anterior')}" para visualizar o modal aqui.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center rounded-xl border-2 border-dashed border-union-border/60 bg-union-surface/30 space-y-1.5">
+                      <BookOpen className="h-5 w-5 text-emerald-400/60 mx-auto" />
+                      <span className="text-xs font-bold text-zinc-300 block">
+                        Aguardando Conexão
+                      </span>
+                      <p className="text-[10px] text-zinc-500 leading-relaxed max-w-[200px] mx-auto">
+                        Ligue a saída de um E-book, AI Writer ou Resumo aqui para abrir em modal.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })() : (
+              <div className="p-2.5 rounded-lg bg-union-surface border border-union-border text-xs text-union-muted">
+                {String(config.format || 'Export Destination')}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       )}
 
@@ -1275,7 +1412,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         <EbookReaderModal
           isOpen={showReaderModal}
           onClose={() => setShowReaderModal(false)}
-          ebook={config.generatedEbook as any}
+          ebook={(customViewerEbook || config.generatedEbook) as any}
         />
       )}
     </div>
