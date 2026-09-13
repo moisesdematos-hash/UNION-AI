@@ -160,6 +160,9 @@ export function UnionNode({ id, data, selected }: NodeProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [showReaderModal, setShowReaderModal] = useState(false);
   const [showChaptersList, setShowChaptersList] = useState(false);
+  const [isNodeCollapsed, setIsNodeCollapsed] = useState(false);
+  const [isPortsCollapsed, setIsPortsCollapsed] = useState(false);
+  const [isParamsCollapsed, setIsParamsCollapsed] = useState(false);
 
   useEffect(() => {
     if (nodeData.config) {
@@ -459,7 +462,9 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       id={`union-node-${id}`}
       data-node-id={id}
       className={`rounded-2xl bg-union-card border transition-all duration-200 text-union-text shadow-2xl backdrop-blur ${
-        nodeData.type === 'ai-ebook-forge' ? 'w-96 border-amber-500/50 shadow-amber-950/20 ring-1 ring-amber-500/30' : 'w-72'
+        nodeData.type === 'ai-ebook-forge' 
+          ? 'w-96 min-w-[300px] max-w-[580px] resize-x overflow-hidden border-amber-500/50 shadow-amber-950/20 ring-1 ring-amber-500/30' 
+          : 'w-72'
       } ${categoryStyle.border} ${selected ? 'ring-2 ring-union-accent shadow-union-accent/20' : ''}`}
     >
       {/* 1. Header */}
@@ -480,6 +485,14 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
         <div className="flex items-center space-x-1.5 relative">
           {renderStateBadge(nodeData.state)}
+
+          <button
+            onClick={() => setIsNodeCollapsed(!isNodeCollapsed)}
+            title={isNodeCollapsed ? "Expandir Nó Completo" : "Recolher Nó"}
+            className="p-1 rounded-md text-union-muted hover:text-white hover:bg-union-surface transition-colors cursor-pointer"
+          >
+            {isNodeCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+          </button>
 
           <button
             onClick={() => setShowMenu(!showMenu)}
@@ -524,70 +537,153 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       </div>
 
       {/* 2. Ports Section (Inputs on Left, Outputs on Right) */}
-      <div className="px-3.5 py-3 border-b border-union-border/40 space-y-2">
-        {/* Input Ports */}
-        {nodeData.inputs && nodeData.inputs.length > 0 && (
-          <div className="space-y-2">
-            <span className="text-[9px] uppercase font-mono tracking-wider text-union-muted block">Inputs</span>
-            {nodeData.inputs.map((port) => {
-              const style = getDataTypeStyle(port.type);
-              const incomingCount = edges.filter(
-                (e) => e.target === id && e.targetHandle === port.id
-              ).length;
+      {!isNodeCollapsed ? (
+        <div className="px-3.5 py-2.5 border-b border-union-border/40 space-y-2">
+          {nodeData.type === 'ai-ebook-forge' && (
+            <button
+              onClick={() => setIsPortsCollapsed(!isPortsCollapsed)}
+              className="w-full flex items-center justify-between text-[10px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer pb-1"
+            >
+              <span className="flex items-center gap-1.5">
+                <span>Portas de Conexão</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-zinc-300">
+                  {nodeData.inputs?.length || 0} In / {nodeData.outputs?.length || 0} Out
+                </span>
+              </span>
+              {isPortsCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+            </button>
+          )}
 
-              return (
-                <div key={port.id} className="relative flex items-center pl-3 py-1 rounded bg-union-surface/50 text-[11px]">
-                  <Handle
-                    type="target"
-                    position={Position.Left}
-                    id={port.id}
-                    className="!w-3 !h-3 !-left-3 !rounded-full !border-2 !border-union-card transition-transform hover:!scale-125"
-                    style={{ backgroundColor: style.color }}
-                  />
-                  <span className="font-medium text-white">{port.label}</span>
-                  {port.isMulti && incomingCount > 0 ? (
-                    <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-union-accent/20 text-union-accent border border-union-accent/40 font-bold">
-                      {incomingCount} {incomingCount === 1 ? 'INPUT CONNECTED' : 'INPUTS CONNECTED'}
-                    </span>
-                  ) : (
-                    <span className={`ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border ${style.badgeBg}`}>
-                      {port.type} {port.isMulti ? '(multi)' : ''}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+          {!isPortsCollapsed ? (
+            <>
+              {/* Input Ports */}
+              {nodeData.inputs && nodeData.inputs.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[9px] uppercase font-mono tracking-wider text-union-muted block">Inputs</span>
+                  {nodeData.inputs.map((port) => {
+                    const style = getDataTypeStyle(port.type);
+                    const incomingCount = edges.filter(
+                      (e) => e.target === id && e.targetHandle === port.id
+                    ).length;
 
-        {/* Output Ports */}
-        {nodeData.outputs && nodeData.outputs.length > 0 && (
-          <div className="space-y-2 pt-1">
-            <span className="text-[9px] uppercase font-mono tracking-wider text-union-muted block text-right">Outputs</span>
-            {nodeData.outputs.map((port) => {
-              const style = getDataTypeStyle(port.type);
-              return (
-                <div key={port.id} className="relative flex items-center pr-3 py-1 justify-end rounded bg-union-surface/50 text-[11px]">
-                  <span className={`mr-auto text-[9px] font-mono px-1.5 py-0.5 rounded border ${style.badgeBg}`}>
-                    {port.type}
-                  </span>
-                  <span className="font-medium text-white">{port.label}</span>
-                  <Handle
-                    type="source"
-                    position={Position.Right}
-                    id={port.id}
-                    className="!w-3 !h-3 !-right-3 !rounded-full !border-2 !border-union-card transition-transform hover:!scale-125"
-                    style={{ backgroundColor: style.color }}
-                  />
+                    return (
+                      <div key={port.id} className="relative flex items-center pl-3 py-1 rounded bg-union-surface/50 text-[11px]">
+                        <Handle
+                          type="target"
+                          position={Position.Left}
+                          id={port.id}
+                          className="!w-3 !h-3 !-left-3 !rounded-full !border-2 !border-union-card transition-transform hover:!scale-125"
+                          style={{ backgroundColor: style.color }}
+                        />
+                        <span className="font-medium text-white">{port.label}</span>
+                        {port.isMulti && incomingCount > 0 ? (
+                          <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-union-accent/20 text-union-accent border border-union-accent/40 font-bold">
+                            {incomingCount} {incomingCount === 1 ? 'INPUT CONNECTED' : 'INPUTS CONNECTED'}
+                          </span>
+                        ) : (
+                          <span className={`ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border ${style.badgeBg}`}>
+                            {port.type} {port.isMulti ? '(multi)' : ''}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              )}
+
+              {/* Output Ports */}
+              {nodeData.outputs && nodeData.outputs.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <span className="text-[9px] uppercase font-mono tracking-wider text-union-muted block text-right">Outputs</span>
+                  {nodeData.outputs.map((port) => {
+                    const style = getDataTypeStyle(port.type);
+                    return (
+                      <div key={port.id} className="relative flex items-center pr-3 py-1 justify-end rounded bg-union-surface/50 text-[11px]">
+                        <span className={`mr-auto text-[9px] font-mono px-1.5 py-0.5 rounded border ${style.badgeBg}`}>
+                          {port.type}
+                        </span>
+                        <span className="font-medium text-white">{port.label}</span>
+                        <Handle
+                          type="source"
+                          position={Position.Right}
+                          id={port.id}
+                          className="!w-3 !h-3 !-right-3 !rounded-full !border-2 !border-union-card transition-transform hover:!scale-125"
+                          style={{ backgroundColor: style.color }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            /* Compact Handles Row when ports are collapsed */
+            <div className="relative py-1 flex items-center justify-between text-[9px] font-mono text-zinc-400 bg-union-surface/30 px-2 rounded">
+              <div className="flex items-center gap-1">
+                {nodeData.inputs?.map((port, idx) => {
+                  const style = getDataTypeStyle(port.type);
+                  return (
+                    <Handle
+                      key={port.id}
+                      type="target"
+                      position={Position.Left}
+                      id={port.id}
+                      className="!w-2.5 !h-2.5 !-left-3 !rounded-full !border-2 !border-union-card"
+                      style={{ backgroundColor: style.color, top: `${25 + idx * 25}%` }}
+                    />
+                  );
+                })}
+                <span>● {nodeData.inputs?.length || 0} Entradas</span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <span>{nodeData.outputs?.length || 0} Saídas ●</span>
+                {nodeData.outputs?.map((port, idx) => {
+                  const style = getDataTypeStyle(port.type);
+                  return (
+                    <Handle
+                      key={port.id}
+                      type="source"
+                      position={Position.Right}
+                      id={port.id}
+                      className="!w-2.5 !h-2.5 !-right-3 !rounded-full !border-2 !border-union-card"
+                      style={{ backgroundColor: style.color, top: `${25 + idx * 25}%` }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Render hidden handles when whole node is collapsed so edges stay connected */
+        <div className="relative h-1">
+          {nodeData.inputs?.map((port, idx) => (
+            <Handle
+              key={port.id}
+              type="target"
+              position={Position.Left}
+              id={port.id}
+              className="!w-2.5 !h-2.5 !-left-2 !rounded-full"
+              style={{ top: `${idx * 10}px` }}
+            />
+          ))}
+          {nodeData.outputs?.map((port, idx) => (
+            <Handle
+              key={port.id}
+              type="source"
+              position={Position.Right}
+              id={port.id}
+              className="!w-2.5 !h-2.5 !-right-2 !rounded-full"
+              style={{ top: `${idx * 10}px` }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* 3. Interactive Body / Configuration */}
-      <div className="p-3.5 space-y-2.5 text-xs">
+      {!isNodeCollapsed && (
+        <div className="p-3.5 space-y-2.5 text-xs">
         {/* Source Nodes Configuration & Extraction Trigger */}
         {nodeData.category === 'SOURCE' && (
           <div className="space-y-2">
@@ -684,89 +780,106 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                   </p>
                 </div>
 
-                {/* Configuration Fields */}
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-union-muted flex items-center justify-between">
-                      <span>Título da Obra</span>
-                      <span className="text-[9px] text-zinc-500">Opcional</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={String(config.title || '')}
-                      onChange={(e) => handleConfigUpdate('title', e.target.value)}
-                      placeholder="Ex: Manual Estratégico de IA"
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none placeholder:text-zinc-600"
-                    />
-                  </div>
+                {/* Collapsible Configuration Section */}
+                <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20">
+                  <button
+                    onClick={() => setIsParamsCollapsed(!isParamsCollapsed)}
+                    className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>⚙️ Parâmetros da Obra</span>
+                      <span className="text-[9px] text-zinc-500 font-normal">
+                        ({String(config.pageCount || 10)} Págs, {String(config.wordsPerChapter || 1000)}+ pal)
+                      </span>
+                    </span>
+                    {isParamsCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+                  </button>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-union-muted flex items-center justify-between">
-                      <span>Tema Central / Briefing</span>
-                      <span className="text-[9px] text-amber-400/80">Entrada Principal</span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={String(config.topic || '')}
-                      onChange={(e) => handleConfigUpdate('topic', e.target.value)}
-                      placeholder="Ex: Automação e processos de escala digital..."
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none resize-none placeholder:text-zinc-600"
-                    />
-                  </div>
+                  {!isParamsCollapsed && (
+                    <div className="p-2.5 space-y-2 border-t border-white/5">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-union-muted flex items-center justify-between">
+                          <span>Título da Obra</span>
+                          <span className="text-[9px] text-zinc-500">Opcional</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={String(config.title || '')}
+                          onChange={(e) => handleConfigUpdate('title', e.target.value)}
+                          placeholder="Ex: Manual Estratégico de IA"
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none placeholder:text-zinc-600"
+                        />
+                      </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-union-muted">Nicho de Atuação</label>
-                    <input
-                      type="text"
-                      value={String(config.niche || '')}
-                      onChange={(e) => handleConfigUpdate('niche', e.target.value)}
-                      placeholder="Ex: Marketing Digital e Negócios"
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none placeholder:text-zinc-600"
-                    />
-                  </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-union-muted flex items-center justify-between">
+                          <span>Tema Central / Briefing</span>
+                          <span className="text-[9px] text-amber-400/80">Entrada Principal</span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={String(config.topic || '')}
+                          onChange={(e) => handleConfigUpdate('topic', e.target.value)}
+                          placeholder="Ex: Automação e processos de escala digital..."
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none resize-none placeholder:text-zinc-600"
+                        />
+                      </div>
 
-                  {/* Grid with PageCount, Words and Tone */}
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-mono text-union-muted block">Extensão</label>
-                      <select
-                        value={Number(config.pageCount || 10)}
-                        onChange={(e) => handleConfigUpdate('pageCount', Number(e.target.value))}
-                        className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none"
-                      >
-                        <option value={10}>10 Páginas</option>
-                        <option value={15}>15 Páginas</option>
-                        <option value={20}>20 Páginas</option>
-                      </select>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-union-muted">Nicho de Atuação</label>
+                        <input
+                          type="text"
+                          value={String(config.niche || '')}
+                          onChange={(e) => handleConfigUpdate('niche', e.target.value)}
+                          placeholder="Ex: Marketing Digital e Negócios"
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none placeholder:text-zinc-600"
+                        />
+                      </div>
+
+                      {/* Grid with PageCount, Words and Tone */}
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-mono text-union-muted block">Extensão</label>
+                          <select
+                            value={Number(config.pageCount || 10)}
+                            onChange={(e) => handleConfigUpdate('pageCount', Number(e.target.value))}
+                            className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none"
+                          >
+                            <option value={10}>10 Páginas</option>
+                            <option value={15}>15 Páginas</option>
+                            <option value={20}>20 Páginas</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-mono text-union-muted block">Capítulo</label>
+                          <select
+                            value={Number(config.wordsPerChapter || 1000)}
+                            onChange={(e) => handleConfigUpdate('wordsPerChapter', Number(e.target.value))}
+                            className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-emerald-400 focus:outline-none"
+                          >
+                            <option value={1000}>1.000+ pal</option>
+                            <option value={1200}>1.200+ pal</option>
+                            <option value={1500}>1.500+ pal</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-mono text-union-muted block">Tom</label>
+                          <select
+                            value={String(config.tone || 'didactic')}
+                            onChange={(e) => handleConfigUpdate('tone', e.target.value)}
+                            className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none"
+                          >
+                            <option value="didactic">Didático</option>
+                            <option value="authoritative">Autoritário</option>
+                            <option value="conversational">Conversa</option>
+                            <option value="inspirational">Inspiração</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-mono text-union-muted block">Capítulo</label>
-                      <select
-                        value={Number(config.wordsPerChapter || 1000)}
-                        onChange={(e) => handleConfigUpdate('wordsPerChapter', Number(e.target.value))}
-                        className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-emerald-400 focus:outline-none"
-                      >
-                        <option value={1000}>1.000+ pal</option>
-                        <option value={1200}>1.200+ pal</option>
-                        <option value={1500}>1.500+ pal</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-mono text-union-muted block">Tom</label>
-                      <select
-                        value={String(config.tone || 'didactic')}
-                        onChange={(e) => handleConfigUpdate('tone', e.target.value)}
-                        className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none"
-                      >
-                        <option value="didactic">Didático</option>
-                        <option value="authoritative">Autoritário</option>
-                        <option value="conversational">Conversa</option>
-                        <option value="inspirational">Inspiração</option>
-                      </select>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Action Trigger Button */}
@@ -996,9 +1109,10 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           </div>
         )}
       </div>
+      )}
 
       {/* 4. Execution Information Footer */}
-      {nodeData.executionInfo && (
+      {!isNodeCollapsed && nodeData.executionInfo && (
         <div className="px-3.5 py-2 rounded-b-2xl bg-union-surface/80 border-t border-union-border/50 text-[10px] font-mono flex items-center justify-between text-union-muted">
           <span>
             Duration: <strong className="text-white">{nodeData.executionInfo.durationMs || 0}ms</strong>

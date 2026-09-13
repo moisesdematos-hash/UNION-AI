@@ -8,7 +8,14 @@ import {
   Check, 
   ChevronLeft, 
   ChevronRight, 
-  ShieldCheck
+  ShieldCheck,
+  Maximize2,
+  Minimize2,
+  PanelRight,
+  PanelLeftClose,
+  PanelLeft,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export interface EbookChapter {
@@ -51,6 +58,7 @@ interface EbookReaderModalProps {
 
 type ThemeMode = 'obsidian' | 'paper' | 'emerald' | 'royal';
 type ViewMode = 'chapters' | 'deck' | 'raw';
+type WindowSizeMode = 'standard' | 'fullscreen' | 'docked';
 
 export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onClose, ebook }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('chapters');
@@ -58,6 +66,11 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
   const [activePageIdx, setActivePageIdx] = useState(0);
   const [theme, setTheme] = useState<ThemeMode>('obsidian');
   const [copied, setCopied] = useState(false);
+  
+  // Collapse and Resize States
+  const [sizeMode, setSizeMode] = useState<WindowSizeMode>('standard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   if (!isOpen || !ebook) return null;
 
@@ -211,59 +224,90 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
   const currentChapter = chapters[activeChapterIdx] || chapters[0];
   const currentPage = pages[activePageIdx] || pages[0];
 
+  // Sizing styles based on sizeMode
+  const sizeClasses = {
+    standard: 'w-full max-w-5xl h-[88vh] rounded-2xl border shadow-2xl flex flex-col overflow-hidden resize min-w-[360px] min-h-[400px]',
+    fullscreen: 'w-[98vw] h-[96vh] rounded-xl border shadow-2xl flex flex-col overflow-hidden',
+    docked: 'w-full md:w-[460px] h-[85vh] rounded-2xl border shadow-2xl flex flex-col overflow-hidden resize-x min-w-[340px] max-w-[650px]'
+  };
+
+  const containerOverlayClasses = {
+    standard: 'fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-hidden animate-fadeIn',
+    fullscreen: 'fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-2 overflow-hidden animate-fadeIn',
+    docked: 'fixed right-4 bottom-4 top-16 z-50 flex items-end justify-end pointer-events-none animate-fadeIn'
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-hidden animate-fadeIn">
-      <div className={`w-full max-w-5xl h-[90vh] rounded-2xl border shadow-2xl flex flex-col overflow-hidden transition-all ${themeClasses[theme]}`}>
+    <div className={containerOverlayClasses[sizeMode]}>
+      <div className={`${sizeClasses[sizeMode]} ${themeClasses[theme]} pointer-events-auto transition-all`}>
         {/* Header Bar */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-black/30 backdrop-blur flex-wrap gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <BookOpen className="h-5 w-5" />
+        <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur flex-wrap gap-2 shrink-0">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+              <BookOpen className="h-4 w-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold tracking-wide truncate max-w-md">
+                <h3 className="text-xs md:text-sm font-bold tracking-wide truncate max-w-[200px] md:max-w-md">
                   {ebook.title || 'Livro Digital UNION.AI'}
                 </h3>
-                <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
-                  <ShieldCheck className="h-3 w-3" />
+                <span className="hidden sm:flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
+                  <ShieldCheck className="h-2.5 w-2.5" />
                   &gt; 1.000 pal/cap
                 </span>
               </div>
-              <div className="text-[11px] opacity-70 font-mono flex items-center gap-3 mt-0.5">
-                <span>Nicho: <strong>{ebook.targetNiche || 'Geral'}</strong></span>
-                <span>•</span>
-                <span>Total: <strong className="text-amber-400">{totalWords.toLocaleString()} palavras</strong></span>
-                <span>•</span>
-                <span>{chapters.length} Capítulos</span>
-                <span>•</span>
-                <span>{pageCount} Páginas</span>
-              </div>
+              {!isHeaderCollapsed && (
+                <div className="text-[10px] opacity-70 font-mono flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span>Nicho: <strong>{ebook.targetNiche || 'Geral'}</strong></span>
+                  <span>•</span>
+                  <span>Total: <strong className="text-amber-400">{totalWords.toLocaleString()} palavras</strong></span>
+                  <span>•</span>
+                  <span>{chapters.length} Capítulos</span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 flex-wrap">
             {/* View Mode Switcher */}
-            <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10 text-xs font-mono">
+            <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10 text-[11px] font-mono">
               <button
                 onClick={() => setViewMode('chapters')}
-                className={`px-3 py-1 rounded-md transition-all ${viewMode === 'chapters' ? 'bg-amber-500 text-black font-bold shadow' : 'opacity-70 hover:opacity-100'}`}
+                className={`px-2.5 py-1 rounded-md transition-all ${viewMode === 'chapters' ? 'bg-amber-500 text-black font-bold shadow' : 'opacity-70 hover:opacity-100'}`}
               >
-                Capítulos ({chapters.length})
+                Capítulos
               </button>
               {pages.length > 0 && (
                 <button
                   onClick={() => setViewMode('deck')}
-                  className={`px-3 py-1 rounded-md transition-all ${viewMode === 'deck' ? 'bg-amber-500 text-black font-bold shadow' : 'opacity-70 hover:opacity-100'}`}
+                  className={`px-2.5 py-1 rounded-md transition-all ${viewMode === 'deck' ? 'bg-amber-500 text-black font-bold shadow' : 'opacity-70 hover:opacity-100'}`}
                 >
-                  Slides/Deck ({pages.length})
+                  Deck
                 </button>
               )}
               <button
                 onClick={() => setViewMode('raw')}
-                className={`px-3 py-1 rounded-md transition-all ${viewMode === 'raw' ? 'bg-amber-500 text-black font-bold shadow' : 'opacity-70 hover:opacity-100'}`}
+                className={`px-2.5 py-1 rounded-md transition-all ${viewMode === 'raw' ? 'bg-amber-500 text-black font-bold shadow' : 'opacity-70 hover:opacity-100'}`}
               >
-                Markdown
+                MD
+              </button>
+            </div>
+
+            {/* Sizing Controls (Standard, Docked, Fullscreen) */}
+            <div className="flex items-center bg-white/5 p-0.5 rounded-lg border border-white/10">
+              <button
+                onClick={() => setSizeMode(sizeMode === 'docked' ? 'standard' : 'docked')}
+                title={sizeMode === 'docked' ? "Centralizar Modal" : "Fixar na Lateral (Permite usar o Canvas)"}
+                className={`p-1 rounded transition-colors ${sizeMode === 'docked' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+              >
+                <PanelRight className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setSizeMode(sizeMode === 'fullscreen' ? 'standard' : 'fullscreen')}
+                title={sizeMode === 'fullscreen' ? "Restaurar Janela" : "Tela Cheia"}
+                className={`p-1 rounded transition-colors ${sizeMode === 'fullscreen' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+              >
+                {sizeMode === 'fullscreen' ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </button>
             </div>
 
@@ -274,7 +318,7 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
                   key={t}
                   onClick={() => setTheme(t)}
                   title={`Tema ${t}`}
-                  className={`w-5 h-5 rounded-full border transition-all ${
+                  className={`w-3.5 h-3.5 rounded-full border transition-all ${
                     t === 'obsidian' ? 'bg-zinc-950 border-amber-500/50' :
                     t === 'paper' ? 'bg-[#fcfbf9] border-zinc-400' :
                     t === 'emerald' ? 'bg-[#06120e] border-emerald-500/50' :
@@ -284,37 +328,46 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
               ))}
             </div>
 
+            {/* Toggle Header Details */}
+            <button
+              onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+              title={isHeaderCollapsed ? "Mostrar Detalhes do Topo" : "Ocultar Detalhes do Topo"}
+              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10"
+            >
+              {isHeaderCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </button>
+
             {/* Action Buttons */}
             <button
               onClick={handleCopyMarkdown}
               title="Copiar Markdown"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono flex items-center gap-1.5 transition-colors"
+              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono flex items-center transition-colors"
             >
-              {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
 
             <button
               onClick={handleDownloadMarkdown}
               title="Baixar Markdown (.md)"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono flex items-center gap-1.5 transition-colors"
+              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono flex items-center transition-colors"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-3.5 w-3.5" />
             </button>
 
             <button
               onClick={handlePrintEditorialPDF}
               title="Imprimir ou Salvar PDF"
-              className="p-1.5 rounded-lg bg-amber-500 text-black hover:bg-amber-400 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-amber-500 text-black hover:bg-amber-400 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <Printer className="h-4 w-4" />
-              <span className="hidden md:inline">PDF Editorial</span>
+              <Printer className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">PDF</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-300 border border-white/10 transition-colors"
+              className="p-1 rounded-lg bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-300 border border-white/10 transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -324,78 +377,108 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
           {/* VIEW MODE: CHAPTERS */}
           {viewMode === 'chapters' && (
             <div className="flex-1 flex overflow-hidden">
-              {/* Chapters Sidebar */}
-              <div className="w-72 border-r border-white/10 p-3 overflow-y-auto space-y-2 bg-black/20 shrink-0">
-                <span className="text-[10px] font-mono uppercase tracking-wider opacity-60 px-2 block">
-                  Índice da Obra ({chapters.length} Capítulos)
-                </span>
-                {chapters.map((ch, idx) => {
-                  const isActive = idx === activeChapterIdx;
-                  return (
-                    <button
-                      key={ch.chapterNumber || idx}
-                      onClick={() => setActiveChapterIdx(idx)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all text-xs cursor-pointer ${
-                        isActive
-                          ? 'bg-amber-500/20 border-amber-500/50 shadow-md font-semibold'
-                          : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10 opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono font-bold text-amber-400 uppercase">
-                          Capítulo {ch.chapterNumber}
-                        </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          {ch.wordCount.toLocaleString()} pal
-                        </span>
-                      </div>
-                      <p className="line-clamp-2 leading-relaxed font-sans">{ch.title}</p>
-                      <span className="text-[9px] font-mono opacity-60 block mt-1">
-                        Páginas: {ch.pagesRange || `${idx * 2 + 1}-${idx * 2 + 2}`}
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* Chapters Sidebar (Collapsible) */}
+              <div className={`border-r border-white/10 transition-all duration-200 bg-black/20 flex flex-col shrink-0 ${
+                isSidebarCollapsed ? 'w-12 p-2 items-center' : 'w-64 md:w-72 p-3'
+              }`}>
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 w-full">
+                  {!isSidebarCollapsed && (
+                    <span className="text-[10px] font-mono uppercase tracking-wider opacity-60 font-semibold truncate">
+                      Índice ({chapters.length} Caps)
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    title={isSidebarCollapsed ? "Expandir Índice" : "Recolher Índice"}
+                    className="p-1 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 mx-auto"
+                  >
+                    {isSidebarCollapsed ? <PanelLeft className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-1.5 w-full">
+                  {chapters.map((ch, idx) => {
+                    const isActive = idx === activeChapterIdx;
+                    if (isSidebarCollapsed) {
+                      return (
+                        <button
+                          key={ch.chapterNumber || idx}
+                          onClick={() => setActiveChapterIdx(idx)}
+                          title={`Capítulo ${ch.chapterNumber}: ${ch.title} (${ch.wordCount} palavras)`}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono text-xs font-bold transition-all mx-auto ${
+                            isActive 
+                              ? 'bg-amber-500 text-black shadow' 
+                              : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          {ch.chapterNumber}
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={ch.chapterNumber || idx}
+                        onClick={() => setActiveChapterIdx(idx)}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-all text-xs cursor-pointer ${
+                          isActive
+                            ? 'bg-amber-500/20 border-amber-500/50 shadow-md font-semibold'
+                            : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10 opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-mono font-bold text-amber-400 uppercase">
+                            Capítulo {ch.chapterNumber}
+                          </span>
+                          <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            {ch.wordCount.toLocaleString()} pal
+                          </span>
+                        </div>
+                        <p className="line-clamp-2 leading-relaxed font-sans text-[11px]">{ch.title}</p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Active Chapter Reading Pane */}
-              <div className="flex-1 overflow-y-auto p-8 max-w-3xl mx-auto space-y-6 font-serif">
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-3xl mx-auto space-y-5 font-serif">
                 {currentChapter ? (
                   <>
-                    <div className="border-b border-white/10 pb-4 font-sans">
+                    <div className="border-b border-white/10 pb-3 font-sans">
                       <div className="flex items-center justify-between text-xs font-mono opacity-70 mb-1">
                         <span>CAPÍTULO {currentChapter.chapterNumber}</span>
-                        <span className="text-emerald-400 font-bold">
-                          ✓ {currentChapter.wordCount.toLocaleString()} palavras (Meta &gt; 1.000 cumprida)
+                        <span className="text-emerald-400 font-bold text-[11px]">
+                          ✓ {currentChapter.wordCount.toLocaleString()} palavras (&gt; 1.000 cumprida)
                         </span>
                       </div>
-                      <h2 className="text-2xl font-black font-sans tracking-tight">
+                      <h2 className="text-xl md:text-2xl font-black font-sans tracking-tight">
                         {currentChapter.title}
                       </h2>
                     </div>
 
-                    <div className="prose prose-invert max-w-none text-sm md:text-base leading-relaxed space-y-4 whitespace-pre-wrap">
+                    <div className="prose prose-invert max-w-none text-xs md:text-sm leading-relaxed space-y-4 whitespace-pre-wrap">
                       {currentChapter.content}
                     </div>
 
                     {/* Navigation Footer */}
-                    <div className="pt-8 border-t border-white/10 flex items-center justify-between font-sans text-xs">
+                    <div className="pt-6 border-t border-white/10 flex items-center justify-between font-sans text-xs">
                       <button
                         onClick={() => setActiveChapterIdx(Math.max(0, activeChapterIdx - 1))}
                         disabled={activeChapterIdx === 0}
-                        className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
                       >
-                        <ChevronLeft className="h-4 w-4" /> Capítulo Anterior
+                        <ChevronLeft className="h-4 w-4" /> Anterior
                       </button>
-                      <span className="font-mono text-xs opacity-70">
-                        Capítulo {activeChapterIdx + 1} de {chapters.length}
+                      <span className="font-mono text-[11px] opacity-70">
+                        {activeChapterIdx + 1} de {chapters.length}
                       </span>
                       <button
                         onClick={() => setActiveChapterIdx(Math.min(chapters.length - 1, activeChapterIdx + 1))}
                         disabled={activeChapterIdx === chapters.length - 1}
-                        className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
                       >
-                        Próximo Capítulo <ChevronRight className="h-4 w-4" />
+                        Próximo <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
                   </>
@@ -408,63 +491,61 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
 
           {/* VIEW MODE: DECK */}
           {viewMode === 'deck' && (
-            <div className="flex-1 flex flex-col p-6 overflow-y-auto">
-              <div className="flex items-center justify-between pb-4 border-b border-white/10">
+            <div className="flex-1 flex flex-col p-5 overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div className="flex items-center space-x-2">
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
                     Slide {activePageIdx + 1} de {pages.length}
                   </span>
-                  <h4 className="text-sm font-bold truncate max-w-md">{currentPage?.title}</h4>
+                  <h4 className="text-xs md:text-sm font-bold truncate max-w-md">{currentPage?.title}</h4>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setActivePageIdx(Math.max(0, activePageIdx - 1))}
                     disabled={activePageIdx === 0}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30"
+                    className="p-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
                   <span className="text-xs font-mono">{activePageIdx + 1} / {pages.length}</span>
                   <button
                     onClick={() => setActivePageIdx(Math.min(pages.length - 1, activePageIdx + 1))}
                     disabled={activePageIdx === pages.length - 1}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30"
+                    className="p-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center py-6">
-                {/* Visual side */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-5 items-center py-4">
                 <div>
                   {currentPage?.image ? (
-                    <div className="relative rounded-2xl overflow-hidden aspect-video border border-white/10 bg-black shadow-xl">
+                    <div className="relative rounded-xl overflow-hidden aspect-video border border-white/10 bg-black shadow-xl">
                       <img src={currentPage.image.url} alt={currentPage.image.alt} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                      <p className="absolute bottom-3 left-3 right-3 text-xs text-zinc-300 italic">
+                      <p className="absolute bottom-2 left-2 right-2 text-[11px] text-zinc-300 italic">
                         {currentPage.image.caption}
                       </p>
                     </div>
                   ) : (
-                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                      <span className="text-[10px] font-mono uppercase text-amber-400 font-bold">Diretriz Visual</span>
-                      <h4 className="text-lg font-bold">{currentPage?.title}</h4>
-                      <p className="text-xs opacity-70">Estrutura tática focada em retenção e clareza de execução.</p>
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                      <span className="text-[9px] font-mono uppercase text-amber-400 font-bold">Diretriz Visual</span>
+                      <h4 className="text-sm font-bold">{currentPage?.title}</h4>
+                      <p className="text-[11px] opacity-70">Estrutura tática focada em retenção e clareza de execução.</p>
                     </div>
                   )}
                 </div>
 
-                {/* Text side */}
-                <div className="space-y-4">
-                  <h3 className="text-xl font-black">{currentPage?.title}</h3>
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap opacity-90">
+                <div className="space-y-3">
+                  <h3 className="text-base md:text-lg font-black">{currentPage?.title}</h3>
+                  <div className="text-xs md:text-sm leading-relaxed whitespace-pre-wrap opacity-90">
                     {currentPage?.content}
                   </div>
                   {currentPage?.callout && (
-                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
-                      <strong className="block font-mono text-[11px] uppercase">💡 {currentPage.callout.title}</strong>
-                      <p>{currentPage.callout.text}</p>
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+                      <strong className="block font-mono text-[10px] uppercase">💡 {currentPage.callout.title}</strong>
+                      <p className="text-[11px]">{currentPage.callout.text}</p>
                     </div>
                   )}
                 </div>
@@ -474,7 +555,7 @@ export const EbookReaderModal: React.FC<EbookReaderModalProps> = ({ isOpen, onCl
 
           {/* VIEW MODE: RAW MARKDOWN */}
           {viewMode === 'raw' && (
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-5 overflow-y-auto">
               <pre className="p-4 rounded-xl bg-black/40 border border-white/10 text-xs font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed">
                 {fullMarkdown}
               </pre>

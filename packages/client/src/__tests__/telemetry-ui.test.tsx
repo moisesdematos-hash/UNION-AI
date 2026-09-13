@@ -1,4 +1,9 @@
+/**
+ * @vitest-environment jsdom
+ */
+import './setup.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import App from '../App.js';
 import { useCanvasStore } from '../store/canvasStore.js';

@@ -1,5 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+/**
+ * @vitest-environment jsdom
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { render, screen, fireEvent, act, waitFor, cleanup } from '@testing-library/react';
 import { createNodeFromTemplate, NODE_TEMPLATES } from '../components/nodes/nodeRegistry.js';
 import { UnionNode, UnionNodeData } from '../components/nodes/UnionNode.js';
 import { EbookReaderModal } from '../components/modals/EbookReaderModal.js';
@@ -8,11 +12,16 @@ import { ReactFlowProvider } from '@xyflow/react';
 
 describe('Option 2: Autonomous E-book Forge Module in Canvas', () => {
   beforeEach(() => {
+    cleanup();
     useCanvasStore.setState({
       nodes: [],
       edges: []
     });
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('verifies ai-ebook-forge template exists in NODE_TEMPLATES with valid configuration', () => {
@@ -49,6 +58,9 @@ describe('Option 2: Autonomous E-book Forge Module in Canvas', () => {
           positionAbsoluteX={0}
           positionAbsoluteY={0}
           dragging={false}
+          deletable={true}
+          selectable={true}
+          draggable={true}
         />
       </ReactFlowProvider>
     );
@@ -129,7 +141,7 @@ describe('Option 2: Autonomous E-book Forge Module in Canvas', () => {
       }]
     });
 
-    const { rerender } = render(
+    render(
       <ReactFlowProvider>
         <UnionNode
           id="ebook-node-1"
@@ -141,6 +153,9 @@ describe('Option 2: Autonomous E-book Forge Module in Canvas', () => {
           positionAbsoluteX={0}
           positionAbsoluteY={0}
           dragging={false}
+          deletable={true}
+          selectable={true}
+          draggable={true}
         />
       </ReactFlowProvider>
     );
@@ -199,7 +214,7 @@ describe('Option 2: Autonomous E-book Forge Module in Canvas', () => {
     expect(screen.getAllByText(/1[,\.]?150/i).length).toBeGreaterThanOrEqual(1);
 
     // Switch to Raw Markdown view
-    const markdownBtn = screen.getByRole('button', { name: 'Markdown' });
+    const markdownBtn = screen.getByRole('button', { name: 'MD' });
     fireEvent.click(markdownBtn);
     expect(screen.getByText(/## Capítulo 1: Fundamentos da Automação Cognitiva/i)).toBeInTheDocument();
   });
