@@ -175,4 +175,65 @@ describe('Workflow & Project Storage Persistence API', () => {
 
     expect(updateAttempt.status).toBe(400);
   });
+
+  it('should store and list user files in dedicated folder (/api/projects/storage)', async () => {
+    // 1. Get initial storage overview
+    const overviewInitial = await request(app)
+      .get('/api/projects/storage/overview')
+      .set('Authorization', `Bearer ${userAToken}`);
+
+    expect(overviewInitial.status).toBe(200);
+    expect(overviewInitial.body.data.categories).toBeDefined();
+
+    // 2. Save an e-book file to user's folder
+    const saveEbookRes = await request(app)
+      .post('/api/projects/storage/save')
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({
+        category: 'ebooks',
+        fileName: 'Manual_Campanha_Completo.md',
+        content: '# Manual de Campanha Estratégico\n\nCapítulo 1: Fundações da Oferta...',
+        extension: 'md'
+      });
+
+    expect(saveEbookRes.status).toBe(201);
+    expect(saveEbookRes.body.data.fileName).toBe('Manual_Campanha_Completo.md');
+
+    // 3. Save a project JSON snapshot
+    const saveProjRes = await request(app)
+      .post('/api/projects/storage/save')
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({
+        category: 'projects',
+        fileName: 'fluxo_vendas_q3.json',
+        content: { name: 'Fluxo Vendas Q3', nodesCount: 5 }
+      });
+
+    expect(saveProjRes.status).toBe(201);
+
+    // 4. Verify overview lists the new files
+    const overviewUpdated = await request(app)
+      .get('/api/projects/storage/overview')
+      .set('Authorization', `Bearer ${userAToken}`);
+
+    expect(overviewUpdated.status).toBe(200);
+    expect(overviewUpdated.body.data.totalFiles).toBeGreaterThanOrEqual(2);
+    expect(overviewUpdated.body.data.categories.ebooks.some((f: any) => f.name === 'Manual_Campanha_Completo.md')).toBe(true);
+
+    // 5. Read file content
+    const readFileRes = await request(app)
+      .get('/api/projects/storage/file/ebooks/Manual_Campanha_Completo.md')
+      .set('Authorization', `Bearer ${userAToken}`);
+
+    expect(readFileRes.status).toBe(200);
+    expect(readFileRes.body.data.content).toContain('Capítulo 1: Fundações da Oferta');
+
+    // 6. User B cannot see User A's files
+    const overviewUserB = await request(app)
+      .get('/api/projects/storage/overview')
+      .set('Authorization', `Bearer ${userBToken}`);
+
+    expect(overviewUserB.status).toBe(200);
+    expect(overviewUserB.body.data.categories.ebooks.some((f: any) => f.name === 'Manual_Campanha_Completo.md')).toBe(false);
+  });
 });

@@ -33,7 +33,8 @@ import { ConversionSimulatorModal } from './components/marketing/ConversionSimul
 import { ProjectOracleDrawer } from './components/chat/ProjectOracleDrawer.js';
 import { ConnectionStandardsModal } from './components/modals/ConnectionStandardsModal.js';
 import { UnionForgeModal } from './components/modals/UnionForgeModal.js';
-import { Target, Bot, Workflow, Zap } from 'lucide-react';
+import { UserStorageManagerModal } from './components/modals/UserStorageManagerModal.js';
+import { Target, Bot, Workflow, Zap, FolderOpen } from 'lucide-react';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
@@ -47,6 +48,7 @@ export function App() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isConnectionStandardsOpen, setIsConnectionStandardsOpen] = useState(false);
   const [isUnionForgeOpen, setIsUnionForgeOpen] = useState(false);
+  const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isOracleOpen, setIsOracleOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
@@ -379,6 +381,15 @@ export function App() {
               </button>
 
               <button
+                onClick={() => setIsStorageManagerOpen(true)}
+                title="Minhas Pastas: Gerenciar Projetos, E-books e Arquivos em Disco"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-semibold transition-all shadow-sm cursor-pointer"
+              >
+                <FolderOpen className="h-3.5 w-3.5 text-amber-400" />
+                <span>Minhas Pastas</span>
+              </button>
+
+              <button
                 onClick={() => setIsConnectionStandardsOpen(true)}
                 title="Padronização de Conexões & 8 Esteiras Oficiais (1-Click)"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
@@ -530,6 +541,10 @@ export function App() {
           isOpen={isSimulatorOpen}
           onClose={() => setIsSimulatorOpen(false)}
           initialCopy={simulatorCopy}
+        />
+        <UserStorageManagerModal
+          isOpen={isStorageManagerOpen}
+          onClose={() => setIsStorageManagerOpen(false)}
         />
         <ProjectOracleDrawer
           isOpen={isOracleOpen}

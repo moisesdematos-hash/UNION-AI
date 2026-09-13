@@ -226,5 +226,50 @@ export class StorageService {
     }
     return [];
   }
+
+  /**
+   * Fetches user's dedicated disk directory overview and list of files
+   */
+  public static async fetchUserStorageOverview(authToken?: string | null): Promise<any | null> {
+    const token = authToken || (typeof window !== 'undefined' && localStorage.getItem(AUTH_TOKEN_KEY));
+    if (!token) return null;
+    try {
+      const res = await fetch('/api/projects/storage/overview', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.data;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Saves an e-book or file to user's dedicated folder
+   */
+  public static async saveToUserFolder(
+    category: 'projects' | 'ebooks' | 'assets',
+    fileName: string,
+    content: string | object,
+    extension?: 'json' | 'md' | 'html',
+    authToken?: string | null
+  ): Promise<boolean> {
+    const token = authToken || (typeof window !== 'undefined' && localStorage.getItem(AUTH_TOKEN_KEY));
+    if (!token) return false;
+    try {
+      const res = await fetch('/api/projects/storage/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ category, fileName, content, extension })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
 }
 

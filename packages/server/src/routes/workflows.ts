@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { workflowRepository } from '../services/workflow-repository.js';
+import { userStorageService } from '../services/user-storage-service.js';
 import { creditsService } from '../services/credits-service.js';
 import { 
   NodeDefinitionSchema, 
@@ -63,6 +64,14 @@ workflowsRouter.put('/:id', (req: AuthenticatedRequest, res: Response) => {
     if (!updated) {
       return res.status(404).json({ status: 'error', message: 'Workflow not found' });
     }
+
+    // Mirror snapshot directly into user's dedicated projects folder
+    try {
+      userStorageService.saveProjectFile(userId, `${updated.name || 'workflow'}_${workflowId}`, updated);
+    } catch (diskErr) {
+      console.warn(`[UserStorage] Non-blocking error writing workflow ${workflowId} to disk:`, diskErr);
+    }
+
     res.status(200).json({ status: 'success', data: { workflow: updated } });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to save workflow state';

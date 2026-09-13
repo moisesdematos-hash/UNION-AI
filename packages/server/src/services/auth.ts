@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/database.js';
 import { env } from '../config/env.js';
+import { userStorageService } from './user-storage-service.js';
 
 export interface UserProfile {
   id: string;
@@ -58,6 +59,13 @@ export class AuthService {
 
     insertUser();
 
+    // Create dedicated user storage directories on disk
+    try {
+      userStorageService.getUserDir(userId);
+    } catch (e) {
+      console.warn('[Auth] Error preparing user directory:', e);
+    }
+
     const user: UserProfile = {
       id: userId,
       email: normalizedEmail,
@@ -91,6 +99,13 @@ export class AuthService {
       name: userRow.name,
       createdAt: userRow.created_at
     };
+
+    // Ensure user storage folder exists
+    try {
+      userStorageService.getUserDir(user.id);
+    } catch (e) {
+      console.warn('[Auth] Error checking user directory on login:', e);
+    }
 
     const token = this.generateToken(user);
     return { user, token };

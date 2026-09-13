@@ -28,6 +28,7 @@ import {
   Palette
 } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore.js';
+import { StorageService } from '../../services/storageService.js';
 import { createNodeFromTemplate } from '../nodes/nodeRegistry.js';
 
 interface UnionForgeModalProps {
@@ -964,7 +965,7 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
     showToast('📋 Copiado para a área de transferência!');
   };
 
-  // Download Markdown
+  // Download Markdown & Save to User Folder
   const handleDownloadFile = (filename: string, content: string) => {
     const element = document.createElement('a');
     const file = new Blob([content], { type: 'text/markdown' });
@@ -973,7 +974,11 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    showToast(`💾 Arquivo ${filename} baixado!`);
+
+    // Salvar automaticamente na pasta isolada do usuário no servidor
+    StorageService.saveToUserFolder('ebooks', filename, content, 'md').catch(() => {});
+
+    showToast(`💾 Arquivo ${filename} baixado e salvo na sua pasta pessoal!`);
   };
 
   // Exportar PDF Editorial com Design Profissional de Impressão
