@@ -34,7 +34,7 @@ import { ProjectOracleDrawer } from './components/chat/ProjectOracleDrawer.js';
 import { ConnectionStandardsModal } from './components/modals/ConnectionStandardsModal.js';
 import { UnionForgeModal } from './components/modals/UnionForgeModal.js';
 import { UserStorageManagerModal } from './components/modals/UserStorageManagerModal.js';
-import { Target, Bot, Workflow, Zap, FolderOpen } from 'lucide-react';
+import { Target, Bot, Workflow, Zap, FolderOpen, ChevronDown } from 'lucide-react';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
@@ -51,6 +51,7 @@ export function App() {
   const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isOracleOpen, setIsOracleOpen] = useState(false);
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
     return typeof window !== 'undefined' && localStorage.getItem('union_welcome_dismissed') !== 'true';
   });
@@ -108,9 +109,18 @@ export function App() {
     };
     window.addEventListener('hashchange', handleHashChange);
 
+    const handleWindowClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && !target.closest('#tools-dropdown-container')) {
+        setIsToolsMenuOpen(false);
+      }
+    };
+    window.addEventListener('click', handleWindowClick);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('click', handleWindowClick);
     };
   }, [initFromLocalStorage, saveWorkflow, fetchUserCredits]);
 
@@ -291,7 +301,7 @@ export function App() {
             </button>
           </div>
 
-          <div className="flex items-center space-x-3 px-3 py-1 rounded-full bg-union-card border border-union-border text-xs font-mono">
+          <div className="hidden xl:flex items-center space-x-3 px-3 py-1 rounded-full bg-union-card border border-union-border text-xs font-mono">
             <span className="text-union-muted">
               Nodes: <strong className="text-white">{nodes.length}</strong>
             </span>
@@ -301,7 +311,7 @@ export function App() {
             </span>
           </div>
 
-          <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-union-card border border-union-border text-xs">
+          <div className="hidden lg:flex items-center space-x-2 px-3 py-1 rounded-full bg-union-card border border-union-border text-xs">
             <span
               className={`h-2 w-2 rounded-full ${
                 serverStatus === 'online'
@@ -350,88 +360,164 @@ export function App() {
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => {
-                  window.location.hash = '#landing';
-                  setCurrentView('landing');
-                }}
-                title="Ir para a Página Inicial / Landing Page"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-zinc-500 text-zinc-300 hover:text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-              >
-                <Compass className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Página Inicial</span>
-              </button>
-
-              <button
-                onClick={() => setIsWelcomeOpen(true)}
-                title="Guia Completo & Apresentação UNION.AI"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 border border-union-accent/30 hover:border-union-accent text-cyan-300 hover:text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-              >
-                <BookOpen className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Guia & Visão Geral</span>
-              </button>
-
-              <button
-                onClick={() => setIsTemplateModalOpen(true)}
-                title="Abrir Biblioteca de Templates (Gate 18)"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-union-accent text-zinc-200 hover:text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span>Templates</span>
-              </button>
-
-              <button
-                onClick={() => setIsStorageManagerOpen(true)}
-                title="Minhas Pastas: Gerenciar Projetos, E-books e Arquivos em Disco"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-semibold transition-all shadow-sm cursor-pointer"
-              >
-                <FolderOpen className="h-3.5 w-3.5 text-amber-400" />
-                <span>Minhas Pastas</span>
-              </button>
-
-              <button
-                onClick={() => setIsConnectionStandardsOpen(true)}
-                title="Padronização de Conexões & 8 Esteiras Oficiais (1-Click)"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-              >
-                <Workflow className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Padronizar Conexões</span>
-              </button>
-
+              {/* Botão de Destaque 1: Union Forge */}
               <button
                 onClick={() => setIsUnionForgeOpen(true)}
-                title="Union Forge: Criação Direta (E-books, Imagens, Produtos) & Aceleradores Virais"
+                title="Union Forge: Criação Direta de E-books, Imagens e Copys"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
               >
                 <Zap className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
                 <span>⚡ Union Forge</span>
               </button>
 
+              {/* Botão de Destaque 2: Simulador CPS */}
               <button
                 onClick={() => setIsSimulatorOpen(true)}
                 title="AI Conversion Simulator & Heatmap (Chave de Ouro)"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
               >
                 <Target className="h-3.5 w-3.5 text-amber-400" />
                 <span>Simulador CPS</span>
               </button>
 
+              {/* Botão de Destaque 3: Minhas Pastas */}
               <button
-                onClick={() => setIsOracleOpen(true)}
-                title="Chat do Projeto (Project Oracle)"
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 hover:from-cyan-500/30 hover:to-indigo-500/30 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                onClick={() => setIsStorageManagerOpen(true)}
+                title="Minhas Pastas: Projetos, E-books e Arquivos em Disco"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-semibold transition-all shadow-sm cursor-pointer"
               >
-                <Bot className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Chat do Projeto</span>
+                <FolderOpen className="h-3.5 w-3.5 text-amber-400" />
+                <span>Minhas Pastas</span>
               </button>
 
+              {/* Menu Colapsável / Dropdown Agrupado: Mais Ferramentas & Modais */}
+              <div className="relative" id="tools-dropdown-container">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsToolsMenuOpen(!isToolsMenuOpen);
+                  }}
+                  title="Mais Ferramentas e Opções da Plataforma"
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all shadow-sm cursor-pointer ${
+                    isToolsMenuOpen
+                      ? 'bg-zinc-800 border-union-accent text-white shadow-md shadow-union-accent/10'
+                      : 'bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80 hover:border-zinc-500 text-zinc-300 hover:text-white'
+                  }`}
+                >
+                  <Layers className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Ferramentas</span>
+                  <ChevronDown className={`h-3 w-3 text-zinc-400 transition-transform duration-200 ${isToolsMenuOpen ? 'rotate-180 text-white' : ''}`} />
+                </button>
+
+                {/* Painel Dropdown Flutuante */}
+                {isToolsMenuOpen && (
+                  <div 
+                    className="absolute right-0 mt-2 w-64 rounded-xl bg-zinc-950/95 border border-zinc-700/80 shadow-2xl backdrop-blur-md p-1.5 z-50 animate-fadeIn space-y-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="px-2.5 py-1.5 text-[10px] font-mono uppercase text-zinc-400 font-semibold tracking-wider border-b border-zinc-800/80 mb-1 flex items-center justify-between">
+                      <span>Ferramentas do Workspace</span>
+                      <span className="text-zinc-500">6 Ações</span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setIsTemplateModalOpen(true);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
+                    >
+                      <Sparkles className="h-4 w-4 text-amber-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="font-semibold">Biblioteca de Templates</div>
+                        <div className="text-[10px] text-zinc-400">Pipelines prontos de alta conversão</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setIsConnectionStandardsOpen(true);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
+                    >
+                      <Workflow className="h-4 w-4 text-cyan-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="font-semibold">Padronizar Conexões</div>
+                        <div className="text-[10px] text-zinc-400">8 Esteiras oficiais e validação em 1-clique</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setIsOracleOpen(true);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
+                    >
+                      <Bot className="h-4 w-4 text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="font-semibold">Chat do Projeto (Oráculo)</div>
+                        <div className="text-[10px] text-zinc-400">Estrategista de campanha em tempo real</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setIsSimulatorOpen(true);
+                      }}
+                      className="md:hidden w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
+                    >
+                      <Target className="h-4 w-4 text-amber-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="font-semibold">Simulador CPS & Heatmap</div>
+                        <div className="text-[10px] text-zinc-400">Teste de conversão com 5 personas</div>
+                      </div>
+                    </button>
+
+                    <div className="border-t border-zinc-800/80 my-1 pt-1"></div>
+
+                    <button
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setIsWelcomeOpen(true);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
+                    >
+                      <BookOpen className="h-4 w-4 text-cyan-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="font-semibold">Guia & Apresentação</div>
+                        <div className="text-[10px] text-zinc-400">Visão geral do UNION.AI e gates</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        window.location.hash = '#landing';
+                        setCurrentView('landing');
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
+                    >
+                      <Compass className="h-4 w-4 text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="font-semibold">Página Inicial</div>
+                        <div className="text-[10px] text-zinc-400">Visão da landing page institucional</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão de Execução Principal */}
               <button
                 onClick={openExecutionPlanModal}
                 disabled={nodes.length === 0}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-union-accent hover:bg-union-accent/90 text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-union-accent hover:bg-union-accent/90 text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-union-accent/20 cursor-pointer"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
-                <span>RUN WORKFLOW</span>
+                <span className="font-bold">EXECUTAR</span>
               </button>
             </div>
           )}
