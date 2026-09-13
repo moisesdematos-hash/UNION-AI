@@ -36,6 +36,19 @@ export interface UnionNodeData extends NodeDefinition {
   onConfigChange?: (key: string, value: unknown) => void;
 }
 
+export function extractYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  const shortMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch) return shortMatch[1];
+  const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch) return watchMatch[1];
+  const pathMatch = trimmed.match(/youtube\.com\/(?:embed|shorts|v)\/([a-zA-Z0-9_-]{11})/);
+  if (pathMatch) return pathMatch[1];
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  return null;
+}
+
 const CATEGORY_COLORS: Record<NodeCategory, { border: string; headerBg: string; badge: string; iconColor: string }> = {
   SOURCE: {
     border: 'border-blue-500/40 hover:border-blue-500/80',
@@ -243,7 +256,14 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         },
         config: {
           ...config,
-          extractedSummary: raw.title || raw.cleanText?.slice(0, 60) || 'Extração concluída'
+          videoTitle: raw.metadata?.title || raw.title || config.videoTitle,
+          channelTitle: raw.metadata?.authorName || config.channelTitle,
+          thumbnailUrl: raw.metadata?.thumbnailUrl || config.thumbnailUrl,
+          duration: raw.metadata?.durationSec
+            ? `${Math.floor(raw.metadata.durationSec / 60)}:${String(raw.metadata.durationSec % 60).padStart(2, '0')}`
+            : config.duration,
+          extractedSummary: raw.metadata?.title || raw.title || raw.cleanText?.slice(0, 60) || 'Extração concluída',
+          fullOutput: raw.fullText || raw.cleanText || ''
         }
       });
     } catch (err: unknown) {
@@ -266,7 +286,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
     const startTime = Date.now();
 
     try {
-      const incomingTopicEdges = edges.filter(e => e.target === id && e.targetHandle === 'in-topic');
+      const incomingTopicEdges = edges.filter(e => e.target === id && (e.targetHandle === 'in-topic' || !e.targetHandle));
       const incomingContextEdges = edges.filter(e => e.target === id && e.targetHandle === 'in-context');
       const incomingAvatarEdges = edges.filter(e => e.target === id && e.targetHandle === 'in-avatar');
 
@@ -274,27 +294,33 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       let dynamicNiche = String(config.niche || '').trim();
 
       const { nodes } = useCanvasStore.getState();
-      if (incomingTopicEdges.length > 0) {
-        const sourceNode = nodes.find(n => n.id === incomingTopicEdges[0].source);
-        if (sourceNode?.data) {
-          const sData = sourceNode.data as Record<string, any>;
-          const sourceText = sData.config?.extractedSummary || sData.config?.aiSummary || sData.config?.fullOutput || sData.config?.text;
-          if (sourceText) {
-            dynamicPrompt = dynamicPrompt ? dynamicPrompt + ' - ' + sourceText.slice(0, 150) : sourceText.slice(0, 150);
-          }
-        }
-      }
 
-      if (incomingContextEdges.length > 0) {
-        const sourceNode = nodes.find(n => n.id === incomingContextEdges[0].source);
+      // Multi-source aggregation from all connected video & document sources
+      const connectedSources: Array<{ label: string; text: string }> = [];
+
+      incomingTopicEdges.forEach((edge, idx) => {
+        const sourceNode = nodes.find(n => n.id === edge.source);
         if (sourceNode?.data) {
           const sData = sourceNode.data as Record<string, any>;
-          const contextText = sData.config?.content || sData.config?.fullOutput || sData.config?.extractedSummary;
-          if (contextText) {
-            dynamicPrompt += '\n[Contexto/Pesquisa]: ' + contextText.slice(0, 300);
+          const sourceText = sData.config?.videoTitle || sData.config?.extractedSummary || sData.config?.aiSummary || sData.config?.fullOutput || sData.config?.text || sData.config?.title;
+          const label = sData.config?.videoTitle || sData.label || `Fonte ${idx + 1}`;
+          if (sourceText) {
+            connectedSources.push({ label, text: String(sourceText).slice(0, 300) });
           }
         }
-      }
+      });
+
+      incomingContextEdges.forEach((edge, idx) => {
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        if (sourceNode?.data) {
+          const sData = sourceNode.data as Record<string, any>;
+          const contextText = sData.config?.content || sData.config?.fullOutput || sData.config?.extractedSummary || sData.config?.videoTitle;
+          const label = sData.config?.videoTitle || sData.label || `Documento ${idx + 1}`;
+          if (contextText) {
+            connectedSources.push({ label, text: String(contextText).slice(0, 400) });
+          }
+        }
+      });
 
       if (incomingAvatarEdges.length > 0) {
         const sourceNode = nodes.find(n => n.id === incomingAvatarEdges[0].source);
@@ -307,9 +333,20 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         }
       }
 
+      if (connectedSources.length > 0) {
+        const sourcesText = connectedSources.map((s, i) => `[Fonte ${i + 1}: ${s.label}]: ${s.text}`).join('\n');
+        dynamicPrompt = dynamicPrompt
+          ? `${dynamicPrompt}\n\n[Fontes Conectadas no Canvas (${connectedSources.length} Fontes)]:\n${sourcesText}`
+          : `Síntese de Conhecimento Multimédia (${connectedSources.length} Fontes):\n${sourcesText}`;
+      }
+
       const effectivePrompt = dynamicPrompt || 'Estratégia e Execução Prática com Inteligência Artificial';
       const effectiveNiche = dynamicNiche || 'Negócios e Marketing Digital';
-      const effectiveTitle = String(config.title || '').trim() || ('Manual Estratégico de ' + effectivePrompt.slice(0, 35));
+      const effectiveTitle = String(config.title || '').trim() || (
+        connectedSources.length > 1
+          ? `Síntese Multi-Vídeo: ${connectedSources.map(s => s.label).join(' & ')}`.slice(0, 55)
+          : ('Manual Estratégico de ' + effectivePrompt.slice(0, 35))
+      );
       const effectivePages = Number(config.pageCount || 10);
       const effectiveWords = Number(config.wordsPerChapter || 1000);
 
@@ -687,7 +724,102 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         {/* Source Nodes Configuration & Extraction Trigger */}
         {nodeData.category === 'SOURCE' && (
           <div className="space-y-2">
-            {(nodeData.type === 'source-youtube' || nodeData.type === 'source-website') && (
+            {nodeData.type === 'source-youtube' && (() => {
+              const videoId = extractYouTubeId(String(config.url || '')) || String(config.videoId || 'dQw4w9WgXcQ');
+              const thumbnailUrl = String(config.thumbnailUrl || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''));
+              const displayTitle = String(config.videoTitle || config.title || (config.url ? String(config.url).replace(/^https?:\/\/(www\.)?youtube\.com\/watch\?v=/, 'Vídeo: ') : 'Vídeo do YouTube'));
+
+              return (
+                <div className="space-y-2">
+                  {/* Visual Video Thumbnail Card with Red Play Button */}
+                  <div className="relative rounded-xl overflow-hidden aspect-video bg-black/80 border border-red-500/40 group shadow-lg shadow-black/50 select-none">
+                    {thumbnailUrl ? (
+                      <img
+                        src={thumbnailUrl}
+                        alt={displayTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          if (videoId) {
+                            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${videoId}/default.jpg`;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-950/40 to-black">
+                        <Youtube className="h-10 w-10 text-red-500 opacity-60" />
+                      </div>
+                    )}
+
+                    {/* Gradient Overlay & YouTube Badges */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 flex flex-col justify-between p-2.5">
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-red-600 text-white font-bold shadow-md">
+                          <Youtube className="h-3 w-3 fill-current" />
+                          YouTube
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/75 text-zinc-300 font-semibold border border-white/10">
+                          {String(config.duration || '15:20')}
+                        </span>
+                      </div>
+
+                      {/* Central YouTube Play Button */}
+                      <div className="self-center my-auto">
+                        <div
+                          className="w-10 h-10 rounded-full bg-red-600/90 hover:bg-red-500 text-white flex items-center justify-center shadow-xl shadow-red-900/50 transition-all transform group-hover:scale-110 cursor-pointer"
+                          title="Pré-visualizar Vídeo"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (config.url) {
+                              window.open(String(config.url), '_blank');
+                            }
+                          }}
+                        >
+                          <Play className="h-4 w-4 fill-white ml-0.5" />
+                        </div>
+                      </div>
+
+                      {/* Bottom Title Banner */}
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-white drop-shadow truncate block leading-snug">
+                          {displayTitle}
+                        </span>
+                        {Boolean(config.channelTitle) && (
+                          <span className="text-[9px] text-zinc-300 font-sans block truncate opacity-85">
+                            {String(config.channelTitle)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* URL Input */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-mono text-union-muted">URL do Vídeo</label>
+                      <span className="text-[9px] font-mono text-zinc-500">ID: {videoId}</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={String(config.url || '')}
+                      onChange={(e) => {
+                        const newUrl = e.target.value;
+                        const newId = extractYouTubeId(newUrl);
+                        handleConfigUpdate('url', newUrl);
+                        if (newId) {
+                          handleConfigUpdate('videoId', newId);
+                          handleConfigUpdate('thumbnailUrl', `https://img.youtube.com/vi/${newId}/hqdefault.jpg`);
+                        }
+                      }}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {nodeData.type === 'source-website' && (
               <div className="space-y-1">
                 <label className="text-[10px] font-mono text-union-muted">Target URL</label>
                 <input

@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import { NodeDefinitionSchema } from './nodes.js';
 import { ConnectionDefinitionSchema } from './connections.js';
 
@@ -795,6 +795,132 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
         sourcePortId: 'out-content',
         targetNodeId: 'tpl-auto-exp',
         targetPortId: 'in-results',
+        state: 'connected'
+      }
+    ]
+  },
+  // 9. Multi-Video Knowledge Forge (3 YouTube -> Conhecimento AI / E-book)
+  {
+    id: 'multi-video-knowledge-forge',
+    name: 'Síntese Multi-Vídeo: 3 YouTube -> Conhecimento AI / E-book',
+    description: 'Conecta 3 vídeos do YouTube simultaneamente num nó central de IA para consolidar pontos-chave e forjar um e-book completo com > 1.000 palavras por capítulo.',
+    category: 'CONTENT',
+    tags: ['youtube', 'multi-video', 'ebook', 'knowledge-synthesis', 'canvas-forge'],
+    icon: 'Video',
+    estimatedCredits: 0.15,
+    nodes: [
+      {
+        id: 'yt-vid-1',
+        type: 'source-youtube',
+        label: 'YouTube: Tráfego Pago',
+        category: 'SOURCE',
+        position: { x: 60, y: 50 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoId: 'dQw4w9WgXcQ',
+          videoTitle: 'Como Começar no Tráfego Pago',
+          channelTitle: 'Performance Masters',
+          duration: '18:32',
+          thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'yt-vid-2',
+        type: 'source-youtube',
+        label: 'YouTube: Revolução da IA',
+        category: 'SOURCE',
+        position: { x: 60, y: 320 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=aircAruvnKk',
+          videoId: 'aircAruvnKk',
+          videoTitle: 'A Revolução da Inteligência Artificial',
+          channelTitle: 'Tech Visionary',
+          duration: '22:15',
+          thumbnailUrl: 'https://img.youtube.com/vi/aircAruvnKk/hqdefault.jpg'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'yt-vid-3',
+        type: 'source-youtube',
+        label: 'YouTube: Marketing Digital',
+        category: 'SOURCE',
+        position: { x: 60, y: 590 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
+          videoId: 'kJQP7kiw5Fk',
+          videoTitle: 'Como Começar no Marketing Digital',
+          channelTitle: 'Growth Playbook',
+          duration: '15:40',
+          thumbnailUrl: 'https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'ai-knowledge-forge',
+        type: 'ai-ebook-forge',
+        label: 'Conhecimento & E-book AI (Síntese)',
+        category: 'AI',
+        position: { x: 560, y: 220 },
+        inputs: [
+          { id: 'in-topic', name: 'topic', label: 'Tema / Briefing', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-context', name: 'context', label: 'Pesquisa / Dados', type: 'DOCUMENT', isMulti: true, required: false },
+          { id: 'in-avatar', name: 'avatar', label: 'Avatar ICP', type: 'JSON', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-ebook', name: 'ebook', label: 'Livro Digital (JSON)', type: 'DOCUMENT', isMulti: true, required: true },
+          { id: 'out-markdown', name: 'markdown', label: 'Texto Completo (MD)', type: 'TEXT', isMulti: true, required: true },
+          { id: 'out-chapters', name: 'chapters', label: 'Capítulos Estruturados', type: 'JSON', isMulti: true, required: true }
+        ],
+        config: {
+          title: 'Manual de Escala Digital & IA: Síntese de 3 Vídeos',
+          niche: 'Marketing de Performance & Negócios com IA',
+          pageCount: 10,
+          wordsPerChapter: 1000,
+          tone: 'authoritative'
+        },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'conn-vid-1',
+        sourceNodeId: 'yt-vid-1',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'ai-knowledge-forge',
+        targetPortId: 'in-topic',
+        state: 'connected'
+      },
+      {
+        id: 'conn-vid-2',
+        sourceNodeId: 'yt-vid-2',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'ai-knowledge-forge',
+        targetPortId: 'in-topic',
+        state: 'connected'
+      },
+      {
+        id: 'conn-vid-3',
+        sourceNodeId: 'yt-vid-3',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'ai-knowledge-forge',
+        targetPortId: 'in-context',
         state: 'connected'
       }
     ]

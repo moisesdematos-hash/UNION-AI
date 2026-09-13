@@ -9,7 +9,7 @@ import { WorkflowDefinition } from '../types/workflow.js';
 
 describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
   it('should validate all official templates against WorkflowTemplateSchema', () => {
-    expect(OFFICIAL_TEMPLATES.length).toBe(8);
+    expect(OFFICIAL_TEMPLATES.length).toBe(9);
 
     for (const template of OFFICIAL_TEMPLATES) {
       const parsed = WorkflowTemplateSchema.parse(template);
@@ -54,5 +54,6 @@ describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
     expect(ids).toContain('document-rag-chat');
     expect(ids).toContain('autonomous-react-agent');
     expect(ids).toContain('recurring-automation-pipeline');
+    expect(ids).toContain('multi-video-knowledge-forge');
   });
 });
