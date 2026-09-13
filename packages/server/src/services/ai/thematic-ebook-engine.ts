@@ -281,6 +281,16 @@ export function generateThematicEbook(options: ThematicEbookOptions): ThematicEb
     `Em nossa análise detalhada dos fluxos de trabalho associados a **${cleanPrompt}**, detectamos que os maiores prejuízos não são causados por erros catastróficos visíveis, mas sim pelo acúmulo contínuo de micro-fricções diárias em **${cleanNiche}**. Uma micro-fricção é qualquer detalhe mal resolvido que consome alguns minutos a mais em cada ciclo de trabalho: um documento fora de lugar, um parâmetro não calibrado ou uma dúvida recorrente sobre quem deve validar uma decisão.`,
     `Quando essas pequenas perdas se somam ao longo de semanas ou meses, o resultado é uma erosão substancial da produtividade e da qualidade entregue em **${cleanPrompt}**. Eliminar essas perdas ocultas exige uma postura atenta e a disposição de auditar periodicamente cada uma das etapas do seu mecanismo operacional.`,
 
+    `### 2.5 Arquitetura de Blindagem Mental e Foco Tático`,
+    `A execução diária de alto rendimento em **${cleanPrompt}** demanda um estado cognitivo protegido contra distrações e ruídos dispersivos. Observamos que profissionais de **${cleanNiche}** que operam sem blocos de tempo dedicados perdem até 40% de sua acuidade diagnóstica ao alternarem entre tarefas operacionais de baixa relevância e decisões estruturais críticas.`,
+    `Para instituir essa blindagem, estabeleça a rotina dos Blocos de Foco Ininterrupto (BFI): períodos de 90 minutos onde nenhuma comunicação externa é permitida, focando exclusivamente na calibração técnica e no avanço do protocolo central de **${cleanPrompt}**. Essa simples prática multiplica a densidade de entrega e assegura que os padrões de qualidade permaneçam inegociáveis.`,
+
+    `### 2.6 Protocolo de Gestão de Incidentes e Resolução Rápida`,
+    `Quando um imprevisto surge na esteira de **${cleanPrompt}**, a reação instintiva da maioria é o desespero ou a tentativa de remendos improvisados. A metodologia de elite preconiza a aplicação do Procedimento Operacional de Resolução Rápida (PORR):`,
+    `1. **Contenção Imediata**: Isolar a etapa afetada sem comprometer as entregas paralelas em **${cleanNiche}**.`,
+    `2. **Rastreamento de Causa-Raiz**: Aplicar a técnica dos Cinco Porquês para descobrir qual falha de entrada ou de parâmetro originou o incidente.`,
+    `3. **Solução Definitiva e Atualização do Manual**: Implementar a correção e registrar o aprendizado para que a mesma falha nunca mais se repita em **${cleanPrompt}**.`,
+
     `> 🎯 **EXERCÍCIO DE IMPLEMENTAÇÃO**\n> Identifique na sua rotina atual duas micro-fricções recorrentes ao lidar com **${cleanPrompt}**. Desenvolva hoje mesmo um checklist simples de 5 itens para extinguir essas fricções em definitivo.`,
 
     `> 📜 **CITAÇÃO DE MESTRE**\n> *"A maestria não é um estado estático que se atinge para depois descansar; é o hábito inabalável de rejeitar a mediocridade em cada pequeno detalhe do processo diário."*`
@@ -331,6 +341,10 @@ export function generateThematicEbook(options: ThematicEbookOptions): ThematicEb
     `[ ] Acabamento e refinamento da Fase 5 concluídos com padrão de excelência inquestionável.\n` +
     `[ ] Métricas finais registradas no histórico oficial para retroalimentação do sistema de **${cleanPrompt}**.`,
 
+    `### 3.5 Protocolos de Calibração Fina e Manutenção Preventiva`,
+    `A excelência na execução de **${cleanPrompt}** não depende apenas do rigor durante a tarefa ativa, mas da disciplina com que você prepara e mantém as condições ideais do ambiente de trabalho em **${cleanNiche}**. O desgaste invisível de processos não revisados gera desvios imperceptíveis que culminam em quebra de padrão de qualidade.`,
+    `Para prevenir essa degradação silenciosa, institua uma inspeção técnica antes de cada novo ciclo de entrega: certifique-se de que os modelos de referência estão atualizados, valide a integridade dos dados de suporte e recalibre os pontos de fricção identificados na rodada anterior. Dessa forma, você opera sempre no ápice do rendimento profissional.`,
+
     `> 🎯 **EXERCÍCIO DE IMPLEMENTAÇÃO**\n> Imprima ou anote o checklist acima e aplique-o na sua próxima sessão de trabalho com **${cleanPrompt}**. Observe como a sensação de controle e a previsibilidade aumentam imediatamente.`,
 
     `> 📜 **CITAÇÃO DE AUTORIDADE**\n> *"A disciplina operacional não restringe a criatividade; ela liberta a mente das preocupações rotineiras para que a verdadeira inovação floresça onde ela mais importa."*`
@@ -369,11 +383,15 @@ export function generateThematicEbook(options: ThematicEbookOptions): ThematicEb
     `• **Semana 3 (Dias 15 a 21): Auditoria e Refinamento** — Analisar os dados obtidos, identificar desvios e otimizar os pontos de atrito identificados na rotina de **${cleanPrompt}**. Ajuste os parâmetros operacionais.`,
     `• **Semana 4 (Dias 22 a 30): Consolidação e Escala** — Padronizar os novos hábitos operacionais, documentar as lições aprendidas e estabelecer as metas para o trimestre seguinte em **${cleanNiche}**. Apresente os resultados e comemore a evolução.`,
 
-    `### 4.5 Conclusão Estratégica, Próximos Passos e Chamada para Ação`,
+    `### 4.5 Manifesto de Excelência e Compromisso Inegociável`,
+    `A consolidação de resultados consistentes em **${cleanPrompt}** não depende de momentos esporádicos de inspiração, mas da internalização de um código de conduta operacional rigoroso. Quem deseja liderar e prosperar dentro de **${cleanNiche}** precisa assumir a responsabilidade intransigente por cada detalhe da entrega, rejeitando atalhos ilusórios e cultivando a reputação de quem entrega valor real, mensurável e acima das expectativas do mercado.`,
+    `Adotar essa postura transforma não apenas a eficiência dos seus processos diários, mas a percepção de autoridade e confiança que você projeta. Quando seus clientes e parceiros percebem que o seu método para **${cleanPrompt}** é pautado em critérios científicos e procedimentos replicáveis, a resistência comercial desaparece e a fidelização torna-se o padrão natural da sua operação.`,
+
+    `### 4.6 Conclusão Estratégica, Próximos Passos e Chamada para Ação`,
     `Chegamos ao final deste guia definitivo sobre **${cleanPrompt}**. Você agora detém não apenas o entendimento profundo das causas e consequências que moldam o mercado de **${cleanNiche}**, mas também um roteiro prático e detalhado para atuar com a postura e a precisão dos melhores especialistas.`,
     `O conhecimento que você acumulou nestas páginas possui valor apenas na medida em que for colocado em movimento. Escolha agora o primeiro passo, comprometa-se com a excelência do processo e transforme **${cleanPrompt}** em um dos maiores pilares do seu sucesso profissional e pessoal. A oportunidade está diante de você: cabe a você dar o primeiro passo deliberado hoje mesmo.`,
 
-    `### 4.6 Checklist Executivo de Domínio Definitivo`,
+    `### 4.7 Checklist Executivo de Domínio Definitivo`,
     `[ ] Revisei todas as etapas do protocolo e sinto-me apto a conduzi-las de forma autônoma em **${cleanPrompt}**.\n` +
     `[ ] Configurei meu ambiente e eliminei as principais fontes de atrito e distração em **${cleanNiche}**.\n` +
     `[ ] Defini minha rotina de acompanhamento semanal das métricas essenciais de desempenho.\n` +

@@ -425,6 +425,7 @@ export function App() {
                         setIsToolsMenuOpen(false);
                         setIsTemplateModalOpen(true);
                       }}
+                      title="Abrir Biblioteca de Templates"
                       className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left transition-colors text-xs text-zinc-200 hover:text-white group cursor-pointer"
                     >
                       <Sparkles className="h-4 w-4 text-amber-400 flex-shrink-0 group-hover:scale-110 transition-transform" />

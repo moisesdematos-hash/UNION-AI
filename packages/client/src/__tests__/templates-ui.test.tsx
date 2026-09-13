@@ -20,6 +20,13 @@ describe('Gate 18: Template Library UI & Canvas Loading', () => {
     expect(screen.getByRole('heading', { level: 1, name: /UNION\.AI/i })).toBeInTheDocument();
     expect(screen.getByText(/Gate 18 Active/i)).toBeInTheDocument();
 
+    const toolsBtn = screen.queryByTitle(/Mais Ferramentas/i);
+    if (toolsBtn) {
+      await act(async () => {
+        fireEvent.click(toolsBtn);
+      });
+    }
+
     const templatesBtn = screen.getByTitle(/Abrir Biblioteca de Templates/i);
     expect(templatesBtn).toBeInTheDocument();
   });
@@ -31,6 +38,13 @@ describe('Gate 18: Template Library UI & Canvas Loading', () => {
     });
 
     render(<App />);
+
+    const toolsBtn = screen.queryByTitle(/Mais Ferramentas/i);
+    if (toolsBtn) {
+      await act(async () => {
+        fireEvent.click(toolsBtn);
+      });
+    }
 
     const templatesBtn = screen.getByTitle(/Abrir Biblioteca de Templates/i);
     await act(async () => {
@@ -65,6 +79,13 @@ describe('Gate 18: Template Library UI & Canvas Loading', () => {
     render(<App />);
 
     expect(useCanvasStore.getState().nodes).toHaveLength(0);
+
+    const toolsBtn = screen.queryByTitle(/Mais Ferramentas/i);
+    if (toolsBtn) {
+      await act(async () => {
+        fireEvent.click(toolsBtn);
+      });
+    }
 
     const templatesBtn = screen.getByTitle(/Abrir Biblioteca de Templates/i);
     await act(async () => {

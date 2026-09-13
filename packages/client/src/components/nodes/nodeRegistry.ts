@@ -162,6 +162,32 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
     }
   },
 
+  'ai-ebook-forge': {
+    type: 'ai-ebook-forge',
+    label: 'Union E-book Forge',
+    category: 'AI',
+    description: 'Motor autônomo de Livros Digitais e Manuais com garantia de capítulos > 1.000 palavras, 10+ páginas, imagens contextuais e PDF editorial',
+    inputs: [
+      { id: 'in-topic', name: 'topic', label: 'Tema / Briefing', type: 'TEXT', isMulti: true, required: false },
+      { id: 'in-context', name: 'context', label: 'Pesquisa / Dados', type: 'DOCUMENT', isMulti: true, required: false },
+      { id: 'in-avatar', name: 'avatar', label: 'Avatar ICP', type: 'JSON', isMulti: false, required: false }
+    ],
+    outputs: [
+      { id: 'out-ebook', name: 'ebook', label: 'Livro Digital (JSON)', type: 'DOCUMENT', isMulti: true, required: true },
+      { id: 'out-markdown', name: 'markdown', label: 'Texto Completo (MD)', type: 'TEXT', isMulti: true, required: true },
+      { id: 'out-chapters', name: 'chapters', label: 'Capítulos Estruturados', type: 'JSON', isMulti: true, required: true }
+    ],
+    defaultConfig: {
+      topic: 'Estratégia e Execução Prática com IA',
+      niche: 'Negócios e Marketing Digital',
+      title: 'Manual Estratégico Definitivo',
+      pageCount: 10,
+      wordsPerChapter: 1000,
+      tone: 'didactic',
+      audienceLevel: 'beginner'
+    }
+  },
+
   // --- SOURCE NODES ---
   'source-youtube': {
     type: 'source-youtube',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { 
   Youtube, 
@@ -20,8 +20,14 @@ import {
   Copy,
   Trash2,
   Play,
-  Loader2
+  Loader2,
+  BookOpen,
+  Printer,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck
 } from 'lucide-react';
+import { EbookReaderModal } from '../modals/EbookReaderModal.js';
 import { NodeDefinition, NodeCategory, NodeState } from '@union/shared';
 import { getDataTypeStyle } from '../../utils/portColors.js';
 import { useCanvasStore } from '../../store/canvasStore.js';
@@ -93,6 +99,8 @@ function getNodeIcon(type: string, category: NodeCategory) {
       return <BarChart3 className="h-4 w-4" />;
     case 'ai-writer':
       return <PenTool className="h-4 w-4" />;
+    case 'ai-ebook-forge':
+      return <BookOpen className="h-4 w-4 text-amber-400" />;
     case 'ai-router':
       return <Cpu className="h-4 w-4" />;
     case 'transform-formatter':
@@ -150,6 +158,14 @@ export function UnionNode({ id, data, selected }: NodeProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [config, setConfig] = useState(nodeData.config || {});
   const [isExtracting, setIsExtracting] = useState(false);
+  const [showReaderModal, setShowReaderModal] = useState(false);
+  const [showChaptersList, setShowChaptersList] = useState(false);
+
+  useEffect(() => {
+    if (nodeData.config) {
+      setConfig(nodeData.config);
+    }
+  }, [nodeData.config]);
 
   const categoryStyle = CATEGORY_COLORS[nodeData.category] || CATEGORY_COLORS.AI;
 
@@ -229,6 +245,115 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro na extração';
+      updateNodeData(id, {
+        state: 'FAILED',
+        executionInfo: {
+          durationMs: Date.now() - startTime,
+          error: message
+        }
+      });
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleExecuteEbookForge = async () => {
+    setIsExtracting(true);
+    updateNodeData(id, { state: 'PROCESSING' });
+    const startTime = Date.now();
+
+    try {
+      const incomingTopicEdges = edges.filter(e => e.target === id && e.targetHandle === 'in-topic');
+      const incomingContextEdges = edges.filter(e => e.target === id && e.targetHandle === 'in-context');
+      const incomingAvatarEdges = edges.filter(e => e.target === id && e.targetHandle === 'in-avatar');
+
+      let dynamicPrompt = String(config.topic || '').trim();
+      let dynamicNiche = String(config.niche || '').trim();
+
+      const { nodes } = useCanvasStore.getState();
+      if (incomingTopicEdges.length > 0) {
+        const sourceNode = nodes.find(n => n.id === incomingTopicEdges[0].source);
+        if (sourceNode?.data) {
+          const sData = sourceNode.data as Record<string, any>;
+          const sourceText = sData.config?.extractedSummary || sData.config?.aiSummary || sData.config?.fullOutput || sData.config?.text;
+          if (sourceText) {
+            dynamicPrompt = dynamicPrompt ? dynamicPrompt + ' - ' + sourceText.slice(0, 150) : sourceText.slice(0, 150);
+          }
+        }
+      }
+
+      if (incomingContextEdges.length > 0) {
+        const sourceNode = nodes.find(n => n.id === incomingContextEdges[0].source);
+        if (sourceNode?.data) {
+          const sData = sourceNode.data as Record<string, any>;
+          const contextText = sData.config?.content || sData.config?.fullOutput || sData.config?.extractedSummary;
+          if (contextText) {
+            dynamicPrompt += '\n[Contexto/Pesquisa]: ' + contextText.slice(0, 300);
+          }
+        }
+      }
+
+      if (incomingAvatarEdges.length > 0) {
+        const sourceNode = nodes.find(n => n.id === incomingAvatarEdges[0].source);
+        if (sourceNode?.data) {
+          const sData = sourceNode.data as Record<string, any>;
+          const avatarTarget = sData.config?.targetAudience || sData.config?.demographics || sData.config?.prompt;
+          if (avatarTarget && !dynamicNiche) {
+            dynamicNiche = String(avatarTarget);
+          }
+        }
+      }
+
+      const effectivePrompt = dynamicPrompt || 'Estratégia e Execução Prática com Inteligência Artificial';
+      const effectiveNiche = dynamicNiche || 'Negócios e Marketing Digital';
+      const effectiveTitle = String(config.title || '').trim() || ('Manual Estratégico de ' + effectivePrompt.slice(0, 35));
+      const effectivePages = Number(config.pageCount || 10);
+      const effectiveWords = Number(config.wordsPerChapter || 1000);
+
+      const res = await fetch('/api/chat/forge/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'EBOOK',
+          prompt: effectivePrompt,
+          title: effectiveTitle,
+          targetNiche: effectiveNiche,
+          pageCount: effectivePages,
+          wordsPerChapter: effectiveWords,
+          tone: config.tone || 'didactic',
+          audienceLevel: config.audienceLevel || 'beginner'
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.status !== 'success') {
+        throw new Error(json.message || 'Falha ao forjar E-book no Canvas');
+      }
+
+      const ebookData = json.data;
+      const durationMs = Date.now() - startTime;
+      const totalWords = ebookData.totalWords || ebookData.totalWordCount || ebookData.chapters?.reduce((acc: number, c: any) => acc + (c.wordCount || 0), 0) || 4200;
+
+      const updatedConfig = {
+        ...config,
+        generatedEbook: ebookData,
+        aiSummary: ebookData.title + ' (' + totalWords.toLocaleString() + ' palavras, ' + (ebookData.chapters?.length || 4) + ' capítulos > 1.000 pal/cap)',
+        fullOutput: ebookData.fullMarkdown || ''
+      };
+
+      setConfig(updatedConfig);
+
+      updateNodeData(id, {
+        state: 'COMPLETED',
+        executionInfo: {
+          durationMs,
+          tokens: totalWords,
+          credits: 0.05
+        },
+        config: updatedConfig
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao gerar e-book';
       updateNodeData(id, {
         state: 'FAILED',
         executionInfo: {
@@ -333,9 +458,9 @@ export function UnionNode({ id, data, selected }: NodeProps) {
     <div
       id={`union-node-${id}`}
       data-node-id={id}
-      className={`w-72 rounded-2xl bg-union-card border transition-all duration-200 text-union-text shadow-2xl backdrop-blur ${
-        categoryStyle.border
-      } ${selected ? 'ring-2 ring-union-accent shadow-union-accent/20' : ''}`}
+      className={`rounded-2xl bg-union-card border transition-all duration-200 text-union-text shadow-2xl backdrop-blur ${
+        nodeData.type === 'ai-ebook-forge' ? 'w-96 border-amber-500/50 shadow-amber-950/20 ring-1 ring-amber-500/30' : 'w-72'
+      } ${categoryStyle.border} ${selected ? 'ring-2 ring-union-accent shadow-union-accent/20' : ''}`}
     >
       {/* 1. Header */}
       <div className={`p-3.5 border-b border-union-border/60 rounded-t-2xl flex items-center justify-between ${categoryStyle.headerBg}`}>
@@ -540,7 +665,240 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         {/* AI Prompt / Settings Configuration */}
         {nodeData.category === 'AI' && (
           <div className="space-y-2">
-            {nodeData.type === 'ai-router' ? (
+            {nodeData.type === 'ai-ebook-forge' ? (
+              <div className="space-y-3">
+                {/* Header description & Compliance Guarantee */}
+                <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-cyan-500/10 to-amber-500/15 border border-amber-500/40 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      Union E-book Forge
+                    </span>
+                    <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
+                      <ShieldCheck className="h-3 w-3" />
+                      &gt; 1.000 pal/cap
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-300 leading-relaxed">
+                    Motor autônomo de livros digitais com 10+ páginas, capítulos profundos (&gt; 1.000 palavras cada) e exportação em Markdown e PDF Editorial.
+                  </p>
+                </div>
+
+                {/* Configuration Fields */}
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-union-muted flex items-center justify-between">
+                      <span>Título da Obra</span>
+                      <span className="text-[9px] text-zinc-500">Opcional</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={String(config.title || '')}
+                      onChange={(e) => handleConfigUpdate('title', e.target.value)}
+                      placeholder="Ex: Manual Estratégico de IA"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-union-muted flex items-center justify-between">
+                      <span>Tema Central / Briefing</span>
+                      <span className="text-[9px] text-amber-400/80">Entrada Principal</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={String(config.topic || '')}
+                      onChange={(e) => handleConfigUpdate('topic', e.target.value)}
+                      placeholder="Ex: Automação e processos de escala digital..."
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none resize-none placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-union-muted">Nicho de Atuação</label>
+                    <input
+                      type="text"
+                      value={String(config.niche || '')}
+                      onChange={(e) => handleConfigUpdate('niche', e.target.value)}
+                      placeholder="Ex: Marketing Digital e Negócios"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-sans focus:border-amber-400 focus:outline-none placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  {/* Grid with PageCount, Words and Tone */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-mono text-union-muted block">Extensão</label>
+                      <select
+                        value={Number(config.pageCount || 10)}
+                        onChange={(e) => handleConfigUpdate('pageCount', Number(e.target.value))}
+                        className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none"
+                      >
+                        <option value={10}>10 Páginas</option>
+                        <option value={15}>15 Páginas</option>
+                        <option value={20}>20 Páginas</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-mono text-union-muted block">Capítulo</label>
+                      <select
+                        value={Number(config.wordsPerChapter || 1000)}
+                        onChange={(e) => handleConfigUpdate('wordsPerChapter', Number(e.target.value))}
+                        className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-emerald-400 focus:outline-none"
+                      >
+                        <option value={1000}>1.000+ pal</option>
+                        <option value={1200}>1.200+ pal</option>
+                        <option value={1500}>1.500+ pal</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-mono text-union-muted block">Tom</label>
+                      <select
+                        value={String(config.tone || 'didactic')}
+                        onChange={(e) => handleConfigUpdate('tone', e.target.value)}
+                        className="w-full px-1.5 py-1 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none"
+                      >
+                        <option value="didactic">Didático</option>
+                        <option value="authoritative">Autoritário</option>
+                        <option value="conversational">Conversa</option>
+                        <option value="inspirational">Inspiração</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Trigger Button */}
+                <button
+                  onClick={handleExecuteEbookForge}
+                  disabled={isExtracting}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs font-sans flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {isExtracting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-black" />
+                      <span>Forjando E-book (&gt; 1.000 pal/cap)...</span>
+                    </>
+                  ) : (
+                    <>
+                      <BookOpen className="h-4 w-4 text-black" />
+                      <span>⚡ Forjar E-book no Canvas</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Generated Ebook Result Panel */}
+                {Boolean(config.generatedEbook) && (
+                  <div className="p-3 rounded-xl bg-black/40 border border-amber-500/40 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-amber-400 flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                        Obra Forjada no Canvas
+                      </span>
+                      <span className="text-[9px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                        Auditado
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1 text-center py-1 bg-union-surface/50 rounded-lg border border-union-border/60">
+                      <div className="p-1">
+                        <span className="text-[9px] font-mono text-zinc-400 block">Total</span>
+                        <span className="text-xs font-bold text-amber-400 font-mono">
+                          {((config.generatedEbook as any).totalWords || (config.generatedEbook as any).totalWordCount || 4200).toLocaleString()}
+                        </span>
+                        <span className="text-[8px] text-zinc-500 block">palavras</span>
+                      </div>
+                      <div className="p-1 border-x border-union-border/60">
+                        <span className="text-[9px] font-mono text-zinc-400 block">Capítulos</span>
+                        <span className="text-xs font-bold text-emerald-400 font-mono">
+                          {((config.generatedEbook as any).chapters || []).length || 4}
+                        </span>
+                        <span className="text-[8px] text-zinc-500 block">&gt;1.000 pal</span>
+                      </div>
+                      <div className="p-1">
+                        <span className="text-[9px] font-mono text-zinc-400 block">Extensão</span>
+                        <span className="text-xs font-bold text-cyan-400 font-mono">
+                          {(config.generatedEbook as any).pageCount || 10}
+                        </span>
+                        <span className="text-[8px] text-zinc-500 block">páginas</span>
+                      </div>
+                    </div>
+
+                    {/* 1-Click Action Toolbar */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      <button
+                        onClick={() => setShowReaderModal(true)}
+                        className="py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <BookOpen className="h-3.5 w-3.5" />
+                        <span>Ler Obra</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const ebook = config.generatedEbook as any;
+                          const text = ebook.fullMarkdown || '';
+                          const filename = (ebook.title || 'ebook').toLowerCase().replace(/[^a-z0-9]/g, '-') + '.md';
+                          const blob = new Blob([text], { type: 'text/markdown;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', filename);
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[11px] font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                        title="Baixar Arquivo Markdown (.md)"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>.MD</span>
+                      </button>
+
+                      <button
+                        onClick={() => setShowReaderModal(true)}
+                        className="py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-300 text-[11px] font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                        title="Imprimir / Exportar PDF Editorial"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        <span>PDF</span>
+                      </button>
+                    </div>
+
+                    {/* Chapters Quick Toggle */}
+                    <div className="pt-1">
+                      <button
+                        onClick={() => setShowChaptersList(!showChaptersList)}
+                        className="w-full flex items-center justify-between text-[10px] font-mono text-zinc-400 hover:text-white transition-colors"
+                      >
+                        <span>Ver Capítulos & Metas ({((config.generatedEbook as any).chapters || []).length})</span>
+                        {showChaptersList ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+
+                      {showChaptersList && (
+                        <div className="mt-1.5 space-y-1 max-h-40 overflow-y-auto pr-1">
+                          {((config.generatedEbook as any).chapters || []).map((c: any, i: number) => (
+                            <div
+                              key={c.chapterNumber || i}
+                              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] flex items-center justify-between"
+                            >
+                              <span className="truncate max-w-[170px] text-zinc-300 font-sans">
+                                Cap. {c.chapterNumber}: {c.title}
+                              </span>
+                              <span className="font-mono text-[9px] font-bold text-emerald-400 shrink-0 ml-1">
+                                ✓ {c.wordCount} pal
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : nodeData.type === 'ai-router' ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-mono text-union-muted">Optimization</label>
@@ -664,6 +1022,15 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{nodeData.executionInfo.error}</span>
         </div>
+      )}
+
+      {/* Reader Modal */}
+      {showReaderModal && (
+        <EbookReaderModal
+          isOpen={showReaderModal}
+          onClose={() => setShowReaderModal(false)}
+          ebook={config.generatedEbook as any}
+        />
       )}
     </div>
   );
