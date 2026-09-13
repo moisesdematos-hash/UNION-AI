@@ -27,7 +27,10 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Bot,
+  Send,
+  RotateCcw
 } from 'lucide-react';
 import { EbookReaderModal } from '../modals/EbookReaderModal.js';
 import { NodeDefinition, NodeCategory, NodeState } from '@union/shared';
@@ -451,6 +454,23 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         return;
       }
 
+      // Collect upstream context if any
+      const incomingEdges = edges.filter(e => e.target === id);
+      const { nodes } = useCanvasStore.getState();
+      const upstreamSnippets: string[] = [];
+      incomingEdges.forEach(e => {
+        const src = nodes.find(n => n.id === e.source);
+        if (src?.data) {
+          const cfg = (src.data as any).config || {};
+          const text = cfg.fullMarkdown || cfg.fullOutput || cfg.text || cfg.content || cfg.extractedSummary || '';
+          if (text) {
+            upstreamSnippets.push(`[${String((src.data as any).label || 'Fonte')}]:\n${String(text).slice(0, 3000)}`);
+          }
+        }
+      });
+      const resolvedContext = upstreamSnippets.length > 0 ? upstreamSnippets.join('\n\n---\n\n') : (config.context || undefined);
+      const userPromptText = String(config.prompt || `Process task for ${nodeData.label}`);
+
       const res = await fetch('/api/ai/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -458,7 +478,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           nodeId: id,
           role: nodeData.type,
           model: config.model || 'auto',
-          userPrompt: config.prompt || `Process task for ${nodeData.label}`,
+          userPrompt: userPromptText,
+          context: resolvedContext,
           options: {
             format: config.format || (nodeData.type === 'ai-writer' ? 'youtube-script' : undefined)
           }
@@ -471,6 +492,13 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       }
 
       const raw = json.data.raw;
+      const prevMessages = Array.isArray(config.messages) ? config.messages : [];
+      const newMessages = [
+        ...prevMessages,
+        { id: `msg-${Date.now()}-u`, role: 'user', text: userPromptText, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
+        { id: `msg-${Date.now()}-a`, role: 'assistant', text: raw.content, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }
+      ];
+
       updateNodeData(id, {
         state: 'COMPLETED',
         executionInfo: {
@@ -481,7 +509,9 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         config: {
           ...config,
           aiSummary: raw.content.slice(0, 80) + '...',
-          fullOutput: raw.content
+          fullOutput: raw.content,
+          messages: nodeData.type === 'ai-chat' ? newMessages : config.messages,
+          prompt: nodeData.type === 'ai-chat' ? '' : config.prompt
         }
       });
     } catch (err: unknown) {
@@ -507,6 +537,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           ? 'w-96 min-w-[300px] max-w-[580px] resize-x overflow-hidden border-amber-500/50 shadow-amber-950/20 ring-1 ring-amber-500/30' 
           : nodeData.type === 'output-modal-viewer'
           ? `${isNodeCollapsed ? 'w-[640px] h-auto' : 'w-[640px] h-[640px] min-w-[420px] min-h-[420px] max-w-[960px] max-h-[960px]'} resize overflow-hidden flex flex-col border-emerald-500/50 shadow-emerald-950/30 ring-1 ring-emerald-500/30`
+          : nodeData.type === 'ai-chat'
+          ? `${isNodeCollapsed ? 'w-[640px] h-auto' : 'w-[640px] h-[640px] min-w-[420px] min-h-[420px] max-w-[960px] max-h-[960px]'} resize overflow-hidden flex flex-col border-indigo-500/50 shadow-indigo-950/30 ring-1 ring-indigo-500/30`
           : 'w-72'
       } ${categoryStyle.border} ${selected ? 'ring-2 ring-union-accent shadow-union-accent/20' : ''}`}
     >
@@ -582,7 +614,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       {/* 2. Ports Section (Inputs on Left, Outputs on Right) */}
       {!isNodeCollapsed ? (
         <div className="px-3.5 py-2.5 border-b border-union-border/40 space-y-2">
-          {(nodeData.type === 'ai-ebook-forge' || nodeData.type === 'output-modal-viewer') && (
+          {(nodeData.type === 'ai-ebook-forge' || nodeData.type === 'output-modal-viewer' || nodeData.type === 'ai-chat') && (
             <button
               onClick={() => setIsPortsCollapsed(!isPortsCollapsed)}
               className="w-full flex items-center justify-between text-[10px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer pb-1"
@@ -726,7 +758,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
       {/* 3. Interactive Body / Configuration */}
       {!isNodeCollapsed && (
-        <div className={`p-3.5 space-y-2.5 text-xs ${nodeData.type === 'output-modal-viewer' ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
+        <div className={`p-3.5 space-y-2.5 text-xs ${(nodeData.type === 'output-modal-viewer' || nodeData.type === 'ai-chat') ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
         {/* Source Nodes Configuration & Extraction Trigger */}
         {nodeData.category === 'SOURCE' && (
           <div className="space-y-2">
@@ -898,7 +930,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
         {/* AI Prompt / Settings Configuration */}
         {nodeData.category === 'AI' && (
-          <div className="space-y-2">
+          <div className={`space-y-2 ${nodeData.type === 'ai-chat' ? 'flex-1 flex flex-col min-h-0' : ''}`}>
             {nodeData.type === 'ai-ebook-forge' ? (
               <div className="space-y-3">
                 {/* Header description & Compliance Guarantee */}
@@ -1176,7 +1208,221 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                   />
                 </div>
               </div>
-            ) : (
+            ) : nodeData.type === 'ai-chat' ? (() => {
+              const incomingEdges = edges.filter(e => e.target === id);
+              const { nodes } = useCanvasStore.getState();
+              const connectedSources = incomingEdges
+                .map(e => nodes.find(n => n.id === e.source))
+                .filter(Boolean);
+
+              const messages: Array<{ id: string; role: 'user' | 'assistant'; text: string; timestamp: string }> = 
+                Array.isArray(config.messages) && config.messages.length > 0 ? config.messages : (
+                  config.fullOutput ? [
+                    { id: 'initial-u', role: 'user', text: String(config.lastPrompt || 'Executar Conversação'), timestamp: 'Recente' },
+                    { id: 'initial-a', role: 'assistant', text: String(config.fullOutput), timestamp: 'Recente' }
+                  ] : []
+                );
+
+              const quickPrompts = [
+                'Extrair 5 principais insights',
+                'Criar 3 ganchos para Reels/VSL',
+                'Resumir em tópicos acionáveis',
+                'Identificar dores e desejos'
+              ];
+
+              return (
+                <div className="flex-1 flex flex-col min-h-0 space-y-2.5">
+                  {/* Top Model & Context Strip */}
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 shrink-0 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="p-1 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 shrink-0">
+                          <Bot className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="text-[11px] font-bold text-white truncate">
+                          AI Chat Assistant
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {connectedSources.length > 0 ? (
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                            {connectedSources.length} Fonte{connectedSources.length > 1 ? 's' : ''} Conectada{connectedSources.length > 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-400">
+                            0 Fontes no Contexto
+                          </span>
+                        )}
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          Quadrado 3x
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] font-mono text-zinc-400">Modelo:</label>
+                        <select
+                          value={String(config.model || 'gpt-4o')}
+                          onChange={(e) => handleConfigUpdate('model', e.target.value)}
+                          className="px-2 py-0.5 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:border-indigo-400 focus:outline-none cursor-pointer"
+                        >
+                          <option value="gpt-4o">OpenAI GPT-4o (Padrão)</option>
+                          <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Copywriting)</option>
+                          <option value="deepseek-r1">DeepSeek R1 (Raciocínio Lógico)</option>
+                          <option value="gemini-1-5-flash">Gemini 1.5 Flash (Ultra Rápido)</option>
+                          <option value="groq-llama-3">Groq Llama 3 70B (Baixa Latência)</option>
+                          <option value="auto">Auto Router (Smart)</option>
+                        </select>
+                      </div>
+                      {messages.length > 0 && (
+                        <button
+                          onClick={() => {
+                            handleConfigUpdate('messages', []);
+                            handleConfigUpdate('fullOutput', '');
+                            handleConfigUpdate('aiSummary', '');
+                          }}
+                          className="text-[9px] font-mono text-zinc-400 hover:text-rose-400 flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Limpar Conversa"
+                        >
+                          <RotateCcw className="h-2.5 w-2.5" /> Limpar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Interactive Conversation Box */}
+                  <div className="flex-1 min-h-[220px] rounded-xl bg-black/80 border border-indigo-500/25 p-3.5 overflow-y-auto space-y-3 font-sans custom-scrollbar select-text shadow-inner flex flex-col">
+                    {messages.length === 0 ? (
+                      <div className="my-auto text-center p-4 space-y-3">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400 shadow-lg shadow-indigo-950/40">
+                          <Bot className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-1 max-w-sm mx-auto">
+                          <h5 className="text-xs font-bold text-white">
+                            Pronto para Conversar & Analisar
+                          </h5>
+                          <p className="text-[11px] text-zinc-400 leading-relaxed">
+                            {connectedSources.length > 0
+                              ? `Contexto ativo de ${connectedSources.map(s => String((s?.data as any)?.label || 'Fonte')).join(', ')}. Pergunte qualquer coisa sobre o material!`
+                              : 'Conecte a saída de vídeos, sites ou PDFs na porta "Contexts" para o assistente responder com base nos seus dados.'}
+                          </p>
+                        </div>
+
+                        {/* Quick Prompts Suggestions */}
+                        <div className="pt-2 flex flex-wrap gap-1.5 justify-center">
+                          {quickPrompts.map((qp, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleConfigUpdate('prompt', qp)}
+                              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
+                            >
+                              💡 {qp}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {messages.map((m) => (
+                          <div
+                            key={m.id}
+                            className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {m.role === 'user' ? (
+                              <div className="max-w-[85%] bg-indigo-600/30 border border-indigo-500/40 rounded-2xl rounded-tr-none px-3 py-2 text-xs text-indigo-100 shadow-md">
+                                <div className="text-[9px] font-mono text-indigo-300/80 mb-0.5 flex items-center justify-end gap-1">
+                                  <span>Você</span> • <span>{m.timestamp}</span>
+                                </div>
+                                <p className="whitespace-pre-wrap leading-relaxed font-sans">{m.text}</p>
+                              </div>
+                            ) : (
+                              <div className="max-w-[92%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs text-zinc-200 shadow-md space-y-1.5">
+                                <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 pb-1 border-b border-white/5">
+                                  <span className="flex items-center gap-1 text-indigo-400 font-semibold">
+                                    <Bot className="h-3 w-3" /> {String(config.model || 'GPT-4o')}
+                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{m.timestamp}</span>
+                                    <button
+                                      onClick={() => navigator.clipboard.writeText(m.text)}
+                                      className="hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+                                      title="Copiar Resposta"
+                                    >
+                                      <Copy className="h-2.5 w-2.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="whitespace-pre-wrap leading-relaxed text-xs selection:bg-indigo-500/40">
+                                  {m.text}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {isExtracting && (
+                          <div className="flex justify-start">
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs animate-pulse">
+                              <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
+                              <span>Processando resposta com {String(config.model || 'GPT-4o')}...</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Input & Execution Strip */}
+                  <div className="space-y-2 shrink-0 pt-0.5">
+                    <div className="relative">
+                      <textarea
+                        rows={2}
+                        value={String(config.prompt || '')}
+                        onChange={(e) => handleConfigUpdate('prompt', e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (!isExtracting && String(config.prompt || '').trim()) {
+                              handleExecuteAiNode();
+                            }
+                          }
+                        }}
+                        placeholder="Digite sua mensagem para o assistente (Pressione Enter para enviar)..."
+                        className="w-full px-3 py-2 rounded-xl bg-union-surface border border-union-border text-white text-xs font-sans focus:border-indigo-400 focus:outline-none placeholder:text-zinc-500 resize-none shadow-inner pr-10"
+                      />
+                      <button
+                        onClick={handleExecuteAiNode}
+                        disabled={isExtracting || !String(config.prompt || '').trim()}
+                        className="absolute right-2.5 bottom-2.5 p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all cursor-pointer shadow-md"
+                        title="Enviar Mensagem (Enter)"
+                      >
+                        {isExtracting ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                      <span className="text-[9px] text-zinc-500">
+                        Shift + Enter para quebrar linha
+                      </span>
+                      <button
+                        onClick={handleExecuteAiNode}
+                        disabled={isExtracting}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs font-sans flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950/40 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <Bot className="h-3.5 w-3.5" />
+                        <span>{isExtracting ? 'Processando...' : 'Executar Conversação'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
               <>
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-mono text-union-muted">Model Provider</label>
@@ -1210,40 +1456,39 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                     </select>
                   </div>
                 )}
+
+                {Boolean(config.aiSummary) && (
+                  <div className="p-2 rounded-lg bg-union-surface/70 border border-indigo-500/30 text-[10px] text-indigo-400 font-mono truncate">
+                    ✓ {String(config.aiSummary)}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleExecuteAiNode}
+                  disabled={isExtracting}
+                  className="w-full py-1.5 px-3 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-400 text-xs font-mono flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  {isExtracting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-3 w-3 fill-current" />
+                      <span>
+                        {nodeData.type === 'ai-router' && 'Avaliar & Rotear Tarefa'}
+                        {nodeData.type === 'ai-writer' && 'Gerar Copy / Roteiro'}
+                        {nodeData.type === 'ai-analyst' && 'Executar Análise'}
+                        {nodeData.type === 'ai-summarizer' && 'Sintetizar Conteúdo'}
+                        {nodeData.type === 'ai-vision' && 'Analisar Design'}
+                        {!['ai-router', 'ai-writer', 'ai-analyst', 'ai-summarizer', 'ai-vision', 'ai-chat'].includes(nodeData.type) && 'Executar IA'}
+                      </span>
+                    </>
+                  )}
+                </button>
               </>
             )}
-
-            {Boolean(config.aiSummary) && (
-              <div className="p-2 rounded-lg bg-union-surface/70 border border-indigo-500/30 text-[10px] text-indigo-400 font-mono truncate">
-                ✓ {String(config.aiSummary)}
-              </div>
-            )}
-
-            <button
-              onClick={handleExecuteAiNode}
-              disabled={isExtracting}
-              className="w-full py-1.5 px-3 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-400 text-xs font-mono flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
-            >
-              {isExtracting ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Play className="h-3 w-3 fill-current" />
-                  <span>
-                    {nodeData.type === 'ai-router' && 'Avaliar & Rotear Tarefa'}
-                    {nodeData.type === 'ai-writer' && 'Gerar Copy / Roteiro'}
-                    {nodeData.type === 'ai-analyst' && 'Executar Análise'}
-                    {nodeData.type === 'ai-summarizer' && 'Sintetizar Conteúdo'}
-                    {nodeData.type === 'ai-vision' && 'Analisar Design'}
-                    {nodeData.type === 'ai-chat' && 'Executar Conversação'}
-                    {!['ai-router', 'ai-writer', 'ai-analyst', 'ai-summarizer', 'ai-vision', 'ai-chat'].includes(nodeData.type) && 'Executar IA'}
-                  </span>
-                </>
-              )}
-            </button>
           </div>
         )}
 
