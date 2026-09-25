@@ -83,6 +83,9 @@ function initializeSchema(db: Database.Database): void {
       email TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'USER',
+      avatar_url TEXT,
+      auth_provider TEXT NOT NULL DEFAULT 'email',
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -372,6 +375,24 @@ function initializeSchema(db: Database.Database): void {
 
   try {
     db.exec(`ALTER TABLE workflows ADD COLUMN groups_json TEXT NOT NULL DEFAULT '[]'`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'USER'`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'email'`);
   } catch {
     // Column already exists
   }

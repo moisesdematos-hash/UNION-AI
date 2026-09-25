@@ -34,7 +34,11 @@ import { ProjectOracleDrawer } from './components/chat/ProjectOracleDrawer.js';
 import { ConnectionStandardsModal } from './components/modals/ConnectionStandardsModal.js';
 import { UnionForgeModal } from './components/modals/UnionForgeModal.js';
 import { UserStorageManagerModal } from './components/modals/UserStorageManagerModal.js';
-import { Target, Bot, Workflow, Zap, FolderOpen, ChevronDown, LayoutGrid, Share2, Crown } from 'lucide-react';
+import { AuthModal } from './components/auth/AuthModal.js';
+import { AdminDashboardModal } from './components/admin/AdminDashboardModal.js';
+import { ForgotPasswordModal } from './components/modals/ForgotPasswordModal.js';
+import { useAuthStore } from './store/useAuthStore.js';
+import { Target, Bot, Workflow, Zap, FolderOpen, ChevronDown, LayoutGrid, Share2, Crown, ShieldAlert, LogOut, UserCheck } from 'lucide-react';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'workspace' | 'landing'>(() => {
@@ -52,9 +56,24 @@ export function App() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isOracleOpen, setIsOracleOpen] = useState(false);
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
     return typeof window !== 'undefined' && localStorage.getItem('union_welcome_dismissed') !== 'true';
   });
+
+  const {
+    user,
+    isAuthenticated,
+    isAdmin,
+    openAuthModal,
+    logout,
+    checkAuth,
+    isAdminDashboardOpen,
+    openAdminDashboard,
+    closeAdminDashboard
+  } = useAuthStore();
+
   const { 
     nodes, 
     edges, 
@@ -81,6 +100,7 @@ export function App() {
   useEffect(() => {
     initFromLocalStorage();
     fetchUserCredits();
+    checkAuth();
 
     fetch('/api/health')
       .then((res) => {
@@ -116,6 +136,9 @@ export function App() {
       if (target && !target.closest('#tools-dropdown-container')) {
         setIsToolsMenuOpen(false);
       }
+      if (target && !target.closest('#user-profile-dropdown-container')) {
+        setIsUserMenuOpen(false);
+      }
     };
     window.addEventListener('click', handleWindowClick);
 
@@ -124,7 +147,7 @@ export function App() {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('click', handleWindowClick);
     };
-  }, [initFromLocalStorage, saveWorkflow, fetchUserCredits]);
+  }, [initFromLocalStorage, saveWorkflow, fetchUserCredits, checkAuth]);
 
   const handleQuickAddNode = () => {
     const templates = ['source-youtube', 'ai-writer', 'ai-analyst', 'extractor-transcript'];
@@ -555,6 +578,132 @@ export function App() {
               </div>
             </div>
           )}
+
+          {/* Vertical Divider */}
+          <div className="h-5 w-px bg-zinc-800" />
+
+          {/* Admin Panel Quick Trigger (Exclusively for Admins) */}
+          {isAdmin && (
+            <button
+              onClick={() => openAdminDashboard()}
+              title="Painel de Administração do Sistema (SUPER ADMIN)"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 via-amber-400/20 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-400/30 border border-amber-500/60 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-md shadow-amber-950/40 cursor-pointer animate-pulse"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden sm:inline">🛡️ Painel Admin</span>
+              <span className="sm:hidden">🛡️ Admin</span>
+            </button>
+          )}
+
+          {/* User Profile / Auth Cluster */}
+          {isAuthenticated ? (
+            <div className="relative" id="user-profile-dropdown-container">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsUserMenuOpen(!isUserMenuOpen);
+                }}
+                className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 hover:border-zinc-500 text-xs transition-all shadow-sm cursor-pointer"
+              >
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="h-5 w-5 rounded-full object-cover border border-zinc-700" />
+                ) : (
+                  <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-union-accent to-emerald-500 text-white font-bold flex items-center justify-center text-[10px]">
+                    {(user?.name || 'U').slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-zinc-200 font-semibold max-w-[110px] truncate hidden md:inline">
+                  {user?.name || user?.email}
+                </span>
+                {isAdmin && (
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 hidden sm:inline">
+                    ADMIN
+                  </span>
+                )}
+                <ChevronDown className={`h-3 w-3 text-zinc-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isUserMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-64 rounded-xl bg-zinc-950/95 border border-zinc-800 shadow-2xl p-1.5 z-50 animate-fadeIn space-y-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-3 py-2 border-b border-zinc-800/80 mb-1">
+                    <div className="font-bold text-xs text-white truncate flex items-center gap-1.5">
+                      <span>{user?.name}</span>
+                      {isAdmin && <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">ADMIN</span>}
+                    </div>
+                    <div className="text-[11px] text-zinc-400 truncate">{user?.email}</div>
+                  </div>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        openAdminDashboard();
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left text-xs text-amber-300 font-bold group cursor-pointer"
+                    >
+                      <ShieldAlert className="h-4 w-4 text-amber-400" />
+                      <div>
+                        <div>Painel de Administração</div>
+                        <div className="text-[10px] text-zinc-400 font-normal">KPIs, Usuários e Transações</div>
+                      </div>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      openCreditsDrawer();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left text-xs text-zinc-300 group cursor-pointer"
+                  >
+                    <Coins className="h-4 w-4 text-amber-400" />
+                    <div>
+                      <div className="font-semibold text-white">Minha Carteira & Quotas</div>
+                      <div className="text-[10px] text-zinc-400">{(userCredits?.balance ?? 100).toFixed(2)} créditos disponíveis</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsStorageManagerOpen(true);
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800/90 text-left text-xs text-zinc-300 group cursor-pointer"
+                  >
+                    <FolderOpen className="h-4 w-4 text-cyan-400" />
+                    <div>
+                      <div className="font-semibold text-white">Minhas Pastas em Disco</div>
+                      <div className="text-[10px] text-zinc-400">E-books, copys e ficheiros</div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-zinc-800/80 my-1 pt-1" />
+
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg hover:bg-rose-500/10 text-left text-xs text-rose-400 group cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4 text-rose-400" />
+                    <span className="font-semibold">Terminar Sessão (Sair)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => openAuthModal('login')}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-union-accent to-emerald-500 hover:from-union-accent/90 hover:to-emerald-500/90 text-white text-xs font-bold shadow-md shadow-union-accent/20 transition-all cursor-pointer"
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+              <span>Entrar / Cadastrar</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -774,6 +923,17 @@ export function App() {
           onClose={() => setIsOracleOpen(false)}
           onOpenSimulatorWithCopy={handleOpenSimulatorWithCopy}
           onInjectIntoCanvas={handleInjectIntoCanvas}
+        />
+
+        {/* Global Authentication & Administration Modals */}
+        <AuthModal onOpenForgotPassword={() => setIsForgotPasswordOpen(true)} />
+        <AdminDashboardModal
+          isOpen={isAdminDashboardOpen}
+          onClose={closeAdminDashboard}
+        />
+        <ForgotPasswordModal
+          isOpen={isForgotPasswordOpen}
+          onClose={() => setIsForgotPasswordOpen(false)}
         />
       </main>
     </div>

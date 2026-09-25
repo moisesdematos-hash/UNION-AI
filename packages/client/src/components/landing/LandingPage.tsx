@@ -29,6 +29,7 @@ import { useCanvasStore } from '../../store/canvasStore.js';
 import { LegalModal, LegalDocType } from '../modals/LegalModal.js';
 import { ConversionSimulatorModal } from '../marketing/ConversionSimulatorModal.js';
 import { ProjectOracleDrawer } from '../chat/ProjectOracleDrawer.js';
+import { useAuthStore } from '../../store/useAuthStore.js';
 
 interface LandingPageProps {
   onEnterWorkspace: () => void;
@@ -39,6 +40,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onEnterWorkspace,
   serverStatus
 }) => {
+  const { isAuthenticated, user, isAdmin, openAuthModal } = useAuthStore();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('full-funnel-launch-machine');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
@@ -217,6 +219,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className={`h-2 w-2 rounded-full ${serverStatus === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span className="text-zinc-400">{serverStatus === 'online' ? 'Core Online' : 'Conectando'}</span>
             </div>
+
+            {isAuthenticated ? (
+              <button
+                onClick={onEnterWorkspace}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-white hover:border-zinc-500 cursor-pointer"
+              >
+                <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-union-accent to-emerald-400 text-white font-bold flex items-center justify-center text-[10px]">
+                  {(user?.name || 'U').slice(0, 2).toUpperCase()}
+                </div>
+                <span className="max-w-[100px] truncate">{user?.name || 'Workspace'}</span>
+                {isAdmin && <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono">ADMIN</span>}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  onEnterWorkspace();
+                  openAuthModal('login');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-semibold text-zinc-200 hover:text-white transition-all cursor-pointer"
+              >
+                Entrar
+              </button>
+            )}
 
             <button
               onClick={onEnterWorkspace}

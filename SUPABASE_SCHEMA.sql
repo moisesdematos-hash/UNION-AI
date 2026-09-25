@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'USER', -- 'ADMIN' | 'USER'
+    avatar_url TEXT,
+    auth_provider TEXT NOT NULL DEFAULT 'email', -- 'email' | 'google'
     created_at BIGINT NOT NULL,
     updated_at BIGINT NOT NULL
 );
@@ -342,3 +345,9 @@ CREATE TABLE IF NOT EXISTS processed_payments (
 
 CREATE INDEX IF NOT EXISTS idx_processed_payments_provider_id ON processed_payments(provider_payment_id);
 CREATE INDEX IF NOT EXISTS idx_processed_payments_user ON processed_payments(user_id);
+
+-- Migrations & Non-destructive Updates
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'USER';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'email';
+ALTER TABLE workflows ADD COLUMN IF NOT EXISTS groups_json TEXT NOT NULL DEFAULT '[]';

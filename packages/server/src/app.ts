@@ -24,6 +24,7 @@ import { observabilityRouter } from './routes/observability.js';
 import { templatesRouter } from './routes/templates.js';
 import { chatRouter } from './routes/chat.js';
 import { paymentsRouter } from './routes/payments.js';
+import { adminRouter } from './routes/admin.js';
 import { metricsCollector } from './services/metrics-collector.js';
 
 export function createApp() {
@@ -100,6 +101,7 @@ export function createApp() {
   app.use('/api/chat', chatRouter);
   app.use('/api/webhooks', webhooksRouter);
   app.use('/api/payments', paymentsRouter);
+  app.use('/api/admin', adminRouter);
 
   // Static Frontend Serving for Client SPA
   const clientDistCandidates = [

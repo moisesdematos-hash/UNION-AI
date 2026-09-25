@@ -38,3 +38,21 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
     });
   }
 }
+
+export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'Autenticação necessária para acessar esta área'
+    });
+  }
+
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({
+      status: 'error',
+      message: 'Acesso negado: Requer privilégios de administrador (ADMIN)'
+    });
+  }
+
+  next();
+}
