@@ -1,33 +1,24 @@
 // ==============================================================================
-// Vercel Serverless Function Entrypoint with Diagnostic Handling
+// Vercel Serverless Function Entrypoint with Dynamic ESM Loading
 // ==============================================================================
-let app = null;
-let initError = null;
+let appPromise = null;
 
-try {
-  const { createApp } = require('../packages/server/dist/app.js');
-  app = createApp();
-} catch (err) {
-  initError = err;
-  console.error('[Vercel Serverless Init Error]:', err);
+async function getApp() {
+  if (!appPromise) {
+    appPromise = import('../packages/server/dist/app.js').then((mod) => mod.createApp());
+  }
+  return appPromise;
 }
 
-module.exports = (req, res) => {
-  if (initError) {
-    return res.status(500).json({
-      status: 'error',
-      source: 'vercel-serverless-init',
-      message: initError.message || String(initError),
-      stack: initError.stack
-    });
-  }
-
+module.exports = async (req, res) => {
   try {
+    const app = await getApp();
     return app(req, res);
   } catch (err) {
+    console.error('[Vercel Serverless Entrypoint Error]:', err);
     return res.status(500).json({
       status: 'error',
-      source: 'express-handler',
+      source: 'vercel-serverless-entrypoint',
       message: err.message || String(err),
       stack: err.stack
     });
