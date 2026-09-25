@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspace=@union/shared && npm run build --workspace=@union/server && npm run build --workspace=@union/client",
+    "build": "npm run build --workspace=@union/shared && npm run build --workspace=@union/server && npm run build --workspace=@union/client && node -e \"require('fs').cpSync('packages/client/dist', 'dist', {recursive: true})\"",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:server": "npm run dev --workspace=packages/server",
     "dev:client": "npm run dev --workspace=packages/client",
