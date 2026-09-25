@@ -1,10 +1,35 @@
 // ==============================================================================
-// Vercel Serverless Function Entrypoint for UNION.AI Express Backend
+// Vercel Serverless Function Entrypoint with Diagnostic Handling
 // ==============================================================================
-const { createApp } = require('../packages/server/dist/app.js');
+let app = null;
+let initError = null;
 
-const app = createApp();
+try {
+  const { createApp } = require('../packages/server/dist/app.js');
+  app = createApp();
+} catch (err) {
+  initError = err;
+  console.error('[Vercel Serverless Init Error]:', err);
+}
 
 module.exports = (req, res) => {
-  return app(req, res);
+  if (initError) {
+    return res.status(500).json({
+      status: 'error',
+      source: 'vercel-serverless-init',
+      message: initError.message || String(initError),
+      stack: initError.stack
+    });
+  }
+
+  try {
+    return app(req, res);
+  } catch (err) {
+    return res.status(500).json({
+      status: 'error',
+      source: 'express-handler',
+      message: err.message || String(err),
+      stack: err.stack
+    });
+  }
 };
