@@ -33,6 +33,7 @@ RUN apk add --no-cache python3 make g++
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/packages/server ./packages/server
+COPY --from=builder /app/packages/client/dist ./packages/client/dist
 COPY --from=builder /app/node_modules ./node_modules
 
 # Ensure persistent data directory for SQLite

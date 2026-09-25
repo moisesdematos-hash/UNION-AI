@@ -108,44 +108,85 @@ Se você tentar conectar uma saída incompatível (por exemplo, um link `URL` di
 ### 5.4 Categoria: AI GENERATION & CONTENT
 - **AI Content Writer (`ai-writer`):** Redator multi-formato para criação de artigos, e-mails, threads e posts para redes sociais.
 - **AI Copywriter:** Redação persuasiva com técnicas avançadas de copywriting (AIDA, PAS, Storytelling).
+- **Cinema E-book Agent (`ai-cinema-agent`):** Agente de elite para criação de e-books e narrativas cinematográficas de profundidade com mais de 1.000 palavras por capítulo. Suporta gêneros (Ficção Científica, Suspense, Negócios, Desenvolvimento Pessoal), estilos visuais cinematográficos (Noir, IMAX, Cyberpunk, Fotográfico) e arcos emocionais com tensão progressiva. Gera sinopses completas, metadados estruturados e capítulos detalhados. Dimensões estendidas no Canvas de 640×640 px (3x).
+- **AI Interactive Chat (`ai-chat`):** Assistente conversacional imersivo de 640×640 px com histórico em tempo real, suporte a contexto RAG e exportação direta do histórico.
 
 ### 5.5 Categoria: MARKETING INTELLIGENCE ENGINE (Gate 14)
 - **Target Avatar Generator (`marketing-avatar`):** Cria perfis psicológicos profundos do cliente ideal (dores viscerais, desejos ocultos, objeções e nível de consciência).
 - **Competitor SWOT Analyst (`marketing-competitor`):** Mapeia forças, fraquezas, lacunas inexploradas e oportunidades de mercado dos concorrentes.
 - **12-Step High-Converting VSL (`marketing-vsl`):** Elabora roteiros completos para Vídeos de Vendas seguindo a metodologia validada de 12 etapas.
 - **Omnichannel Ads Matrix (`marketing-ads`):** Gera matriz completa de anúncios formatados para **Meta (Instagram/Facebook)**, **Google Ads** e **TikTok**.
+- **14-Block Sales Page Copywriter (`marketing-sales-page`):** Estrutura cartas de vendas completas seguindo 14 blocos psicológicos comprovados de alta conversão.
+
+### 5.6 Categoria: SIMULAÇÃO, AUDITORIA & VISUALIZAÇÃO
+- **Simulador CPS & Auto-Healing (`simulator-cps`):** Avalia a copy com pontuação algorítmica de 0 a 100 em 5 eixos: Clareza, Persuasão, Conexão Emocional, Urgência e Oferta Irresistível. Possui **Auto-Cura em 1 Clique**, reescrevendo as fraquezas detectadas automaticamente.
+- **Visualizador Universal 3x & Reader Mode (`output-modal-viewer`):** Nó expansível de 640×640 px para visualização de Markdown, E-books e JSON complexo, com botões nativos para leitura imersiva (Reader Modal), download em `.MD` e exportação formatada em `.PDF`.
 
 ---
 
-## 6. BIBLIOTECA DE TEMPLATES OFICIAIS (GATE 18)
+## 6. MOTOR COGNITIVO PADRÃO: GROQ LLAMA 3.3 70B & MULTI-MODELO
 
-Para começar instantaneamente com arquiteturas testadas de alto desempenho, clique no botão **"Templates"** no Top Header:
-
-```
-+---------------------------------------------------------------------------------------+
-|  [Templates]                                                                          |
-|                                                                                       |
-|  1. YouTube Content Factory                                    [Carregar no Canvas]   |
-|     YouTube Source -> Transcript -> Concept Analyzer -> Multi-Platform Content Pack   |
-|                                                                                       |
-|  2. Competitor Intelligence Matrix                             [Carregar no Canvas]   |
-|     Website URL -> Web Scraper -> Competitor SWOT -> Executive Strategy Report        |
-|                                                                                       |
-|  3. Autonomous Marketing VSL Engine                            [Carregar no Canvas]   |
-|     Offer Briefing -> Target Avatar -> 12-Step VSL Script -> Omnichannel Ads Matrix   |
-+---------------------------------------------------------------------------------------+
-```
-
-1. Clique em **"Templates"** no topo da página.
-2. Filtre pela categoria desejada (*Marketing*, *Conteúdo*, *Pesquisa* ou *Automação*).
-3. Clique em **"Carregar no Canvas"**: O workflow completo é instanciado imediatamente, com nós organizados em esteira, conexões ativas e pronto para execução.
+O UNION.AI adota por padrão em todos os nós e serviços o modelo **Groq Llama 3.3 70B Versatile**, proporcionando:
+- **Latência Ultra-Baixa:** Respostas quase instantâneas geradas na velocidade da inferência Groq LPU™.
+- **Roteamento Cognitivo Híbrido:** Capacidade de alternar comutativamente por nó para Claude 3.7 Sonnet, DeepSeek R1, GPT-4o e Gemini 1.5 Pro.
+- **Fallback Resiliente:** Em caso de oscilações ou esgotamento de quota de um provedor, o sistema realiza fallback automático determinístico sem interromper a esteira.
 
 ---
 
-## 7. COMO EXECUTAR UM WORKFLOW
+## 7. RECURSOS VISUAIS & PRODUTIVIDADE NO CANVAS
+
+- **Nós de Grande Porte (Formato 3x — 640×640 px):** Os nós `output-modal-viewer`, `ai-chat` e `ai-cinema-agent` operam em formato expandido no canvas para leitura fluida, inspeção de código e conversação imersiva sem necessidade de abrir abas externas.
+- **Auto-Layout BFS Inteligente:** O botão `⚡ AUTO LAYOUT` reordena automaticamente os nós da esquerda para a direita baseado em busca em largura (BFS) e detecção de dependências, garantindo espaçamento anti-colisão uniforme.
+- **Execução em Cascata (`⚡ CASCATA`):** Executa o pipeline de forma visual e sequencial em tempo real, pulsando visualmente cada nó conforme o processamento avança pela esteira de dados.
+
+---
+
+## 8. BIBLIOTECA DE 16 TEMPLATES OFICIAIS
+
+Para iniciar instantaneamente com esteiras prontas e testadas, clique no botão **"Templates"** no Top Header:
+
+```
++-------------------------------------------------------------------------------------------------------+
+|  [Templates] (16 Esteiras Oficiais)                                                                   |
+|                                                                                                       |
+|  👑 1. Chave de Ouro: Império Autônomo de Conteúdo & Vendas (O Fluxo Supremo)                         |
+|     YouTube -> Cinema E-book Agent -> Copywriter 14-Blocos -> Simulador CPS -> AI Chat 3x -> Viewer 3x|
+|                                                                                                       |
+|  🎯 2. Página de Vendas 14-Blocos & Auto-Cura CPS                                                      |
+|     Briefing -> Copywriter 14-Blocos -> Simulador CPS (Auditoria & Auto-Cura) -> Visualizador 3x       |
+|                                                                                                       |
+|  📱 3. Repurposing Viral Omnichannel                                                                   |
+|     YouTube -> Viral Transformer -> AI Chat 3x -> Visualizador 3x                                     |
+|                                                                                                       |
+|  🎬 4. Cinema E-book Cinematográfico                                                                  |
+|     YouTube Source -> Cinema E-book Agent (>1k pal/cap) -> Visualizador 3x (PDF/MD)                   |
++-------------------------------------------------------------------------------------------------------+
+```
+
+### Relação Completa dos 16 Templates Oficiais:
+1. **👑 Chave de Ouro: Império Autônomo de Conteúdo & Vendas (`golden-key-master-flow`):** O ecossistema unificado definitivo. Converte um vídeo em E-book Cinematográfico de profundidade, Página de Vendas 14-Blocos, Auditoria CPS com Auto-Cura, Chat Interativo 3x e Visualizador 3x com exportação em PDF.
+2. **Página de Vendas 14-Blocos & Auto-Cura CPS (`sales-page-simulation-flow`):** Pipeline com auditoria algorítmica de copy e regeneração automática dos blocos com menor pontuação.
+3. **Repurposing Viral: Vídeo ➔ Carrossel & Reels ➔ Chat 3x (`viral-repurpose-omnichannel-flow`):** Extrai o melhor gancho de um vídeo para produzir carrosséis, scripts de Reels e alimentar o assistente conversacional.
+4. **🎬 Cinema E-book Cinematográfico (`cinematic-ebook-flow`):** Criação de e-books cinematográficos completos com arcos dramáticos e capítulos substanciais (>1.000 palavras).
+5. **YouTube Content Factory (`youtube-content-factory`):** YouTube Source -> Transcript -> Concept Analyzer -> Multi-Platform Content Pack.
+6. **Competitor Intelligence Matrix (`competitor-intel-report`):** Website Scraper -> Competitor SWOT -> Executive Strategy Report.
+7. **Autonomous Marketing VSL Engine (`marketing-vsl-engine`):** Offer Briefing -> Target Avatar -> 12-Step VSL Script -> Omnichannel Ads Matrix.
+8. **Full Funnel Launch Machine (`full-funnel-launch-machine`):** Briefing -> Avatar -> VSL 12-Passos -> Sales Page -> Ads Matrix.
+9. **Sales Page 14-Blocos & Simulador CPS (`sales-page-cps-machine`):** Briefing -> Avatar -> Sales Page -> CPS Simulator.
+10. **Chat Inteligente com Documentos RAG (`document-rag-chat`):** PDF Document -> PDF Extractor -> AI Chat Assistant.
+11. **Agente Autônomo Reflexivo ReAct (`autonomous-react-agent`):** Text Prompt -> Autonomous ReAct Agent -> CPS Simulator.
+12. **Automação Recorrente Cron (`recurring-automation-pipeline`):** Cron Schedule Trigger -> Extractor -> AI Writer -> Results.
+13. **Síntese Multi-Vídeo: 3 YouTube -> Conhecimento AI / E-book (`multi-video-knowledge-forge`):** Conecta 3 canais de YouTube simultâneos para síntese em e-book.
+14. **Vídeo para Livro Completo E-book Forge (`video-to-ebook-flow`):** Transforma aula do YouTube em livro com capítulos e exportação de Markdown.
+15. **Chat Inteligente com Vídeo AI Chat 3x (`video-to-chat-flow`):** YouTube -> AI Chat 3x imersivo com contexto total do vídeo.
+16. **Estratégia & Copywriting de Conversão (`strategy-copywriting-flow`):** Research -> Market Analyst -> High-Conversion Copywriter -> Output.
+
+---
+
+## 9. COMO EXECUTAR UM WORKFLOW
 
 1. **Montar ou Carregar o Grafo:** Certifique-se de que os nós necessários estejam conectados.
-2. **Clicar em RUN WORKFLOW:**
+2. **Clicar em RUN WORKFLOW ou ⚡ CASCATA:**
    - O UNION.AI executa a **Validação DAG**: verifica que não existem ciclos infinitos e que todas as portas obrigatórias estão supridas.
    - O **ExecutionPlanModal** é exibido, mostrando os lotes de nós que serão executados sequencialmente ou em paralelo.
 3. **Confirmar Execução:**
@@ -158,7 +199,7 @@ Para começar instantaneamente com arquiteturas testadas de alto desempenho, cli
 
 ---
 
-## 8. GESTÃO FINANCEIRA: CARTEIRA DE CRÉDITOS & QUOTAS
+## 10. GESTÃO FINANCEIRA: CARTEIRA DE CRÉDITOS & QUOTAS
 
 Para garantir governança e evitar custos descontrolados de API, o UNION.AI opera com um sistema contábil atômico:
 - **Saldo Inicial:** Cada novo usuário recebe **100.00 créditos** de cortesia.
@@ -167,7 +208,7 @@ Para garantir governança e evitar custos descontrolados de API, o UNION.AI oper
 
 ---
 
-## 9. AUTOMAÇÕES EXTERNAS & WEBHOOKS (GATE 15)
+## 11. AUTOMAÇÕES EXTERNAS & WEBHOOKS (GATE 15)
 
 Você pode integrar seus workflows a sistemas externos (Make, Zapier, Webhooks de CRM ou Stripe):
 1. Adicione o nó **Webhook Trigger** ao Canvas.
@@ -178,7 +219,7 @@ Você pode integrar seus workflows a sistemas externos (Make, Zapier, Webhooks d
 
 ---
 
-## 10. EQUIPES & MULTI-TENANCY (RBAC — GATE 16)
+## 12. EQUIPES & MULTI-TENANCY (RBAC — GATE 16)
 
 O UNION.AI permite criar múltiplos Workspaces e Organizações compartilhadas:
 - **OWNER:** Controle total, delegação financeira e gestão de membros.
@@ -188,7 +229,7 @@ O UNION.AI permite criar múltiplos Workspaces e Organizações compartilhadas:
 
 ---
 
-## 11. OBSERVABILIDADE & AUDITORIA CORPORATIVA (GATE 17)
+## 13. OBSERVABILIDADE & AUDITORIA CORPORATIVA (GATE 17)
 
 Para monitoramento em ambientes corporativos e DevOps:
 - **Métricas Prometheus:** Acesse `http://localhost:4000/metrics` para integrar com Grafana ou Datadog.
@@ -197,34 +238,27 @@ Para monitoramento em ambientes corporativos e DevOps:
 
 ---
 
-## 12. FAQ & DICAS DE PRODUTIVIDADE
+## 14. FAQ & DICAS DE PRODUTIVIDADE
+
+### P: Qual o modelo de IA padrão utilizado?
+**R:** Por padrão, todos os nós utilizam **Groq Llama 3.3 70B**, garantindo altíssima velocidade e raciocínio afiado. Você pode alternar pontualmente para Claude 3.7 Sonnet, DeepSeek R1, GPT-4o ou Gemini nas configurações do nó.
+
+### P: Como exportar o e-book ou copy gerada para PDF ou Markdown?
+**R:** Conecte a saída do nó gerador a um nó **Visualizador 3x (`output-modal-viewer`)**. Nele, você conta com os botões rápidos **Baixar .MD**, **Exportar PDF** e **Modo Leitor**.
 
 ### P: Meus dados são perdidos se eu fechar a aba?
 **R:** Não. O UNION.AI possui sistema duplo de autosave: salva em tempo real no SQLite WAL do backend e mantém uma cópia sincronizada no armazenamento local do navegador.
 
-### P: Posso duplicar nós rapidamente?
-**R:** Sim. Selecione um nó e use os atalhos ou adicione nós equivalentes pela barra lateral.
-
-### P: O que significa "Cycle Detected"?
-**R:** Workflows de IA do UNION.AI operam como Grafos Acíclicos Dirigidos (DAGs). Conectar a saída de um nó de volta a ele mesmo ou a um nó ancestral cria um ciclo infinito proibido pelo motor de execução.
+### P: Como organizar nós emaranhados no canvas?
+**R:** Clique no botão **⚡ AUTO LAYOUT** na barra superior ou na barra de ferramentas. O algoritmo BFS reorganiza instantaneamente os blocos em cascata anti-colisão.
 
 ---
 
-*Manual homologado para o UNION.AI MVP Verified — Versão 1.0 (2026).*
+*Manual homologado para o UNION.AI Enterprise & MVP Verified — Versão 2.0 (2026).*
 
 ---
 
-## 13. GUIA RÁPIDO DE CONEXÕES DE BLOCOS & OBJETIVOS
+## 15. GUIA RÁPIDO DE CONEXÕES DE BLOCOS & OBJETIVOS
 
 Para visualizar a matriz completa de conexões recomendadas, portas compatíveis e diagramas prontos para esteiras de marketing, criação de conteúdo e automação com IA, consulte o arquivo dedicado:
 👉 **GUIA_CONEXOES_E_OBJETIVOS.md** (localizado na raiz do projeto).
-
-### Resumo das 8 Principais Esteiras:
-1. **YouTube Content Factory**: YouTube Source ➔ AI Content Writer ➔ Exporter.
-2. **Máquina de Páginas de Vendas (14 Blocos)**: Text Prompt ➔ Marketing Avatar ➔ Sales Page Copywriter ➔ Simulador CPS.
-3. **Esteira de VSL & Anúncios**: Marketing Avatar ➔ VSL Scriptwriter (12 Passos) ➔ Multi-Platform Ad Matrix.
-4. **Espionagem de Concorrência**: Website Crawler ➔ Competitor Intelligence ➔ AI Market Analyst.
-5. **Chat com Documentos / RAG**: PDF Document ➔ PDF Extractor ➔ AI Chat Assistant.
-6. **Roteador Inteligente de Custos**: Text Prompt ➔ Smart AI Router ➔ Fast/Deep Branch.
-7. **Agente Autônomo com Raciocínio**: Text Prompt ➔ Autonomous Agent (ReAct) ➔ Simulador CPS.
-8. **Automação Recorrente**: Schedule Trigger (Cron) / Webhook ➔ Extrator ➔ AI Writer ➔ Export.

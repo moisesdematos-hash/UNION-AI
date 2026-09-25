@@ -3,7 +3,6 @@ import {
   Sparkles,
   Zap,
   ArrowRight,
-  Database,
   Cpu,
   Globe,
   TrendingUp,
@@ -19,7 +18,11 @@ import {
   ArrowUp,
   ArrowDown,
   Target,
-  Bot
+  Bot,
+  Crown,
+  BookOpen,
+  LayoutGrid,
+  FileText
 } from 'lucide-react';
 import { OFFICIAL_TEMPLATES, WorkflowTemplate } from '@union/shared';
 import { useCanvasStore } from '../../store/canvasStore.js';
@@ -106,15 +109,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const faqs = [
     {
       q: 'O que diferencia o UNION.AI de usar o ChatGPT ou Claude diretamente?',
-      a: 'Nos chats convencionais, o trabalho é linear e isolado: você precisa copiar manualmente textos de uma aba para outra, gerando perda contínua de contexto. No UNION.AI 2.0, você orquestra um Grafo Acíclico Direcionado (DAG) com o UNION Data Bus tipado, conectando YouTube, Web Scraping e PDFs diretamente a múltiplos modelos (Claude 3.7, DeepSeek R1, GPT-4o) em uma única esteira automatizada com persistência atômica.'
+      a: 'Nos chats convencionais, o trabalho é linear e isolado: você precisa copiar manualmente textos de uma aba para outra, gerando perda contínua de contexto. No UNION.AI 2.0, você orquestra um Grafo Acíclico Direcionado (DAG) com o UNION Data Bus tipado, conectando YouTube, Web Scraping e PDFs diretamente a múltiplos modelos (Groq Llama 3.3 70B, Claude 3.7, DeepSeek R1, GPT-4o) em uma única esteira automatizada com persistência atômica.'
     },
     {
       q: 'Como funciona o barramento de dados tipado (UNION Data Bus)?',
-      a: 'Cada nó possui portas de entrada e saída com tipos estritos (URL, TRANSCRIPT, TEXT, TABLE, AI_RESPONSE). O sistema valida conexões em tempo real no canvas e, caso tipos diferentes sejam ligados, sugere automaticamente nós transformadores sem que o pipeline quebre.'
+      a: 'Cada nó possui portas de entrada e saída com tipos estritos (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE). O sistema valida conexões em tempo real no canvas e, caso tipos diferentes sejam ligados, sugere automaticamente nós transformadores sem que o pipeline quebre.'
     },
     {
-      q: 'Posso usar meus próprios prompts e regras de negócio?',
-      a: 'Sim, absolutamente. Além dos templates oficiais validados, você pode customizar cada nó individualmente (temperatura, prompts de sistema, personas, tom de voz) ou criar seus próprios nós e fluxos a partir de um canvas em branco.'
+      q: 'Por que o UNION.AI utiliza o Groq Llama 3.3 70B como motor padrão?',
+      a: 'O Groq entrega velocidade de computação LPUs sem precedentes (centenas de tokens por segundo), reduzindo o tempo de espera de dezenas de segundos para milissegundos. No UNION, todos os nós de IA operam com o Groq Llama 3.3 70B por padrão com latência quase nula, permitindo alternar para Claude 3.7 Sonnet, DeepSeek R1 ou GPT-4o com 1 clique quando desejado.'
+    },
+    {
+      q: 'O que é o Agente Cinema e como ele cria E-books Ultramodernos?',
+      a: 'O Cinema E-book Agent é um nó de inteligência especializada que rejeita resumos superficiais: ele escreve obras completas com narrativa cinematográfica, enquadramentos de cena, arcos emocionais por capítulo (Incerteza ➔ Descoberta, Caos ➔ Ordem) e garantia estrita de mais de 1.000 palavras por capítulo, gerando capa descritiva e leitor interativo com download .MD e PDF.'
+    },
+    {
+      q: 'O que é o fluxo "Chave de Ouro" e o Simulador CPS com Auto-Cura?',
+      a: 'A Chave de Ouro é o fluxo mestre que transforma um único vídeo em um ecossistema completo: E-book Cinematográfico (>7.000 palavras), Página de Vendas de 14 Blocos e submissão ao Simulador CPS (Conversion Probability Score de 0 a 100). Esse simulador testa a copy contra 5 personas sintéticas (Dr. Roberto Cético, Ana Lívia Executiva, etc.) e aplica Auto-Healing automático nos pontos de abandono.'
+    },
+    {
+      q: 'Como funciona o Auto-Layout inteligente BFS e a Execução em Cascata?',
+      a: 'O botão Auto-Layout organiza dezenas de nós em colunas perfeitas de execução topológica sem colisões visuais, calculando a dimensão real de cada nó (288px a 640px). Já a Execução em Cascata (⚡ CASCATA) propaga os dados porta a porta do início ao fim do grafo de forma totalmente autônoma.'
     },
     {
       q: 'Como funciona a cobrança e o consumo de créditos?',
@@ -122,7 +137,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       q: 'Os dados da minha empresa e briefings são seguros?',
-      a: 'Sim. O UNION.AI possui arquitetura multi-inquilino com controle de acesso baseado em papéis (RBAC - Owner, Editor, Viewer), isolamento criptográfico por organização e logs de auditoria em conformidade com as melhores práticas enterprise.'
+      a: 'Sim. O UNION.AI possui arquitetura multi-inquilino com controle de acesso baseado em papéis (RBAC - Owner, Editor, Viewer), isolamento criptográfico por organização e telemetria transparente em conformidade com as melhores práticas enterprise.'
     }
   ];
 
@@ -219,29 +234,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="relative z-10 pt-16 pb-20 px-4 sm:px-6 max-w-5xl mx-auto text-center space-y-8">
         
         {/* Top Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-union-accent/30 text-xs font-medium text-zinc-300 shadow-md">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="text-zinc-400">Novo Lançamento:</span>
-          <span className="text-white font-semibold flex items-center gap-1">
-            Motor de Marketing Visual & Data Bus
-            <Zap className="h-3 w-3 text-amber-400 fill-amber-400" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/40 text-xs font-medium text-zinc-300 shadow-md">
+          <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+          <span className="text-zinc-400">Motor Nativo:</span>
+          <span className="text-amber-300 font-semibold flex items-center gap-1 font-mono">
+            ⚡ Groq Llama 3.3 70B &amp; 🎬 Agente Cinema
+            <Sparkles className="h-3 w-3 text-amber-400 fill-amber-400" />
           </span>
         </div>
 
         {/* Main Magnetic Headline */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.1] max-w-4xl mx-auto">
-          Engenharia de Marketing & IA Visual em Escala.{' '}
-          <span className="bg-gradient-to-r from-indigo-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent">
+          Engenharia de Marketing &amp; IA Visual em Escala.{' '}
+          <span className="bg-gradient-to-r from-amber-300 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
             Sem Copiar e Colar.
           </span>
         </h1>
 
         {/* Persuasive Sub-headline */}
-        <p className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          Transforme transcrições do YouTube, sites de concorrentes e PDFs em 
-          <strong className="text-zinc-200"> roteiros de VSL em 12 passos</strong>, 
-          <strong className="text-zinc-200"> páginas de vendas de 14 blocos</strong> e 
-          <strong className="text-zinc-200"> anúncios omnichannel</strong> em menos de 3 minutos.
+        <p className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-3xl mx-auto leading-relaxed">
+          Orquestre <strong className="text-zinc-200">E-books Cinematográficos (&gt;7.000 palavras)</strong>, 
+          <strong className="text-zinc-200"> Páginas de Vendas em 14 Blocos</strong> e 
+          <strong className="text-zinc-200"> Testes Cegos de Conversão (CPS)</strong> em um Canvas Visual em Grafo acionado pelo motor ultrarrápido <strong className="text-amber-300 font-mono">Groq Llama 3.3 70B</strong>.
         </p>
 
         {/* Hero CTAs */}
@@ -258,27 +272,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             href="#templates"
             className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-700/80 text-zinc-200 text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Ver Templates Prontos</span>
+            <span>Ver 16 Templates Prontos</span>
             <ChevronDown className="h-4 w-4 text-zinc-400" />
           </a>
         </div>
 
         {/* Social Proof & Metrics Strip */}
-        <div className="pt-6 border-t border-zinc-800/60 max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div className="pt-6 border-t border-zinc-800/60 max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div className="space-y-0.5">
-            <div className="text-2xl font-black text-white font-mono">235+</div>
+            <div className="text-2xl font-black text-emerald-400 font-mono">308+</div>
             <div className="text-xs text-zinc-400">Testes Homologados</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-2xl font-black text-cyan-400 font-mono">&lt; 3s</div>
+            <div className="text-2xl font-black text-amber-400 font-mono">&lt; 3s</div>
             <div className="text-xs text-zinc-400">Tempo de Planejamento</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-2xl font-black text-purple-400 font-mono">85%</div>
+            <div className="text-2xl font-black text-cyan-400 font-mono">85%</div>
             <div className="text-xs text-zinc-400">Redução de Custos</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-2xl font-black text-emerald-400 font-mono">100%</div>
+            <div className="text-2xl font-black text-purple-400 font-mono">100%</div>
             <div className="text-xs text-zinc-400">Tipado em Grafo</div>
           </div>
         </div>
@@ -388,7 +402,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">
             Orquestração Unificada com os Principais Provedores de Inteligência do Mundo
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-12 opacity-80">
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            <span className="text-sm font-bold font-mono text-amber-300 bg-amber-500/15 border border-amber-500/40 px-3 py-1 rounded-full shadow-lg shadow-amber-500/10 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+              <span>Groq Llama 3.3 70B (Padrão Nativo)</span>
+            </span>
+            <span className="text-zinc-600">•</span>
             <span className="text-sm font-semibold font-mono text-zinc-300">Anthropic Claude 3.7</span>
             <span className="text-zinc-600">•</span>
             <span className="text-sm font-semibold font-mono text-zinc-300">DeepSeek R1</span>
@@ -399,7 +418,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span className="text-zinc-600">•</span>
             <span className="text-sm font-semibold font-mono text-zinc-300">YouTube Data API</span>
             <span className="text-zinc-600">•</span>
-            <span className="text-sm font-semibold font-mono text-zinc-300">Meta & Google Ads</span>
+            <span className="text-sm font-semibold font-mono text-zinc-300">Meta &amp; Google Ads</span>
           </div>
         </div>
       </section>
@@ -411,78 +430,108 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Arquitetura de Nova Geração
           </h2>
           <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            As 4 Superpotências da Engenharia UNION.AI
+            As Superpotências da Engenharia UNION.AI
           </h3>
           <p className="text-sm text-zinc-400 leading-relaxed">
-            Elimine o gargalo manual na produção de copys e ativos de marketing com uma esteira automatizada de dados reais.
+            Elimine o trabalho manual na produção de livros, copys e funis com a esteira visual mais rápida e completa do mercado.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           
-          {/* Bento Card 1: Data Bus */}
-          <div className="md:col-span-2 p-7 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-union-accent/50 transition-all space-y-4 relative overflow-hidden group">
-            <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center">
-              <Database className="h-5 w-5" />
+          {/* Bento Card 1: Groq Llama 3.3 70B */}
+          <div className="md:col-span-2 p-7 rounded-2xl bg-gradient-to-br from-zinc-900 via-amber-950/10 to-zinc-900 border border-amber-500/30 hover:border-amber-400 transition-all space-y-4 relative overflow-hidden group">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+              <Zap className="h-5 w-5 fill-amber-400" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-bold text-white">UNION Data Bus Tipado com Validação em Tempo Real</h4>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  PADRÃO EM TODO O PROJETO
+                </span>
+                <span className="text-[11px] font-mono text-zinc-400">Latência Quase Zero</span>
+              </div>
+              <h4 className="text-lg font-bold text-white">Motor Groq Llama 3.3 70B Nativo &amp; Multi-Modelo</h4>
               <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
-                Diferente de ferramentas de automação genéricas que quebram silenciosamente com formatos desconhecidos, o UNION.AI valida cada pacote de dados na porta de conexão (`DOCUMENT`, `TRANSCRIPT`, `TABLE`, `AI_RESPONSE`), sugerindo auto-transformadores sem interrupções no pipeline.
+                Todos os nós de IA do ecossistema operam nativamente com o poder de computação em LPUs do Groq Llama 3.3 70B, entregando centenas de tokens por segundo. Alterne dinamicamente para Claude 3.7 Sonnet, DeepSeek R1 ou GPT-4o a qualquer momento com apenas 1 clique.
               </p>
             </div>
             <div className="pt-2 flex flex-wrap items-center gap-2 font-mono text-[10px]">
-              <span className="px-2.5 py-1 rounded bg-zinc-800 text-cyan-300 border border-zinc-700">Type-Safe</span>
-              <span className="px-2.5 py-1 rounded bg-zinc-800 text-purple-300 border border-zinc-700">Zero Context Loss</span>
-              <span className="px-2.5 py-1 rounded bg-zinc-800 text-emerald-300 border border-zinc-700">Auto-Transformer</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">⚡ Groq Llama 3.3 70B</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-purple-300 border border-zinc-700">Claude 3.7 Sonnet</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-cyan-300 border border-zinc-700">DeepSeek R1</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-emerald-300 border border-zinc-700">GPT-4o</span>
             </div>
           </div>
 
-          {/* Bento Card 2: Multi Model */}
-          <div className="p-7 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-union-accent/50 transition-all space-y-4">
-            <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
-              <Cpu className="h-5 w-5" />
+          {/* Bento Card 2: Cinema E-book Agent */}
+          <div className="p-7 rounded-2xl bg-gradient-to-br from-zinc-900 via-violet-950/20 to-zinc-900 border border-violet-500/30 hover:border-violet-400 transition-all space-y-4">
+            <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center">
+              <BookOpen className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-bold text-white">Orquestração Multi-Modelos</h4>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                &gt;1.000 PALAVRAS / CAP
+              </span>
+              <h4 className="text-lg font-bold text-white">🎬 Agente Cinema &amp; E-books Ultramodernos</h4>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Combine Claude 3.7 para persuasão profunda, DeepSeek R1 para raciocínio analítico e GPT-4o para criativos de anúncios no mesmo fluxo.
+                Narrativa cinematográfica com enquadramentos de cena, arcos emocionais (Noir, Cyberpunk, Solarpunk) e profundidade editorial real sem resumos rasos.
               </p>
             </div>
           </div>
 
-          {/* Bento Card 3: Extratores */}
+          {/* Bento Card 3: Visualizador 3x Quadrado */}
           <div className="p-7 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-union-accent/50 transition-all space-y-4">
             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Globe className="h-5 w-5" />
+              <FileText className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-bold text-white">Extratores de Dados Nativos</h4>
+              <h4 className="text-lg font-bold text-white">Visualizadores 3x Quadrados (640×640)</h4>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Ingestão em tempo real de vídeos do YouTube com pontuação temporal, raspagem web limpa e extração tabular de arquivos PDF.
+                Nós expandidos no próprio canvas com abas de capítulos, leitura confortável, estatísticas de páginas/palavras, download de arquivo Markdown `.MD` e exportação PDF.
               </p>
             </div>
           </div>
 
-          {/* Bento Card 4: Motores de Copy */}
-          <div className="md:col-span-2 p-7 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-union-accent/50 transition-all space-y-4">
+          {/* Bento Card 4: Data Bus & Auto-Layout */}
+          <div className="md:col-span-2 p-7 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-union-accent/50 transition-all space-y-4 relative overflow-hidden group">
+            <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center">
+              <LayoutGrid className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-lg font-bold text-white">UNION Data Bus Tipado &amp; Auto-Layout Inteligente</h4>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
+                Validação estrita de portas (`DOCUMENT`, `TRANSCRIPT`, `TEXT`, `TABLE`, `AI_RESPONSE`) que impede quebras em runtime. O algoritmo de **Auto-Layout BFS** organiza dezenas de nós em colunas perfeitas sem colisões, calculando as dimensões exatas de nós padrão e 3x.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-wrap items-center gap-2 font-mono text-[10px]">
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-cyan-300 border border-zinc-700">Type-Safe DAG</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-purple-300 border border-zinc-700">Zero Context Loss</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-emerald-300 border border-zinc-700">Auto-Layout Anti-Colisão</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">⚡ Execução em Cascata</span>
+            </div>
+          </div>
+
+          {/* Bento Card 5: Motores de Copy 14-Blocos */}
+          <div className="md:col-span-3 p-7 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-union-accent/50 transition-all space-y-4">
             <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
               <TrendingUp className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-bold text-white">Motores Persuasivos de Alta Conversão 360°</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
-                Arquitetura de marketing pronta para produção: Roteirizador VSL em 12 etapas, redator de Página de Vendas estruturada em 14 blocos psicológicos comprovados, Dossiê de Persona e Matriz de Anúncios para Meta, TikTok e Google.
+              <h4 className="text-lg font-bold text-white">Motores Persuasivos de Alta Conversão 360° (14 Blocos &amp; VSL)</h4>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-3xl">
+                Arquitetura de marketing pronta para escala: Roteirizador VSL em 12 etapas, redator de Página de Vendas estruturada em 14 blocos psicológicos comprovados, Dossiê de Persona e Matriz de Anúncios Omnichannel formatados para Meta, TikTok e Google Search.
               </p>
             </div>
             <div className="pt-2 flex flex-wrap items-center gap-2 font-mono text-[10px]">
               <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">14 Blocos Sales Page</span>
               <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">12 Passos VSL</span>
               <span className="px-2.5 py-1 rounded bg-zinc-800 text-amber-300 border border-zinc-700">Matriz Omnichannel</span>
+              <span className="px-2.5 py-1 rounded bg-zinc-800 text-cyan-300 border border-zinc-700">Roteiro Reels &amp; Carrossel</span>
             </div>
           </div>
 
-          {/* Bento Card 5: EXCLUSIVE CHAVE DE OURO - SIMULADOR & HEATMAP */}
+          {/* Bento Card 6: EXCLUSIVE CHAVE DE OURO - SIMULADOR & HEATMAP */}
           <div className="md:col-span-3 p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-amber-950/20 to-zinc-900 border border-amber-500/40 hover:border-amber-400 transition-all space-y-5 relative overflow-hidden shadow-2xl">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -497,7 +546,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span className="text-xs font-mono text-zinc-400">Zero Concorrência</span>
                   </div>
                   <h4 className="text-xl font-extrabold text-white mt-1">
-                    AI Conversion Simulator & Heatmap Visualizer (com 1-Click Auto-Healing)
+                    AI Conversion Simulator &amp; Heatmap Visualizer (com 1-Click Auto-Healing)
                   </h4>
                 </div>
               </div>
@@ -542,6 +591,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="text-[11px] text-zinc-400 mt-0.5">Reescrita cirúrgica anti-atrito</div>
               </div>
             </div>
+          </div>
+
+          {/* Bento Card 7: CROWNING JEWEL - FLUXO MESTRE CHAVE DE OURO */}
+          <div className="md:col-span-3 p-8 rounded-2xl bg-gradient-to-r from-amber-950/30 via-yellow-950/20 to-amber-950/30 border border-amber-400/50 shadow-2xl space-y-4 relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-600 flex items-center justify-center text-zinc-950 shadow-lg shadow-amber-400/30">
+                  <Crown className="h-6 w-6 fill-zinc-950" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 font-mono">
+                      👑 FLUXO MESTRE SUPREMO
+                    </span>
+                    <span className="text-xs font-mono text-amber-300 font-semibold">16 Templates Oficiais</span>
+                  </div>
+                  <h4 className="text-xl font-black text-white mt-1">
+                    Chave de Ouro: Império Autônomo de Conteúdo &amp; Vendas
+                  </h4>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const masterTpl = OFFICIAL_TEMPLATES.find(t => t.id === 'golden-key-master-flow') || OFFICIAL_TEMPLATES[0];
+                  handleLaunchTemplate(masterTpl);
+                }}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-zinc-950 font-black text-xs shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <Crown className="h-4 w-4" />
+                <span>Lançar Chave de Ouro no Canvas</span>
+              </button>
+            </div>
+
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-4xl">
+              O fluxo mais poderoso já construído: conecta <strong>YouTube Intelligence</strong> ➔ <strong>🎬 Cinema E-book Agent</strong> (livro completo de 7 capítulos com mais de 7.000 palavras) ➔ <strong>Copywriter 14-Blocos</strong> ➔ <strong>Simulador CPS com Auto-Cura</strong> ➔ <strong>AI Chat 3x</strong> ➔ <strong>Visualizador de Saída 3x</strong> com leitor de capítulos e download `.MD`/PDF.
+            </p>
           </div>
 
         </div>
@@ -797,6 +883,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </td>
                 <td className="p-4 text-center text-zinc-400">✗ Assinatura fixa ou surpresa na fatura</td>
                 <td className="p-4 text-center text-zinc-400">✗ Consumo opaco</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-white">Velocidade de Execução Nativa</td>
+                <td className="p-4 text-center bg-union-accent/10 border-x border-union-accent/30 text-amber-300 font-bold">
+                  ✓ Groq Llama 3.3 70B (Milissegundos)
+                </td>
+                <td className="p-4 text-center text-zinc-400">✗ 15-30s de latência por resposta</td>
+                <td className="p-4 text-center text-zinc-400">✗ Filas lentas e limites de API</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-white">E-books Cinematográficos de Alta Densidade</td>
+                <td className="p-4 text-center bg-union-accent/10 border-x border-union-accent/30 text-violet-300 font-bold">
+                  ✓ Sim (&gt;1.000 pal/cap com arcos dramáticos)
+                </td>
+                <td className="p-4 text-center text-zinc-400">✗ Resumos curtos e genéricos</td>
+                <td className="p-4 text-center text-zinc-400">✗ Inexistente</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-white">Simulação de Conversão CPS &amp; Auto-Cura</td>
+                <td className="p-4 text-center bg-union-accent/10 border-x border-union-accent/30 text-rose-300 font-bold">
+                  ✓ Sim (5 Personas Sintéticas + Auto-Healing)
+                </td>
+                <td className="p-4 text-center text-zinc-400">✗ Adivinhação sem pontuação preditiva</td>
+                <td className="p-4 text-center text-zinc-400">✗ Sem análise psicológica de copy</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-white">Visualizadores 3x &amp; Auto-Layout Inteligente</td>
+                <td className="p-4 text-center bg-union-accent/10 border-x border-union-accent/30 text-cyan-300 font-bold">
+                  ✓ Sim (Nós 640px + Layout BFS Anti-Colisão)
+                </td>
+                <td className="p-4 text-center text-zinc-400">✗ Apenas janela de rolagem simples</td>
+                <td className="p-4 text-center text-zinc-400">✗ Nós colidindo sem alinhamento visual</td>
               </tr>
             </tbody>
           </table>

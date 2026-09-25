@@ -28,7 +28,7 @@ describe('LandingPage - Modern High-Converting Experience', () => {
     expect(screen.getByText(/Sem Copiar e Colar/i)).toBeDefined();
 
     // Metrics Strip
-    expect(screen.getByText('235+')).toBeDefined();
+    expect(screen.getByText('308+')).toBeDefined();
     expect(screen.getByText('Testes Homologados')).toBeDefined();
     expect(screen.getByText('< 3s')).toBeDefined();
     expect(screen.getByText('85%')).toBeDefined();

@@ -47,8 +47,9 @@ describe('Gate 18: Workflow Templates & Instantiation API', () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data.length).toBe(1);
-      expect(res.body.data[0].id).toBe('youtube-content-factory');
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      const ids = res.body.data.map((t: any) => t.id);
+      expect(ids).toContain('youtube-content-factory');
     });
   });
 

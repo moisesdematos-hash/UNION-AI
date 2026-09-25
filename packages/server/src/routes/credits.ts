@@ -67,6 +67,14 @@ creditsRouter.post('/topup', (req: AuthenticatedRequest, res: Response) => {
     }
 
     const { amount, packageId, description } = parsed.data;
+
+    if (amount > 10000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Topup amount exceeds maximum allowed single transaction quota (10,000 credits)'
+      });
+    }
+
     const desc = description || (packageId ? `Credit Refill (${packageId})` : `Credit Refill (+${amount} cr)`);
 
     const updatedCredits = creditsService.addCredits(userId, amount, {

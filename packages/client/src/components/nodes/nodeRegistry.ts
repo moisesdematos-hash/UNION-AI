@@ -324,8 +324,8 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
       { id: 'out-response', name: 'response', label: 'AI Response', type: 'AI_RESPONSE', isMulti: true, required: true }
     ],
     defaultConfig: {
-      model: 'auto',
-      systemPrompt: 'Você é um assistente de inteligência artificial altamente capacitado.',
+      model: 'groq-llama-3',
+      systemPrompt: 'Você é um assistente de inteligência artificial altamente capacitado operando via Groq Llama 3.3 70B.',
       temperature: 0.7
     }
   },
@@ -343,7 +343,7 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
       { id: 'out-json', name: 'insights', label: 'Structured JSON', type: 'JSON', isMulti: true, required: false }
     ],
     defaultConfig: {
-      model: 'auto',
+      model: 'groq-llama-3',
       focusArea: 'competitor-intelligence',
       temperature: 0.4
     }
@@ -361,7 +361,7 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
       { id: 'out-content', name: 'content', label: 'Written Content', type: 'AI_RESPONSE', isMulti: true, required: true }
     ],
     defaultConfig: {
-      model: 'auto',
+      model: 'groq-llama-3',
       format: 'youtube-script',
       tone: 'persuasive',
       creativity: 0.7
@@ -561,6 +561,30 @@ export const NODE_TEMPLATES: Record<string, NodeTemplate> = {
     defaultConfig: {
       autoOpen: false,
       title: 'Visualizador de Saída'
+    }
+  },
+
+  'ai-cinema-agent': {
+    type: 'ai-cinema-agent',
+    label: '🎬 Cinema E-book Agent',
+    category: 'AI',
+    description: 'Agente especializado em criar e-books cinematográficos ultramodernos com arcos emocionais, narrativa noir/sci-fi e linguagem editorial de alto impacto visual.',
+    inputs: [
+      { id: 'in-context', name: 'context', label: 'Contexto / Transcrição', type: 'TEXT', isMulti: true, required: false },
+      { id: 'in-prompt', name: 'prompt', label: 'Briefing / Instrução', type: 'TEXT', isMulti: false, required: false }
+    ],
+    outputs: [
+      { id: 'out-ebook', name: 'ebook', label: 'E-book Cinematográfico', type: 'DOCUMENT', isMulti: true, required: true },
+      { id: 'out-synopsis', name: 'synopsis', label: 'Sinopse & Pitch', type: 'TEXT', isMulti: true, required: true }
+    ],
+    defaultConfig: {
+      genre: 'thriller-transformacao',
+      cinematicStyle: 'noir-futurista',
+      chapters: 7,
+      wordsPerChapter: 1200,
+      protagonist: '',
+      theme: '',
+      model: 'groq-llama-3'
     }
   }
 };

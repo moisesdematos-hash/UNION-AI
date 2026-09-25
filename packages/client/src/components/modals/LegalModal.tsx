@@ -217,13 +217,13 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                 <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 space-y-2">
                   <div className="flex items-center gap-2 text-purple-400 font-mono text-xs font-bold">
                     <Cpu className="h-4 w-4" />
-                    <span>Cognitive Router</span>
+                    <span>Cognitive Router & Groq Default</span>
                   </div>
                   <p className="text-xs text-zinc-400">
-                    Roteamento automático com fallback determinístico entre Claude 3.7 Sonnet, DeepSeek R1, GPT-4o e Gemini 1.5.
+                    Motor padrão ultra-rápido <strong>Groq Llama 3.3 70B</strong> com chaveamento inteligente para Claude 3.7 Sonnet, DeepSeek R1, GPT-4o e Gemini 1.5.
                   </p>
                   <div className="text-[11px] font-mono bg-black/50 p-2 rounded border border-zinc-800 text-zinc-300">
-                    Auto Fallback + Parallel Toposort Batches
+                    Default: Groq Llama 3.3 70B | Toposort Paralelo | 16 Templates
                   </div>
                 </div>
               </div>
@@ -241,7 +241,11 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   </div>
                   <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
                     <span className="text-purple-400">POST /api/marketing/sales-page</span>
-                    <span className="text-zinc-400">Motor de 14 blocos psicológicos</span>
+                    <span className="text-zinc-400">Motor de 14 blocos psicológicos & CPS</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                    <span className="text-pink-400">POST /api/ai/cinema-ebook</span>
+                    <span className="text-zinc-400">Agente Cinema E-book (&gt;1.000 pal/cap)</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
                     <span className="text-amber-400">GET /metrics</span>

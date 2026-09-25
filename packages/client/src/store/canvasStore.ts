@@ -153,6 +153,8 @@ export interface CanvasState {
   generateCurrentExecutionPlan: (mode?: ExecutionMode, targetNodeId?: string) => ExecutionPlan;
   openExecutionPlanModal: () => void;
   closeExecutionPlanModal: () => void;
+  autoLayoutWorkflow: () => void;
+  executeCascadeWorkflow: () => Promise<WorkflowExecutionSummary>;
 }
 
 const MAX_HISTORY = 30;
@@ -781,15 +783,55 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
           else if (type === 'NODE_COMPLETED') nodeState = 'COMPLETED';
           else if (type === 'NODE_FAILED') nodeState = 'FAILED';
 
-          set((state) => ({
-            nodes: state.nodes.map((n) => {
+          set((state) => {
+            const outputs = (event as any).outputs;
+            const updatedNodes = state.nodes.map((n) => {
               if (n.id === nodeId) {
                 const prevData = (n.data || {}) as any;
+                const nextConfig = { ...(prevData.config || {}) };
+
+                if (type === 'NODE_COMPLETED' && outputs) {
+                  if (outputs['out-ebook']?.payload) {
+                    nextConfig.generatedEbook = outputs['out-ebook'].payload;
+                  }
+                  if (outputs['out-synopsis']?.payload) {
+                    nextConfig.synopsis = outputs['out-synopsis'].payload;
+                    nextConfig.fullOutput = outputs['out-synopsis'].payload;
+                  }
+                  if (outputs['out-markdown']?.payload) {
+                    nextConfig.fullOutput = outputs['out-markdown'].payload;
+                  }
+                  if (outputs['out-response']?.payload) {
+                    nextConfig.fullOutput = outputs['out-response'].payload;
+                    nextConfig.lastResponse = outputs['out-response'].payload;
+                    if (prevData.type === 'ai-chat') {
+                      const prevMessages = Array.isArray(nextConfig.messages) ? nextConfig.messages : [];
+                      const responseText = String(outputs['out-response'].payload);
+                      nextConfig.messages = [
+                        ...prevMessages,
+                        {
+                          id: `msg-assistant-${Date.now()}`,
+                          role: 'assistant',
+                          text: responseText,
+                          timestamp: 'Executado'
+                        }
+                      ];
+                    }
+                  }
+                  if (outputs['out-transcript']?.payload) {
+                    nextConfig.transcript = outputs['out-transcript'].payload;
+                    if (!nextConfig.fullOutput) {
+                      nextConfig.fullOutput = outputs['out-transcript'].payload;
+                    }
+                  }
+                }
+
                 return {
                   ...n,
                   data: {
                     ...prevData,
                     state: nodeState,
+                    config: nextConfig,
                     executionInfo: {
                       ...(prevData.executionInfo || {}),
                       status: nodeState,
@@ -802,8 +844,70 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
                 };
               }
               return n;
-            })
-          }));
+            });
+
+            // If node completed and produced outputs, propagate downstream along edges
+            if (type === 'NODE_COMPLETED' && outputs) {
+              const outgoingEdges = state.edges.filter((e) => e.source === nodeId);
+              const targetNodeIds = new Set(outgoingEdges.map((e) => e.target));
+
+              for (let i = 0; i < updatedNodes.length; i++) {
+                const node = updatedNodes[i];
+                if (targetNodeIds.has(node.id)) {
+                  const nodeType = (node.data as any)?.type;
+                  const targetConfig = { ...((node.data as any)?.config || {}) };
+                  let mutated = false;
+
+                  if (nodeType === 'output-modal-viewer') {
+                    if (outputs['out-ebook']?.payload) {
+                      targetConfig.generatedEbook = outputs['out-ebook'].payload;
+                      mutated = true;
+                    }
+                    if (outputs['out-markdown']?.payload) {
+                      targetConfig.fullOutput = outputs['out-markdown'].payload;
+                      mutated = true;
+                    }
+                    // Cinema agent output
+                    if (outputs['out-synopsis']?.payload) {
+                      targetConfig.fullOutput = outputs['out-synopsis'].payload;
+                      mutated = true;
+                    }
+                  } else if (nodeType === 'ai-chat') {
+                    if (outputs['out-transcript']?.payload) {
+                      targetConfig.transcript = outputs['out-transcript'].payload;
+                      mutated = true;
+                    }
+                    if (outputs['out-markdown']?.payload) {
+                      targetConfig.context = outputs['out-markdown'].payload;
+                      mutated = true;
+                    }
+                  } else if (nodeType === 'ai-cinema-agent') {
+                    // Forward context/transcript into the cinema agent
+                    if (outputs['out-transcript']?.payload) {
+                      targetConfig.theme = String(outputs['out-transcript'].payload).slice(0, 200);
+                      mutated = true;
+                    }
+                    if (outputs['out-text']?.payload) {
+                      targetConfig.theme = String(outputs['out-text'].payload).slice(0, 200);
+                      mutated = true;
+                    }
+                  }
+
+                  if (mutated) {
+                    updatedNodes[i] = {
+                      ...node,
+                      data: {
+                        ...(node.data as any),
+                        config: targetConfig
+                      }
+                    };
+                  }
+                }
+              }
+            }
+
+            return { nodes: updatedNodes };
+          });
         },
         onSummaryUpdate: (summary) => {
           const percent = summary.totalNodes > 0
@@ -834,6 +938,125 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       });
       throw err;
     }
+  },
+
+  executeCascadeWorkflow: async () => {
+    return get().executeWorkflow('RUN');
+  },
+
+  autoLayoutWorkflow: () => {
+    const { nodes, edges } = get();
+    if (nodes.length === 0) return;
+
+    get().recordHistory();
+
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const validEdges = edges.filter(
+      (e) => nodeMap.has(e.source) && nodeMap.has(e.target)
+    );
+
+    // Build DAG adjacency and in-degree
+    const inDegree = new Map<string, number>();
+    const adjacency = new Map<string, string[]>();
+
+    for (const node of nodes) {
+      inDegree.set(node.id, 0);
+      adjacency.set(node.id, []);
+    }
+
+    for (const edge of validEdges) {
+      adjacency.get(edge.source)!.push(edge.target);
+      inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+    }
+
+    // Longest-path topological level assignment
+    const levels = new Map<string, number>();
+    const queue: string[] = [];
+
+    for (const [id, deg] of inDegree.entries()) {
+      if (deg === 0) {
+        levels.set(id, 0);
+        queue.push(id);
+      }
+    }
+
+    // BFS with cycle-safety
+    const visitedCount = new Map<string, number>();
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const currentLevel = levels.get(current) || 0;
+      const count = (visitedCount.get(current) || 0) + 1;
+      visitedCount.set(current, count);
+
+      if (count > nodes.length * 2) continue; // Cycle guard
+
+      const neighbors = adjacency.get(current) || [];
+      for (const next of neighbors) {
+        const nextLevel = Math.max(levels.get(next) || 0, currentLevel + 1);
+        levels.set(next, nextLevel);
+        queue.push(next);
+      }
+    }
+
+    // Fallback for any unassigned nodes
+    for (const node of nodes) {
+      if (!levels.has(node.id)) {
+        levels.set(node.id, 0);
+      }
+    }
+
+    // Group nodes by level (columns)
+    const columns = new Map<number, Node[]>();
+    for (const node of nodes) {
+      const lvl = levels.get(node.id) || 0;
+      if (!columns.has(lvl)) {
+        columns.set(lvl, []);
+      }
+      columns.get(lvl)!.push(node);
+    }
+
+    const sortedLevels = Array.from(columns.keys()).sort((a, b) => a - b);
+
+    // Helper to estimate node dimensions
+    const getNodeDims = (node: Node) => {
+      const type = (node.data as any)?.type || node.type;
+      if (type === 'output-modal-viewer' || type === 'ai-chat' || type === 'ai-cinema-agent') {
+        return { width: 640, height: 640 };
+      }
+      if (type === 'ai-ebook-forge') {
+        return { width: 384, height: 520 };
+      }
+      return { width: 288, height: 320 };
+    };
+
+    let currentX = 80;
+    const updatedPositions = new Map<string, { x: number; y: number }>();
+
+    for (const lvl of sortedLevels) {
+      const colNodes = columns.get(lvl)!;
+      let maxColWidth = 288;
+      for (const n of colNodes) {
+        const dims = getNodeDims(n);
+        if (dims.width > maxColWidth) maxColWidth = dims.width;
+      }
+
+      let currentY = 80;
+      for (const n of colNodes) {
+        updatedPositions.set(n.id, { x: currentX, y: currentY });
+        const dims = getNodeDims(n);
+        currentY += dims.height + 60; // 60px vertical margin
+      }
+
+      currentX += maxColWidth + 100; // 100px column margin
+    }
+
+    const nextNodes = nodes.map((n) => {
+      const pos = updatedPositions.get(n.id);
+      return pos ? { ...n, position: pos } : n;
+    });
+
+    set({ nodes: nextNodes });
+    get().scheduleAutosave();
   },
 
   stopWorkflow: () => {

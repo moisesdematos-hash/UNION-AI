@@ -33,6 +33,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { EbookReaderModal } from '../modals/EbookReaderModal.js';
+import { SalesPageLivePreviewModal } from '../modals/SalesPageLivePreviewModal.js';
 import { NodeDefinition, NodeCategory, NodeState } from '@union/shared';
 import { getDataTypeStyle } from '../../utils/portColors.js';
 import { useCanvasStore } from '../../store/canvasStore.js';
@@ -177,6 +178,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
   const [config, setConfig] = useState(nodeData.config || {});
   const [isExtracting, setIsExtracting] = useState(false);
   const [showReaderModal, setShowReaderModal] = useState(false);
+  const [showSalesPagePreview, setShowSalesPagePreview] = useState(false);
+  const [salesPageCopyData, setSalesPageCopyData] = useState<any>(null);
   const [customViewerEbook, setCustomViewerEbook] = useState<any>(null);
   const [viewerChapterIdx, setViewerChapterIdx] = useState(0);
   const [showChaptersList, setShowChaptersList] = useState(false);
@@ -477,7 +480,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         body: JSON.stringify({
           nodeId: id,
           role: nodeData.type,
-          model: config.model || 'auto',
+          model: config.model || 'groq-llama-3',
           userPrompt: userPromptText,
           context: resolvedContext,
           options: {
@@ -539,6 +542,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           ? `${isNodeCollapsed ? 'w-[640px] h-auto' : 'w-[640px] h-[640px] min-w-[420px] min-h-[420px] max-w-[960px] max-h-[960px]'} resize overflow-hidden flex flex-col border-emerald-500/50 shadow-emerald-950/30 ring-1 ring-emerald-500/30`
           : nodeData.type === 'ai-chat'
           ? `${isNodeCollapsed ? 'w-[640px] h-auto' : 'w-[640px] h-[640px] min-w-[420px] min-h-[420px] max-w-[960px] max-h-[960px]'} resize overflow-hidden flex flex-col border-indigo-500/50 shadow-indigo-950/30 ring-1 ring-indigo-500/30`
+          : nodeData.type === 'ai-cinema-agent'
+          ? `${isNodeCollapsed ? 'w-[640px] h-auto' : 'w-[640px] h-[640px] min-w-[420px] min-h-[420px] max-w-[960px] max-h-[960px]'} resize overflow-hidden flex flex-col border-violet-500/50 shadow-violet-950/30 ring-1 ring-violet-500/30`
           : 'w-72'
       } ${categoryStyle.border} ${selected ? 'ring-2 ring-union-accent shadow-union-accent/20' : ''}`}
     >
@@ -1207,8 +1212,206 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                     className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none resize-none"
                   />
                 </div>
+
+                <button
+                  onClick={handleExecuteAiNode}
+                  disabled={isExtracting}
+                  className="w-full py-1.5 px-3 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-400 text-xs font-mono flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  {isExtracting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-3 w-3 fill-current" />
+                      <span>Avaliar &amp; Rotear Tarefa</span>
+                    </>
+                  )}
+                </button>
               </div>
-            ) : nodeData.type === 'ai-chat' ? (() => {
+            ) : nodeData.type === 'ai-cinema-agent' ? (() => {
+              const cinematicGenres = [
+                { value: 'thriller-transformacao', label: '🔥 Thriller de Transformação' },
+                { value: 'noir-futurista', label: '🌑 Noir Futurista' },
+                { value: 'epic-fantasy', label: '⚔️ Epic Fantasy' },
+                { value: 'sci-fi-emocional', label: '🚀 Sci-Fi Emocional' },
+                { value: 'drama-psicologico', label: '🧠 Drama Psicológico' },
+                { value: 'biografia-epica', label: '🏆 Biografia Épica' },
+              ];
+              const cinematicStyles = [
+                { value: 'noir-futurista', label: '🌃 Noir Futurista' },
+                { value: 'cyberpunk-minimalista', label: '💠 Cyberpunk Minimalista' },
+                { value: 'dark-academy', label: '📚 Dark Academy' },
+                { value: 'solarpunk', label: '🌿 Solarpunk' },
+                { value: 'neo-gotico', label: '🦇 Neo-Gótico' },
+              ];
+              const aiModels = [
+                { value: 'groq-llama-3', label: '⚡ Groq Llama 3.3 70B (Padrão)' },
+                { value: 'claude-3-7-sonnet', label: 'Claude 3.7 Sonnet' },
+                { value: 'gpt-4o', label: 'GPT-4o' },
+                { value: 'gemini-1-5-pro', label: 'Gemini 1.5 Pro' },
+                { value: 'deepseek-r1', label: 'DeepSeek R1' },
+              ];
+
+              const hasSynopsis = Boolean(config.synopsis);
+              const hasEbook = Boolean(config.generatedEbook);
+              const chaps = typeof config.chapters === 'number' ? config.chapters : 7;
+              const wpc = typeof config.wordsPerChapter === 'number' ? config.wordsPerChapter : 1200;
+
+              return (
+                <div className="flex-1 flex flex-col min-h-0 space-y-2.5">
+                  {/* Header strip */}
+                  <div className="p-2.5 rounded-xl bg-gradient-to-r from-violet-900/40 to-indigo-900/40 border border-violet-500/30 shrink-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-base">🎬</span>
+                      <span className="text-xs font-bold text-violet-300 font-sans tracking-wide">Cinema E-book Agent</span>
+                      {isExtracting && <span className="ml-auto text-[10px] font-mono text-violet-400 animate-pulse">A criar obra…</span>}
+                    </div>
+                    <p className="text-[10px] text-zinc-400 font-sans leading-snug">
+                      Narrativa cinematográfica · Arcos emocionais · Linguagem editorial ultramoderna
+                    </p>
+                  </div>
+
+                  {/* Genre & Style */}
+                  <div className="grid grid-cols-2 gap-1.5 shrink-0">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-500">Género</label>
+                      <select
+                        value={String(config.genre || 'thriller-transformacao')}
+                        onChange={(e) => handleConfigUpdate('genre', e.target.value)}
+                        className="w-full px-2 py-1 rounded-lg bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none focus:border-violet-500"
+                      >
+                        {cinematicGenres.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-500">Estilo Visual</label>
+                      <select
+                        value={String(config.cinematicStyle || 'noir-futurista')}
+                        onChange={(e) => handleConfigUpdate('cinematicStyle', e.target.value)}
+                        className="w-full px-2 py-1 rounded-lg bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none focus:border-violet-500"
+                      >
+                        {cinematicStyles.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Protagonist & Model */}
+                  <div className="grid grid-cols-2 gap-1.5 shrink-0">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-500">Protagonista</label>
+                      <input
+                        type="text"
+                        value={String(config.protagonist || '')}
+                        onChange={(e) => handleConfigUpdate('protagonist', e.target.value)}
+                        placeholder="Ex: O Arquiteto…"
+                        className="w-full px-2 py-1 rounded-lg bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none focus:border-violet-500 placeholder:text-zinc-600"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-500">Modelo IA</label>
+                      <select
+                        value={String(config.model || 'groq-llama-3')}
+                        onChange={(e) => handleConfigUpdate('model', e.target.value)}
+                        className="w-full px-2 py-1 rounded-lg bg-union-surface border border-union-border text-[10px] font-mono text-white focus:outline-none focus:border-violet-500"
+                      >
+                        {aiModels.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Sliders */}
+                  <div className="grid grid-cols-2 gap-2.5 shrink-0">
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <label className="text-[10px] font-mono text-zinc-500">Capítulos</label>
+                        <span className="text-[10px] font-bold font-mono text-violet-400">{chaps}</span>
+                      </div>
+                      <input
+                        type="range" min={3} max={12} step={1}
+                        value={chaps}
+                        onChange={(e) => handleConfigUpdate('chapters', Number(e.target.value))}
+                        className="w-full accent-violet-500 h-1.5 rounded"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <label className="text-[10px] font-mono text-zinc-500">Pal/Cap</label>
+                        <span className="text-[10px] font-bold font-mono text-violet-400">{wpc}</span>
+                      </div>
+                      <input
+                        type="range" min={1000} max={2000} step={100}
+                        value={wpc}
+                        onChange={(e) => handleConfigUpdate('wordsPerChapter', Number(e.target.value))}
+                        className="w-full accent-violet-500 h-1.5 rounded"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Briefing */}
+                  <div className="space-y-1 flex-1 flex flex-col min-h-0">
+                    <label className="text-[10px] font-mono text-zinc-500 shrink-0">Briefing / Tema Central</label>
+                    <textarea
+                      rows={3}
+                      value={String(config.theme || '')}
+                      onChange={(e) => handleConfigUpdate('theme', e.target.value)}
+                      placeholder="Descreve o tema, missão ou contexto do e-book cinematográfico…"
+                      className="flex-1 px-2.5 py-2 rounded-xl bg-union-surface border border-union-border text-white text-[11px] font-sans focus:border-violet-500 focus:outline-none placeholder:text-zinc-600 resize-none"
+                    />
+                  </div>
+
+                  {/* Synopsis preview */}
+                  {hasSynopsis && !isExtracting && (
+                    <div className="p-2 rounded-xl bg-violet-950/50 border border-violet-500/30 shrink-0">
+                      <p className="text-[9px] font-mono text-violet-400 mb-1">✓ Sinopse gerada</p>
+                      <p className="text-[10px] text-zinc-300 font-sans line-clamp-2">{String(config.synopsis).slice(0, 120)}…</p>
+                    </div>
+                  )}
+
+                  {/* E-book stats */}
+                  {hasEbook && !isExtracting && (() => {
+                    const eb = config.generatedEbook as any;
+                    return (
+                      <div className="grid grid-cols-3 gap-1 shrink-0">
+                        <div className="p-1.5 rounded-lg bg-violet-900/30 border border-violet-500/20 text-center">
+                          <span className="text-xs font-bold text-violet-300 font-mono block">{eb.chapters?.length || chaps}</span>
+                          <span className="text-[8px] text-zinc-500 block">capítulos</span>
+                        </div>
+                        <div className="p-1.5 rounded-lg bg-violet-900/30 border border-violet-500/20 text-center">
+                          <span className="text-xs font-bold text-amber-300 font-mono block">{eb.totalWordCount?.toLocaleString() || '—'}</span>
+                          <span className="text-[8px] text-zinc-500 block">palavras</span>
+                        </div>
+                        <div className="p-1.5 rounded-lg bg-violet-900/30 border border-violet-500/20 text-center">
+                          <span className="text-xs font-bold text-cyan-300 font-mono block">{eb.pageCount || '—'}</span>
+                          <span className="text-[8px] text-zinc-500 block">páginas</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Action button */}
+                  <button
+                    onClick={handleExecuteAiNode}
+                    disabled={isExtracting}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs font-sans flex items-center justify-center gap-2 shadow-lg shadow-violet-950/60 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>A criar obra cinematográfica…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-base leading-none">🎬</span>
+                        <span>{hasEbook ? 'Regenerar E-book Cinematográfico' : 'Criar E-book Cinematográfico'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })() : nodeData.type === 'ai-chat' ? (() => {
               const incomingEdges = edges.filter(e => e.target === id);
               const { nodes } = useCanvasStore.getState();
               const connectedSources = incomingEdges
@@ -1264,15 +1467,15 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                       <div className="flex items-center gap-1.5">
                         <label className="text-[10px] font-mono text-zinc-400">Modelo:</label>
                         <select
-                          value={String(config.model || 'gpt-4o')}
+                          value={String(config.model || 'groq-llama-3')}
                           onChange={(e) => handleConfigUpdate('model', e.target.value)}
                           className="px-2 py-0.5 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:border-indigo-400 focus:outline-none cursor-pointer"
                         >
-                          <option value="gpt-4o">OpenAI GPT-4o (Padrão)</option>
+                          <option value="groq-llama-3">⚡ Groq Llama 3.3 70B (Padrão Ultra Rápido)</option>
+                          <option value="gpt-4o">OpenAI GPT-4o</option>
                           <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Copywriting)</option>
                           <option value="deepseek-r1">DeepSeek R1 (Raciocínio Lógico)</option>
                           <option value="gemini-1-5-flash">Gemini 1.5 Flash (Ultra Rápido)</option>
-                          <option value="groq-llama-3">Groq Llama 3 70B (Baixa Latência)</option>
                           <option value="auto">Auto Router (Smart)</option>
                         </select>
                       </div>
@@ -1341,7 +1544,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                               <div className="max-w-[92%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs text-zinc-200 shadow-md space-y-1.5">
                                 <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 pb-1 border-b border-white/5">
                                   <span className="flex items-center gap-1 text-indigo-400 font-semibold">
-                                    <Bot className="h-3 w-3" /> {String(config.model || 'GPT-4o')}
+                                    <Bot className="h-3 w-3" /> {String(config.model || 'Groq Llama 3.3 70B')}
                                   </span>
                                   <div className="flex items-center gap-1.5">
                                     <span>{m.timestamp}</span>
@@ -1366,7 +1569,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                           <div className="flex justify-start">
                             <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs animate-pulse">
                               <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
-                              <span>Processando resposta com {String(config.model || 'GPT-4o')}...</span>
+                              <span>Processando resposta com {String(config.model || 'Groq Llama 3.3 70B')}...</span>
                             </div>
                           </div>
                         )}
@@ -1427,16 +1630,16 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-mono text-union-muted">Model Provider</label>
                   <select
-                    value={String(config.model || 'auto')}
+                    value={String(config.model || 'groq-llama-3')}
                     onChange={(e) => handleConfigUpdate('model', e.target.value)}
                     className="px-2 py-1 rounded bg-union-surface border border-union-border text-[11px] font-mono text-white focus:outline-none"
                   >
+                    <option value="groq-llama-3">⚡ Groq Llama 3.3 70B (Padrão)</option>
                     <option value="auto">Auto Router (Smart)</option>
                     <option value="gpt-4o">OpenAI GPT-4o</option>
                     <option value="claude-3-7-sonnet">Claude 3.7 Sonnet</option>
                     <option value="gemini-1-5-flash">Gemini 1.5 Flash</option>
                     <option value="deepseek-r1">DeepSeek R1</option>
-                    <option value="groq-llama-3">Groq Llama 3 70B</option>
                   </select>
                 </div>
 
@@ -1487,6 +1690,20 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                     </>
                   )}
                 </button>
+
+              {/* Sales Page Live Preview Button */}
+              {(nodeData.type === 'marketing-sales-page' || nodeData.type === 'ai-conversion-simulator') && Boolean(config.salesPageCopy || config.fullOutput) && (
+                <button
+                  onClick={() => {
+                    setSalesPageCopyData(config.salesPageCopy || null);
+                    setShowSalesPagePreview(true);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer hover:opacity-90"
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  <span>🌐 Live Preview &amp; Publicar</span>
+                </button>
+              )}
               </>
             )}
           </div>
@@ -1815,6 +2032,16 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           isOpen={showReaderModal}
           onClose={() => setShowReaderModal(false)}
           ebook={(customViewerEbook || config.generatedEbook) as any}
+        />
+      )}
+
+      {/* Sales Page Live Preview Modal */}
+      {showSalesPagePreview && (
+        <SalesPageLivePreviewModal
+          isOpen={showSalesPagePreview}
+          onClose={() => setShowSalesPagePreview(false)}
+          copy={salesPageCopyData}
+          defaultCheckoutUrl={config.checkoutUrl as string}
         />
       )}
     </div>

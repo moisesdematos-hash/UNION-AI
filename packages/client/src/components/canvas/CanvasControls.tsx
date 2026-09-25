@@ -12,7 +12,8 @@ import {
   Redo2, 
   Trash2, 
   Copy,
-  Eraser
+  Eraser,
+  LayoutGrid
 } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore.js';
 
@@ -31,7 +32,8 @@ export function CanvasControls() {
     redo,
     deleteSelected,
     duplicateSelected,
-    resetCanvas
+    resetCanvas,
+    autoLayoutWorkflow
   } = useCanvasStore();
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(() => {
@@ -270,7 +272,7 @@ export function CanvasControls() {
         </button>
       </div>
 
-      {/* Viewport Alignment */}
+      {/* Viewport Alignment & Auto-Layout */}
       <div className="flex items-center gap-0.5 px-1.5 border-r border-union-border">
         <button
           onClick={() => fitView({ duration: 400, padding: 0.2 })}
@@ -285,6 +287,18 @@ export function CanvasControls() {
           className="p-2 rounded-xl text-union-muted hover:text-white hover:bg-union-card transition-colors"
         >
           <Crosshair className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => {
+            autoLayoutWorkflow();
+            setTimeout(() => {
+              fitView({ duration: 400, padding: 0.15 });
+            }, 50);
+          }}
+          title="Alinhar Fluxo Automaticamente (Auto-Layout em Colunas sem Colisão)"
+          className="p-2 rounded-xl text-amber-400 hover:text-white hover:bg-amber-500/20 border border-amber-500/30 transition-colors"
+        >
+          <LayoutGrid className="h-4 w-4" />
         </button>
       </div>
 

@@ -9,7 +9,7 @@ import { WorkflowDefinition } from '../types/workflow.js';
 
 describe('Gate 18: Workflow Templates & Official Catalog Schemas', () => {
   it('should validate all official templates against WorkflowTemplateSchema', () => {
-    expect(OFFICIAL_TEMPLATES.length).toBe(9);
+    expect(OFFICIAL_TEMPLATES.length).toBe(16);
 
     for (const template of OFFICIAL_TEMPLATES) {
       const parsed = WorkflowTemplateSchema.parse(template);

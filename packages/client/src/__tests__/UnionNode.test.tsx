@@ -121,7 +121,7 @@ describe('UnionNode Component', () => {
       </ReactFlowProvider>
     );
 
-    const input = screen.getByPlaceholderText('https://...') as HTMLInputElement;
+    const input = screen.getByPlaceholderText('https://www.youtube.com/watch?v=...') as HTMLInputElement;
     expect(input.value).toBe('https://youtube.com/watch?v=abc123xyz');
 
     fireEvent.change(input, { target: { value: 'https://youtube.com/watch?v=newVideo' } });
@@ -236,7 +236,8 @@ describe('UnionNode Component', () => {
       config: { optimizeFor: 'cost' }
     });
 
-    const routeBtn = screen.getByRole('button', { name: /avaliar & rotear tarefa/i });
+    const routeBtnSpan = screen.getByText(/avaliar & rotear tarefa/i);
+    const routeBtn = routeBtnSpan.closest('button')!;
     expect(routeBtn).toBeInTheDocument();
 
     await act(async () => {

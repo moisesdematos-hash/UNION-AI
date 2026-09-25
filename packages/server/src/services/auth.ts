@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/database.js';
 import { env } from '../config/env.js';
 import { userStorageService } from './user-storage-service.js';
+import { EmailService } from './email/email-service.js';
 
 export interface UserProfile {
   id: string;
@@ -140,6 +141,74 @@ export class AuthService {
       name: row.name,
       createdAt: row.created_at
     };
+  }
+
+  async requestPasswordReset(email: string): Promise<{ sent: boolean; devToken?: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = this.db.prepare('SELECT id, email, name FROM users WHERE email = ?').get(normalizedEmail) as { id: string; email: string; name: string } | undefined;
+
+    // To prevent email enumeration, return success even if user not found
+    if (!user) {
+      return { sent: true };
+    }
+
+    const token = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
+    const now = Date.now();
+    const expiresAt = now + 60 * 60 * 1000; // 60 minutes
+
+    this.db.prepare(`
+      INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used, created_at)
+      VALUES (?, ?, ?, ?, 0, ?)
+    `).run(randomUUID(), user.id, token, expiresAt, now);
+
+    await EmailService.sendPasswordResetEmail(user.email, user.name, token);
+
+    return { sent: true, devToken: env.NODE_ENV === 'test' ? token : undefined };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    if (newPassword.length < 6) {
+      throw new Error('New password must be at least 6 characters');
+    }
+
+    const resetRecord = this.db.prepare(`
+      SELECT id, user_id, expires_at, used
+      FROM password_reset_tokens
+      WHERE token = ?
+    `).get(token) as { id: string; user_id: string; expires_at: number; used: number } | undefined;
+
+    if (!resetRecord) {
+      throw new Error('Invalid password reset token');
+    }
+
+    if (resetRecord.used === 1) {
+      throw new Error('This password reset token has already been used');
+    }
+
+    if (Date.now() > resetRecord.expires_at) {
+      throw new Error('Password reset token has expired');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+    const now = Date.now();
+
+    const updateTx = this.db.transaction(() => {
+      this.db.prepare(`
+        UPDATE users
+        SET password_hash = ?, updated_at = ?
+        WHERE id = ?
+      `).run(passwordHash, now, resetRecord.user_id);
+
+      this.db.prepare(`
+        UPDATE password_reset_tokens
+        SET used = 1
+        WHERE id = ?
+      `).run(resetRecord.id);
+    });
+
+    updateTx();
+    return true;
   }
 }
 

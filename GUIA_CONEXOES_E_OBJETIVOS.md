@@ -1,4 +1,4 @@
-﻿# ⚡ GUIA DEFINITIVO: CONEXÕES DE BLOCOS E OBJETIVOS NO UNION.AI
+# ⚡ GUIA DEFINITIVO: CONEXÕES DE BLOCOS E OBJETIVOS NO UNION.AI
 
 > **Documento de Referência Rápida para Engenharia de Workflows, Automação e Marketing com IA**
 
@@ -115,7 +115,58 @@ O pipeline segue a esteira universal de 4 fases:
 
 ---
 
+### 9. Cinema E-book Cinematográfico (Narrativas de Alta Profundidade)
+* **Objetivo:** Transformar transcrições ou temas em livros com arcos emocionais estruturados e capítulos substanciais (>1.000 palavras/capítulo) no visualizador 3x.
+* **Diagrama de Conexão:**
+  YouTube Source -> Transcript Extractor -> Cinema E-book Agent -> Visualizador Universal 3x
+* **Portas Conectadas:**
+  - YouTube Source [URL] -> Conecta em -> [YouTube URL] do Transcript Extractor
+  - Transcript Extractor [Transcript] -> Conecta em -> [Context / Knowledge] do Cinema E-book Agent
+  - Cinema E-book Agent [Complete E-book] -> Conecta em -> [E-book Data] do Visualizador Universal 3x (para leitura e exportação PDF)
+
+---
+
+### 10. Máquina de Páginas de Vendas (14 Blocos) & Auto-Cura CPS
+* **Objetivo:** Estruturar copy de alta conversão em 14 blocos psicológicos, auditar os 5 eixos algorítmicos no simulador CPS e reescrever pontos fracos em 1 clique.
+* **Diagrama de Conexão:**
+  Text Briefing -> 14-Block Sales Page Copywriter -> Simulador CPS & Auto-Healing -> Visualizador Universal 3x
+* **Portas Conectadas:**
+  - Text Briefing [Text] -> Conecta em -> [Context / Research] do 14-Block Sales Page Copywriter
+  - 14-Block Sales Page Copywriter [Sales Page Copy] -> Conecta em -> [Copy Text] do Simulador CPS
+  - 14-Block Sales Page Copywriter [Blocks JSON] -> Conecta em -> [Blocks Data] do Simulador CPS
+  - Simulador CPS [Healed Copy / E-book Data] -> Conecta em -> [Input Data] do Visualizador Universal 3x
+
+---
+
+### 11. Repurposing Viral Omnichannel (Vídeo ➔ Carrossel & Reels ➔ Chat 3x)
+* **Objetivo:** Converter qualquer vídeo longo em carrosséis para Instagram/LinkedIn, roteiros dinâmicos de Reels/Shorts e carregar o contexto num assistente interativo 3x.
+* **Diagrama de Conexão:**
+  YouTube Source -> Transcript Extractor -> AI Content Writer (Viral) -> AI Chat 3x -> Visualizador Universal 3x
+* **Portas Conectadas:**
+  - YouTube Source [URL] -> Conecta em -> [YouTube URL] do Transcript Extractor
+  - Transcript Extractor [Transcript] -> Conecta em -> [Context] do AI Content Writer
+  - Transcript Extractor [Transcript] -> Conecta em -> [Knowledge Context] do AI Chat 3x
+  - AI Content Writer [Content] -> Conecta em -> [Markdown / Copy] do Visualizador Universal 3x
+
+---
+
+### 12. 👑 Chave de Ouro: Império Autônomo de Conteúdo & Vendas (O Fluxo Supremo)
+* **Objetivo:** O ecossistema autônomo total. Pega 1 vídeo ou tema bruto e gera simultaneamente: E-book Cinematográfico completo (>1k pal/cap), Página de Vendas de 14 Blocos Psicológicos, Auditoria CPS com Auto-Cura, Chat Conversacional 3x e Visualizador 3x com download em PDF.
+* **Diagrama de Conexão:**
+  YouTube Source -> Transcript Extractor -> Cinema E-book Agent ➔ Copywriter 14-Blocos ➔ Simulador CPS ➔ AI Chat 3x ➔ Visualizador Universal 3x
+* **Portas Conectadas:**
+  - YouTube Source [URL] -> [YouTube URL] do Transcript Extractor
+  - Transcript Extractor [Transcript] -> [Context] do Cinema E-book Agent
+  - Cinema E-book Agent [Synopsis / Core Narrative] -> [Briefing] do Copywriter 14-Blocos
+  - Copywriter 14-Blocos [Sales Page Copy] -> [Copy Text] do Simulador CPS
+  - Transcript Extractor [Transcript] -> [Knowledge Base] do AI Chat 3x
+  - Cinema E-book Agent [Complete E-book] + Simulador CPS [Healed Copy] -> [Data Input] do Visualizador Universal 3x
+
+---
+
 ## 🛠️ DICAS DE OURO PARA OPERAÇÃO
-1. **Comando no Chat do Projeto**: Se não quiser arrastar bloco a bloco manualmente, abra o **Chat do Projeto** (topo direito) e peça em português: *"Crie uma esteira de YouTube com Copywriter e Simulador"*.
-2. **Data Inspector**: Dê um clique em qualquer fio de conexão para abrir o **Inspetor de Pacotes** e ver os dados trafegando em tempo real.
-3. **Templates Prontos**: No menu superior, o botão **Templates** carrega qualquer uma dessas esteiras prontas no seu canvas com apenas 1 clique!
+1. **Comando no Chat do Projeto**: Se não quiser arrastar bloco a bloco manualmente, abra o **Chat do Projeto** (topo direito) e peça em português: *"Crie o fluxo Chave de Ouro com YouTube, Cinema E-book e Simulador CPS"*.
+2. **Auto-Layout BFS (`⚡ AUTO LAYOUT`)**: Sempre que o canvas tiver muitos blocos, clique em Auto-Layout para ordenar toda a esteira sem colisões.
+3. **Data Inspector**: Dê um clique em qualquer fio de conexão para abrir o **Inspetor de Pacotes** e ver os dados trafegando em tempo real.
+4. **Motor Padrão Groq**: Toda a geração opera com **Groq Llama 3.3 70B** por padrão para velocidade extrema, permitindo fallback instantâneo nas configurações de cada nó.
+5. **Templates Prontos**: No menu superior, o botão **Templates** carrega qualquer uma dessas 16 esteiras oficiais com apenas 1 clique!

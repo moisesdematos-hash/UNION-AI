@@ -924,5 +924,774 @@ export const OFFICIAL_TEMPLATES: WorkflowTemplate[] = [
         state: 'connected'
       }
     ]
+  },
+
+  // 12. Vídeo para Livro Completo (E-book Forge 3x)
+  {
+    id: 'video-to-ebook-flow',
+    name: 'Vídeo para Livro Completo (E-book Forge)',
+    description: 'Transforma um vídeo do YouTube em e-book editorial profundo com 10+ páginas, capítulos > 1.000 palavras e visualizador quadrado no Canvas.',
+    category: 'CONTENT',
+    tags: ['youtube', 'ebook', 'leitor-3x', 'pdf-editorial'],
+    icon: 'BookOpen',
+    estimatedCredits: 0.18,
+    nodes: [
+      {
+        id: 'tpl-vte-src',
+        type: 'source-youtube',
+        label: 'YouTube Source',
+        category: 'SOURCE',
+        position: { x: 60, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoTitle: 'Masterclass: Escala e IA Estratégica',
+          duration: '18:30',
+          thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vte-forge',
+        type: 'ai-ebook-forge',
+        label: 'Union E-book Forge',
+        category: 'AI',
+        position: { x: 420, y: 150 },
+        inputs: [
+          { id: 'in-topic', name: 'topic', label: 'Tema / Briefing', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-context', name: 'context', label: 'Pesquisa / Dados', type: 'DOCUMENT', isMulti: true, required: false }
+        ],
+        outputs: [
+          { id: 'out-ebook', name: 'ebook', label: 'Livro Digital (JSON)', type: 'DOCUMENT', isMulti: true, required: true },
+          { id: 'out-markdown', name: 'markdown', label: 'Texto Completo (MD)', type: 'TEXT', isMulti: true, required: true },
+          { id: 'out-chapters', name: 'chapters', label: 'Capítulos Estruturados', type: 'JSON', isMulti: true, required: true }
+        ],
+        config: {
+          title: 'Manual de Escala Digital & IA',
+          niche: 'Negócios Online & Automação',
+          pageCount: 10,
+          wordsPerChapter: 1000,
+          tone: 'authoritative'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vte-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída (Quadrado 3x)',
+        category: 'OUTPUT',
+        position: { x: 920, y: 150 },
+        inputs: [
+          { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: {
+          title: 'Visualizador de Saída',
+          format: 'markdown-bundle'
+        },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-vte-conn-1',
+        sourceNodeId: 'tpl-vte-src',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'tpl-vte-forge',
+        targetPortId: 'in-topic',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-vte-conn-2',
+        sourceNodeId: 'tpl-vte-forge',
+        sourcePortId: 'out-ebook',
+        targetNodeId: 'tpl-vte-viewer',
+        targetPortId: 'in-ebook',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 13. Chat Inteligente com Vídeo (AI Chat 3x)
+  {
+    id: 'video-to-chat-flow',
+    name: 'Chat Inteligente com Vídeo (AI Chat 3x)',
+    description: 'Extrai a transcrição de um vídeo e conecta instantaneamente ao assistente conversacional quadrado 3x para análise e Q&A dinâmico.',
+    category: 'CONTENT',
+    tags: ['youtube', 'ai-chat', 'chat-3x', 'transcricao'],
+    icon: 'MessageSquare',
+    estimatedCredits: 0.08,
+    nodes: [
+      {
+        id: 'tpl-vtc-src',
+        type: 'source-youtube',
+        label: 'YouTube Source',
+        category: 'SOURCE',
+        position: { x: 60, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoTitle: 'Análise de Estratégias & Crescimento',
+          duration: '14:20',
+          thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vtc-chat',
+        type: 'ai-chat',
+        label: 'AI Chat Assistant',
+        category: 'AI',
+        position: { x: 420, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexts', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Prompt', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-response', name: 'response', label: 'AI Response', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: {
+          model: 'groq-llama-3',
+          prompt: 'Analise esta transcrição e extraia os 5 principais insights estratégicos.'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vtc-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída',
+        category: 'OUTPUT',
+        position: { x: 1120, y: 150 },
+        inputs: [
+          { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: {
+          title: 'Visualizador de Saída'
+        },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-vtc-conn-1',
+        sourceNodeId: 'tpl-vtc-src',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'tpl-vtc-chat',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-vtc-conn-2',
+        sourceNodeId: 'tpl-vtc-chat',
+        sourcePortId: 'out-response',
+        targetNodeId: 'tpl-vtc-viewer',
+        targetPortId: 'in-markdown',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 14. Estratégia & Copywriting de Conversão
+  {
+    id: 'strategy-copywriting-flow',
+    name: 'Estratégia & Copywriting de Conversão',
+    description: 'Pipeline completo de inteligência competitiva que analisa dados de mercado e gera copy persuasiva validada para campanhas digitais.',
+    category: 'MARKETING',
+    tags: ['marketing', 'copywriting', 'analyst', 'vsl'],
+    icon: 'TrendingUp',
+    estimatedCredits: 0.16,
+    nodes: [
+      {
+        id: 'tpl-strat-site',
+        type: 'source-website',
+        label: 'Website Crawler',
+        category: 'SOURCE',
+        position: { x: 60, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Clean Text', type: 'TEXT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: { url: 'https://exemplo.com/produto' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-strat-analyst',
+        type: 'ai-analyst',
+        label: 'AI Market Analyst',
+        category: 'AI',
+        position: { x: 400, y: 150 },
+        inputs: [
+          { id: 'in-sources', name: 'sources', label: 'Data Sources', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-analysis', name: 'analysis', label: 'Analysis Report', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: { model: 'deepseek-r1' },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-strat-writer',
+        type: 'ai-writer',
+        label: 'AI Creative Copywriter',
+        category: 'AI',
+        position: { x: 740, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexts', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Briefing', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-content', name: 'content', label: 'Content', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: {
+          model: 'claude-3-7-sonnet',
+          format: 'instagram-carousel'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-strat-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída',
+        category: 'OUTPUT',
+        position: { x: 1080, y: 150 },
+        inputs: [
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: { title: 'Campanha de Copywriting' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-strat-c1',
+        sourceNodeId: 'tpl-strat-site',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-strat-analyst',
+        targetPortId: 'in-sources',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-strat-c2',
+        sourceNodeId: 'tpl-strat-analyst',
+        sourcePortId: 'out-analysis',
+        targetNodeId: 'tpl-strat-writer',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-strat-c3',
+        sourceNodeId: 'tpl-strat-writer',
+        sourcePortId: 'out-content',
+        targetNodeId: 'tpl-strat-viewer',
+        targetPortId: 'in-markdown',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 15. Cinema E-book Flow
+  {
+    id: 'cinematic-ebook-flow',
+    name: '🎬 Cinema E-book Cinematográfico',
+    description: 'Extrai transcrição de vídeo e gera um e-book cinematográfico ultramoderno com narrativa noir/sci-fi, arcos emocionais por capítulo e linguagem editorial de alto impacto.',
+    category: 'CONTENT',
+    tags: ['cinema', 'ebook', 'narrativa', 'ultramoderno', 'youtube', 'noir'],
+    icon: 'Film',
+    estimatedCredits: 0.20,
+    nodes: [
+      {
+        id: 'tpl-cin-src',
+        type: 'source-youtube',
+        label: 'YouTube Source',
+        category: 'SOURCE',
+        position: { x: 60, y: 200 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoTitle: 'Conteúdo para E-book Cinematográfico',
+          duration: '18:45'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-cin-agent',
+        type: 'ai-cinema-agent',
+        label: '🎬 Cinema E-book Agent',
+        category: 'AI',
+        position: { x: 420, y: 200 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexto / Transcrição', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Briefing / Instrução', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-ebook', name: 'ebook', label: 'E-book Cinematográfico', type: 'DOCUMENT', isMulti: true, required: true },
+          { id: 'out-synopsis', name: 'synopsis', label: 'Sinopse & Pitch', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: {
+          genre: 'thriller-transformacao',
+          cinematicStyle: 'noir-futurista',
+          chapters: 7,
+          wordsPerChapter: 1200,
+          protagonist: 'O Visionário',
+          model: 'groq-llama-3'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-cin-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída',
+        category: 'OUTPUT',
+        position: { x: 1100, y: 200 },
+        inputs: [
+          { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: { title: 'E-book Cinematográfico' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-cin-c1',
+        sourceNodeId: 'tpl-cin-src',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'tpl-cin-agent',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-cin-c2',
+        sourceNodeId: 'tpl-cin-agent',
+        sourcePortId: 'out-ebook',
+        targetNodeId: 'tpl-cin-viewer',
+        targetPortId: 'in-ebook',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 16. Página de Vendas 14-Blocos & Auto-Cura CPS ➔ Visualizador
+  {
+    id: 'sales-page-simulation-flow',
+    name: 'Página de Vendas 14-Blocos & Auto-Cura CPS',
+    description: 'Gera copy completa em 14 blocos psicológicos de alta conversão, submete ao teste cego contra 5 personas sintéticas com cálculo de CPS e entrega a versão curada no Visualizador 3x.',
+    category: 'MARKETING',
+    tags: ['marketing', 'sales-page', 'cps-simulator', '14-blocos', 'auto-healing'],
+    icon: 'Target',
+    estimatedCredits: 0.18,
+    nodes: [
+      {
+        id: 'tpl-sps-briefing',
+        type: 'source-text',
+        label: 'Briefing da Oferta',
+        category: 'INPUT',
+        position: { x: 60, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-text', name: 'text', label: 'Briefing Estratégico', type: 'TEXT', isMulti: false, required: true }
+        ],
+        config: {
+          text: 'Produto: Mentoria Elite de Escala com IA\nPúblico: Empreendedores e Consultores\nPreço: R$ 2.997\nPromessa: Construir e automatizar esteiras de aquisição com agentes de IA em 30 dias.'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-sps-copy',
+        type: 'marketing-sales-page',
+        label: 'Copywriter 14-Blocos',
+        category: 'AI',
+        position: { x: 400, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Offer Briefing', type: 'TEXT', isMulti: true, required: true },
+          { id: 'in-avatar', name: 'avatar', label: 'Avatar / ICP', type: 'JSON', isMulti: false, required: false },
+          { id: 'in-vsl', name: 'vslScript', label: 'VSL / Briefing', type: 'DOCUMENT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-copy', name: 'salesPageCopy', label: 'Full Sales Page Copy', type: 'DOCUMENT', isMulti: true, required: true },
+          { id: 'out-json', name: 'blocksJson', label: '14-Block JSON', type: 'JSON', isMulti: true, required: true }
+        ],
+        config: {
+          productName: 'Mentoria Elite de Escala com IA',
+          targetAudience: 'Empreendedores e Consultores',
+          offerPrice: 'R$ 2.997 à vista ou 12x de R$ 297',
+          model: 'groq-llama-3'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-sps-sim',
+        type: 'ai-conversion-simulator',
+        label: 'Simulador CPS & Auto-Cura',
+        category: 'AI',
+        position: { x: 740, y: 150 },
+        inputs: [
+          { id: 'in-copy', name: 'copy', label: 'Copy / VSL Blocks', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-json', name: 'blocksJson', label: 'Blocks JSON', type: 'JSON', isMulti: false, required: false },
+          { id: 'in-text', name: 'text', label: 'Raw Copy Text', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-simulation', name: 'simulationResult', label: 'Simulation & CPS Score', type: 'JSON', isMulti: true, required: true },
+          { id: 'out-healed', name: 'healedCopy', label: 'Auto-Healed Copy', type: 'DOCUMENT', isMulti: true, required: false }
+        ],
+        config: {
+          sourceType: 'SALES_PAGE',
+          targetNiche: 'Marketing Digital e Consultoria',
+          autoHealDropOffs: true
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-sps-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída',
+        category: 'OUTPUT',
+        position: { x: 1080, y: 150 },
+        inputs: [
+          { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false },
+          { id: 'in-data', name: 'data', label: 'Dados Gerais', type: 'JSON', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: { title: 'Página de Vendas Validada (CPS)' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-sps-c1',
+        sourceNodeId: 'tpl-sps-briefing',
+        sourcePortId: 'out-text',
+        targetNodeId: 'tpl-sps-copy',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-sps-c2',
+        sourceNodeId: 'tpl-sps-copy',
+        sourcePortId: 'out-copy',
+        targetNodeId: 'tpl-sps-sim',
+        targetPortId: 'in-text',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-sps-c3',
+        sourceNodeId: 'tpl-sps-sim',
+        sourcePortId: 'out-healed',
+        targetNodeId: 'tpl-sps-viewer',
+        targetPortId: 'in-ebook',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 17. Repurposing Viral Omnichannel: Vídeo ➔ Roteiro Reels & Carrossel ➔ Chat 3x
+  {
+    id: 'viral-repurpose-omnichannel-flow',
+    name: 'Repurposing Viral: Vídeo ➔ Carrossel & Reels ➔ Chat 3x',
+    description: 'Transforma um vídeo longo em múltiplos ativos virais (carrossel de 10 slides, roteiro de alta retenção para Reels) e conecta ao AI Chat 3x para ajuste dinâmico com visualização instantânea.',
+    category: 'CONTENT',
+    tags: ['youtube', 'reels', 'carrossel', 'repurpose', 'ai-chat', 'viral'],
+    icon: 'Share2',
+    estimatedCredits: 0.15,
+    nodes: [
+      {
+        id: 'tpl-vro-src',
+        type: 'source-youtube',
+        label: 'YouTube Source',
+        category: 'SOURCE',
+        position: { x: 60, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoTitle: 'Masterclass de Posicionamento & Vendas',
+          duration: '22:15'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vro-writer',
+        type: 'ai-writer',
+        label: 'Transformador Viral',
+        category: 'AI',
+        position: { x: 400, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexts', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Briefing', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-content', name: 'content', label: 'Content', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: {
+          model: 'groq-llama-3',
+          format: 'instagram-carousel'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vro-chat',
+        type: 'ai-chat',
+        label: 'AI Chat Assistant',
+        category: 'AI',
+        position: { x: 740, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexts', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Prompt', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-response', name: 'response', label: 'AI Response', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: {
+          model: 'groq-llama-3',
+          prompt: 'Refine os ganchos do carrossel para maximizar cliques e compartilhamentos.'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-vro-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída',
+        category: 'OUTPUT',
+        position: { x: 1440, y: 150 },
+        inputs: [
+          { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: { title: 'Ativos Virais Prontos' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-vro-c1',
+        sourceNodeId: 'tpl-vro-src',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'tpl-vro-writer',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-vro-c2',
+        sourceNodeId: 'tpl-vro-writer',
+        sourcePortId: 'out-content',
+        targetNodeId: 'tpl-vro-chat',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-vro-c3',
+        sourceNodeId: 'tpl-vro-chat',
+        sourcePortId: 'out-response',
+        targetNodeId: 'tpl-vro-viewer',
+        targetPortId: 'in-markdown',
+        state: 'connected'
+      }
+    ]
+  },
+
+  // 18. 👑 Chave de Ouro: Império Autônomo de Conteúdo & Vendas
+  {
+    id: 'golden-key-master-flow',
+    name: '👑 Chave de Ouro: Império Autônomo de Conteúdo & Vendas',
+    description: 'O ápice da automação UNION.AI: transforma um único vídeo em um E-book Cinematográfico completo (>7.000 palavras), uma Página de Vendas de 14 Blocos validada pelo Simulador CPS com Auto-Cura, conectando tudo a um AI Chat 3x e ao Visualizador de Saída com download .MD e PDF.',
+    category: 'MARKETING',
+    tags: ['chave-de-ouro', 'imperio', 'cinema-ebook', 'sales-page', 'simulador-cps', 'ai-chat', 'groq'],
+    icon: 'Crown',
+    estimatedCredits: 0.35,
+    nodes: [
+      {
+        id: 'tpl-gkm-src',
+        type: 'source-youtube',
+        label: 'YouTube Intelligence',
+        category: 'SOURCE',
+        position: { x: 60, y: 150 },
+        inputs: [],
+        outputs: [
+          { id: 'out-transcript', name: 'transcript', label: 'Transcript', type: 'TRANSCRIPT', isMulti: true, required: true },
+          { id: 'out-metadata', name: 'metadata', label: 'Metadata', type: 'METADATA', isMulti: true, required: true }
+        ],
+        config: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoTitle: 'A Nova Ordem da Inteligência Artificial: Estratégias & Escala',
+          duration: '28:40'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-gkm-cinema',
+        type: 'ai-cinema-agent',
+        label: '🎬 Cinema E-book Agent',
+        category: 'AI',
+        position: { x: 420, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexto / Transcrição', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Briefing / Instrução', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-ebook', name: 'ebook', label: 'E-book Cinematográfico', type: 'DOCUMENT', isMulti: true, required: true },
+          { id: 'out-synopsis', name: 'synopsis', label: 'Sinopse & Pitch', type: 'TEXT', isMulti: true, required: true }
+        ],
+        config: {
+          genre: 'thriller-transformacao',
+          cinematicStyle: 'noir-futurista',
+          chapters: 7,
+          wordsPerChapter: 1200,
+          protagonist: 'O Construtor do Futuro',
+          model: 'groq-llama-3'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-gkm-copy',
+        type: 'marketing-sales-page',
+        label: 'Copywriter 14-Blocos',
+        category: 'AI',
+        position: { x: 1140, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Offer Briefing', type: 'TEXT', isMulti: true, required: true },
+          { id: 'in-avatar', name: 'avatar', label: 'Avatar / ICP', type: 'JSON', isMulti: false, required: false },
+          { id: 'in-vsl', name: 'vslScript', label: 'VSL / Briefing', type: 'DOCUMENT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-copy', name: 'salesPageCopy', label: 'Full Sales Page Copy', type: 'DOCUMENT', isMulti: true, required: true },
+          { id: 'out-json', name: 'blocksJson', label: '14-Block JSON', type: 'JSON', isMulti: true, required: true }
+        ],
+        config: {
+          productName: 'Protocolo UNION: O Império Autônomo',
+          targetAudience: 'Infoprodutores, Agências de IA e Especialistas',
+          offerPrice: '12x de R$ 197 ou R$ 1.997 à vista',
+          model: 'groq-llama-3'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-gkm-sim',
+        type: 'ai-conversion-simulator',
+        label: 'Simulador CPS & Auto-Cura',
+        category: 'AI',
+        position: { x: 1480, y: 150 },
+        inputs: [
+          { id: 'in-copy', name: 'copy', label: 'Copy / VSL Blocks', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-json', name: 'blocksJson', label: 'Blocks JSON', type: 'JSON', isMulti: false, required: false },
+          { id: 'in-text', name: 'text', label: 'Raw Copy Text', type: 'TEXT', isMulti: true, required: true }
+        ],
+        outputs: [
+          { id: 'out-simulation', name: 'simulationResult', label: 'Simulation & CPS Score', type: 'JSON', isMulti: true, required: true },
+          { id: 'out-healed', name: 'healedCopy', label: 'Auto-Healed Copy', type: 'DOCUMENT', isMulti: true, required: false }
+        ],
+        config: {
+          sourceType: 'SALES_PAGE',
+          targetNiche: 'Marketing de Alta Conversão',
+          autoHealDropOffs: true
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-gkm-chat',
+        type: 'ai-chat',
+        label: 'AI Chat Assistant 3x',
+        category: 'AI',
+        position: { x: 1820, y: 150 },
+        inputs: [
+          { id: 'in-context', name: 'context', label: 'Contexts', type: 'TEXT', isMulti: true, required: false },
+          { id: 'in-prompt', name: 'prompt', label: 'Prompt', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [
+          { id: 'out-response', name: 'response', label: 'AI Response', type: 'AI_RESPONSE', isMulti: true, required: true }
+        ],
+        config: {
+          model: 'groq-llama-3',
+          prompt: 'Analise o e-book cinematográfico e a copy dos 14 blocos para sugerir 3 ângulos de tráfego pago.'
+        },
+        state: 'IDLE'
+      },
+      {
+        id: 'tpl-gkm-viewer',
+        type: 'output-modal-viewer',
+        label: 'Visualizador de Saída 3x',
+        category: 'OUTPUT',
+        position: { x: 2540, y: 150 },
+        inputs: [
+          { id: 'in-ebook', name: 'ebook', label: 'E-book / Documento', type: 'DOCUMENT', isMulti: false, required: false },
+          { id: 'in-markdown', name: 'markdown', label: 'Texto / Markdown', type: 'TEXT', isMulti: false, required: false }
+        ],
+        outputs: [],
+        config: { title: 'Dossiê do Império: E-book & Copy Validada' },
+        state: 'IDLE'
+      }
+    ],
+    connections: [
+      {
+        id: 'tpl-gkm-c1',
+        sourceNodeId: 'tpl-gkm-src',
+        sourcePortId: 'out-transcript',
+        targetNodeId: 'tpl-gkm-cinema',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-gkm-c2',
+        sourceNodeId: 'tpl-gkm-cinema',
+        sourcePortId: 'out-synopsis',
+        targetNodeId: 'tpl-gkm-copy',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-gkm-c3',
+        sourceNodeId: 'tpl-gkm-copy',
+        sourcePortId: 'out-copy',
+        targetNodeId: 'tpl-gkm-sim',
+        targetPortId: 'in-text',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-gkm-c4',
+        sourceNodeId: 'tpl-gkm-sim',
+        sourcePortId: 'out-healed',
+        targetNodeId: 'tpl-gkm-chat',
+        targetPortId: 'in-context',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-gkm-c5',
+        sourceNodeId: 'tpl-gkm-cinema',
+        sourcePortId: 'out-ebook',
+        targetNodeId: 'tpl-gkm-viewer',
+        targetPortId: 'in-ebook',
+        state: 'connected'
+      },
+      {
+        id: 'tpl-gkm-c6',
+        sourceNodeId: 'tpl-gkm-chat',
+        sourcePortId: 'out-response',
+        targetNodeId: 'tpl-gkm-viewer',
+        targetPortId: 'in-markdown',
+        state: 'connected'
+      }
+    ]
   }
 ];

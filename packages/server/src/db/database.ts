@@ -46,6 +46,9 @@ export function closeDatabase(): void {
 
 export function resetTestDatabase(): void {
   const db = getDatabase();
+  db.prepare('DELETE FROM password_reset_tokens').run();
+  db.prepare('DELETE FROM processed_payments').run();
+  db.prepare('DELETE FROM published_sales_pages').run();
   db.prepare('DELETE FROM audit_logs').run();
   db.prepare('DELETE FROM org_invitations').run();
   db.prepare('DELETE FROM org_members').run();
@@ -315,6 +318,49 @@ function initializeSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_oracle_memories_session ON oracle_chat_memories(session_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_oracle_memories_unique ON oracle_chat_memories(session_id, memory_key);
+
+    CREATE TABLE IF NOT EXISTS published_sales_pages (
+      slug TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      copy_json TEXT NOT NULL,
+      html TEXT NOT NULL,
+      checkout_url TEXT NOT NULL,
+      published_at TEXT NOT NULL,
+      views INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_published_sales_pages_user ON published_sales_pages(user_id);
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id);
+
+    CREATE TABLE IF NOT EXISTS processed_payments (
+      id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      provider_payment_id TEXT UNIQUE NOT NULL,
+      user_id TEXT NOT NULL,
+      package_id TEXT NOT NULL,
+      amount_paid REAL NOT NULL,
+      credits_amount REAL NOT NULL,
+      status TEXT NOT NULL,
+      metadata_json TEXT DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_processed_payments_provider_id ON processed_payments(provider_payment_id);
+    CREATE INDEX IF NOT EXISTS idx_processed_payments_user ON processed_payments(user_id);
   `);
 
   try {

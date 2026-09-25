@@ -354,7 +354,7 @@ Você analisa conexões de nós no Canvas, tipagem estrita do Data Bus (URL, TRA
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'qwen/qwen3.8-27b',
+            model: env.GROQ_MODEL || 'openai/gpt-oss-120b',
             messages: [
               {
                 role: 'system',
