@@ -28,6 +28,8 @@ export class UserStorageService {
   constructor(customBaseDir?: string) {
     if (customBaseDir) {
       this.baseDir = customBaseDir;
+    } else if (process.env.VERCEL) {
+      this.baseDir = '/tmp/union-data/users';
     } else {
       // Default to data/users relative to root or server directory
       const defaultDir = path.resolve(process.cwd(), 'packages/server/data/users');
@@ -38,8 +40,18 @@ export class UserStorageService {
   }
 
   private ensureDirectory(dirPath: string): void {
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
+    try {
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+    } catch (err) {
+      console.warn('[UserStorageService] Directory creation failed, falling back to /tmp:', err);
+      this.baseDir = '/tmp/union-data/users';
+      try {
+        if (!fs.existsSync(this.baseDir)) {
+          fs.mkdirSync(this.baseDir, { recursive: true });
+        }
+      } catch {}
     }
   }
 
