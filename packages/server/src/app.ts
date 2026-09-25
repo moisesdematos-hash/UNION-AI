@@ -4,7 +4,11 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { projectsRouter } from './routes/projects.js';
