@@ -5,4 +5,6 @@ const { createApp } = require('../packages/server/dist/app.js');
 
 const app = createApp();
 
-module.exports = app;
+module.exports = (req, res) => {
+  return app(req, res);
+};
