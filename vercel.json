@@ -1,15 +1,12 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "npm run build --workspace=@union/shared && npm run build --workspace=@union/client",
+  "buildCommand": "npm run build",
   "outputDirectory": "packages/client/dist",
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://api-union-production.up.railway.app/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/p/(.*)", "destination": "/api" },
+    { "source": "/metrics", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -10,12 +10,19 @@ export function getDatabase(customPath?: string): Database.Database {
     return dbInstance;
   }
 
-  const targetPath = customPath || (env.NODE_ENV === 'test' ? ':memory:' : env.DB_PATH);
+  const isVercel = Boolean(process.env.VERCEL);
+  const defaultPath = isVercel ? '/tmp/union.db' : env.DB_PATH;
+  const targetPath = customPath || (env.NODE_ENV === 'test' ? ':memory:' : defaultPath);
 
   if (targetPath !== ':memory:') {
     const dir = path.dirname(targetPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (err) {
+        console.warn('[Database] Could not create directory, falling back to memory:', err);
+        return new Database(':memory:');
+      }
     }
   }
 
