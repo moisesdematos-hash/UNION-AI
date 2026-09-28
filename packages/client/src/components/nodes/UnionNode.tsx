@@ -429,6 +429,105 @@ export function UnionNode({ id, data, selected }: NodeProps) {
     }
   };
 
+  const handleExecuteCinemaAgent = async () => {
+    setIsExtracting(true);
+    updateNodeData(id, { state: 'PROCESSING' });
+    const startTime = Date.now();
+
+    try {
+      const incomingEdges = edges.filter(e => e.target === id);
+      const { nodes } = useCanvasStore.getState();
+      const upstreamTexts: string[] = [];
+      incomingEdges.forEach(e => {
+        const src = nodes.find(n => n.id === e.source);
+        if (src?.data) {
+          const cfg = (src.data as any).config || {};
+          const text = cfg.fullMarkdown || cfg.fullOutput || cfg.text || cfg.content || cfg.extractedSummary || cfg.videoTitle || '';
+          if (text) {
+            upstreamTexts.push(String(text));
+          }
+        }
+      });
+      const contextText = upstreamTexts.join('\n\n---\n\n');
+      const theme = String(config.theme || '').trim() || (contextText ? contextText.slice(0, 300) : 'Transformação Estratégica');
+      const protagonist = String(config.protagonist || '').trim() || 'O Estrategista';
+      const genre = String(config.genre || 'thriller-transformacao');
+      const cinematicStyle = String(config.cinematicStyle || 'noir-futurista');
+      const chaptersCount = Math.min(12, Math.max(3, Number(config.chapters) || 7));
+      const wordsPerChapter = Math.max(1000, Number(config.wordsPerChapter) || 1200);
+
+      const res = await fetch('/api/chat/forge/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'EBOOK',
+          prompt: `E-book Cinematográfico: ${theme}. Protagonista: ${protagonist}. Género: ${genre}. Estilo: ${cinematicStyle}. Contexto fonte: ${contextText.slice(0, 1500)}`,
+          title: `${protagonist}: A Jornada (${genre})`,
+          targetNiche: genre,
+          pageCount: chaptersCount * 2,
+          wordsPerChapter: wordsPerChapter,
+          tone: 'persuasive',
+          audienceLevel: 'intermediate'
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.status !== 'success' || !json.data) {
+        throw new Error(json.message || 'Falha ao forjar e-book cinematográfico');
+      }
+
+      const ebookData = json.data;
+      const totalWords = ebookData.totalWords || ebookData.totalWordCount || ebookData.chapters?.reduce((acc: number, c: any) => acc + (c.wordCount || 0), 0) || (chaptersCount * wordsPerChapter);
+      const updatedConfig = {
+        ...config,
+        generatedEbook: ebookData,
+        synopsis: ebookData.synopsis || ebookData.description || `Obra Cinematográfica: ${theme}`,
+        aiSummary: `${ebookData.title || protagonist} (${chaptersCount} capítulos, ${totalWords.toLocaleString()} palavras)`,
+        fullOutput: ebookData.fullMarkdown || ''
+      };
+
+      setConfig(updatedConfig);
+      updateNodeData(id, {
+        state: 'COMPLETED',
+        executionInfo: {
+          durationMs: Date.now() - startTime,
+          tokens: totalWords,
+          credits: 0.18
+        },
+        config: updatedConfig
+      });
+
+      // Propagate automatically to connected nodes (like Visualizador 3x)
+      const outgoingEdges = edges.filter(e => e.source === id);
+      outgoingEdges.forEach(e => {
+        updateNodeData(e.target, {
+          config: {
+            ...((nodes.find(n => n.id === e.target)?.data as any)?.config || {}),
+            generatedEbook: ebookData,
+            fullOutput: ebookData.fullMarkdown || '',
+            fullMarkdown: ebookData.fullMarkdown || ''
+          }
+        });
+      });
+
+      // Automatically open Reader modal so user immediately sees their book!
+      setCustomViewerEbook(ebookData);
+      setShowReaderModal(true);
+
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao criar e-book cinematográfico';
+      updateNodeData(id, {
+        state: 'FAILED',
+        executionInfo: {
+          durationMs: Date.now() - startTime,
+          error: message
+        }
+      });
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handleExecuteAiNode = async () => {
     setIsExtracting(true);
     updateNodeData(id, { state: 'PROCESSING' });
@@ -1443,7 +1542,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
                   {/* Action button */}
                   <button
-                    onClick={handleExecuteAiNode}
+                    onClick={handleExecuteCinemaAgent}
                     disabled={isExtracting}
                     className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs font-sans flex items-center justify-center gap-2 shadow-lg shadow-violet-950/60 transition-all cursor-pointer disabled:opacity-50 shrink-0"
                   >
@@ -1459,6 +1558,39 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                       </>
                     )}
                   </button>
+
+                  {/* Read and Download Buttons */}
+                  {hasEbook && !isExtracting && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          setCustomViewerEbook(config.generatedEbook);
+                          setShowReaderModal(true);
+                        }}
+                        className="py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:opacity-90 text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                      >
+                        <BookOpen className="h-4 w-4 text-black" />
+                        <span>📖 Ler E-book</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const eb = config.generatedEbook as any;
+                          const text = eb?.fullMarkdown || '';
+                          const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${(eb?.title || 'ebook_cinematografico').toLowerCase().replace(/\s+/g, '_')}.md`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-white/10"
+                      >
+                        <Download className="h-4 w-4 text-zinc-300" />
+                        <span>Baixar .MD</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })() : nodeData.type === 'ai-chat' ? (() => {
