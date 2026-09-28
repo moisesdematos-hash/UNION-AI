@@ -268,75 +268,27 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
 
+    const p1 = payload.pages?.[0] || { title: 'Capa Oficial', content: 'Introdução...' };
+    const p3 = payload.pages?.[2] || { title: 'Diagnóstico', content: 'Gargalos...' };
+    const p5 = payload.pages?.[4] || { title: 'Mecanismo Único', content: 'Os 3 pilares...' };
+    const p7 = payload.pages?.[6] || { title: 'Execução Visual', content: 'Esteiras...' };
+
     let textAcc = `[INICIANDO FORJAMENTO PROFUNDO DO E-BOOK]\n> Obra: "${payload.title}"\n> Nicho Alvo: ${payload.targetNiche || 'Geral'}\n> Extensão Autônoma: ${pagesCount} Páginas Completas\n> Ilustrações do Projeto: ${imagesCount} Imagens Contextuais\n> Motor: UNION.AI Deep Forge v2.0\n\n[ETAPA 1: MAPEAR AUDIÊNCIA E ALOCAÇÃO DE PÁGINAS]\n• Alocando estrutura para ${pagesCount} páginas completas...\n• Identificando as 3 maiores dores inconscientes do público...\n✓ ICP Validado: Foco em velocidade de execução e retorno tangível.\n`;
+    textAcc += `\n[ETAPA 2: GERAÇÃO AUTÔNOMA DE IMAGENS DO PROJETO]\n• Imagem 1 (Capa): Capa cinematográfica de "${payload.title}"\n• Imagem 2 (Diagnóstico): Infográfico do gargalo de mercado\n• Imagem 3 (Metodologia): Diagrama holográfico do Mecanismo Único\n• Imagem 4 (Execução): Blueprint visual do pipeline UNION.AI\n• Imagem 5 (Escala): Gráfico de crescimento exponencial\n✓ ${imagesCount} imagens de alta resolução incorporadas ao projeto!\n`;
+    textAcc += `\n[ETAPA 3: ESCREVENDO PÁGINAS 1 A 4...]\n## Página 1: ${p1.title}\n${p1.content}\n🖼️ [Imagem da Capa Inserida]\n\n## Página 3: ${p3.title}\n${p3.content}\n🖼️ [Infográfico do Diagnóstico Inserido]\n`;
+    textAcc += `\n[ETAPA 4: ESCREVENDO PÁGINAS 5 A 8...]\n## Página 5: ${p5.title}\n${p5.content}\n🖼️ [Diagrama Metodológico Inserido]\n\n## Página 7: ${p7.title}\n${p7.content}\n🖼️ [Blueprint de Pipeline Inserido]\n`;
+    textAcc += `\n[ETAPA 5: CONCLUINDO E COMPILANDO TODAS AS ${pagesCount} PÁGINAS...]\n• Consolidando índice remissivo e diagramas...\n• Formatando Markdown completo com imagens contextuais...\n\n✨ E-BOOK COM ${pagesCount} PÁGINAS E ${imagesCount} IMAGENS 100% FORJADO!\n`;
+
     setLiveStreamText(textAcc);
     setStreamWordCount(textAcc.split(/\s+/).length);
-
-    // Passo 2 (600ms)
-    const t1 = setTimeout(() => {
-      setUnfoldingProgress(25);
-      setUnfoldingSteps(prev => prev.map(s => 
-        s.id === 1 ? { ...s, status: 'done' } :
-        s.id === 2 ? { ...s, status: 'active' } : s
-      ));
-      textAcc += `\n[ETAPA 2: GERAÇÃO AUTÔNOMA DE IMAGENS DO PROJETO]\n• Imagem 1 (Capa): Capa cinematográfica de "${payload.title}"\n• Imagem 2 (Diagnóstico): Infográfico do gargalo de mercado\n• Imagem 3 (Metodologia): Diagrama holográfico do Mecanismo Único\n• Imagem 4 (Execução): Blueprint visual do pipeline UNION.AI\n• Imagem 5 (Escala): Gráfico de crescimento exponencial\n✓ ${imagesCount} imagens de alta resolução incorporadas ao projeto!\n`;
-      setLiveStreamText(textAcc);
-      setStreamWordCount(textAcc.split(/\s+/).length);
-    }, 600);
-
-    // Passo 3 (1500ms)
-    const t2 = setTimeout(() => {
-      setUnfoldingProgress(50);
-      setUnfoldingSteps(prev => prev.map(s => 
-        s.id <= 2 ? { ...s, status: 'done' } :
-        s.id === 3 ? { ...s, status: 'active' } : s
-      ));
-      const p1 = payload.pages?.[0] || { title: 'Capa Oficial', content: 'Introdução...' };
-      const p3 = payload.pages?.[2] || { title: 'Diagnóstico', content: 'Gargalos...' };
-      textAcc += `\n[ETAPA 3: ESCREVENDO PÁGINAS 1 A 4...]\n## Página 1: ${p1.title}\n${p1.content}\n🖼️ [Imagem da Capa Inserida]\n\n## Página 3: ${p3.title}\n${p3.content}\n🖼️ [Infográfico do Diagnóstico Inserido]\n`;
-      setLiveStreamText(textAcc);
-      setStreamWordCount(textAcc.split(/\s+/).length);
-    }, 1500);
-
-    // Passo 4 (2500ms)
-    const t3 = setTimeout(() => {
-      setUnfoldingProgress(75);
-      setUnfoldingSteps(prev => prev.map(s => 
-        s.id <= 3 ? { ...s, status: 'done' } :
-        s.id === 4 ? { ...s, status: 'active' } : s
-      ));
-      const p5 = payload.pages?.[4] || { title: 'Mecanismo Único', content: 'Os 3 pilares...' };
-      const p7 = payload.pages?.[6] || { title: 'Execução Visual', content: 'Esteiras...' };
-      textAcc += `\n[ETAPA 4: ESCREVENDO PÁGINAS 5 A 8...]\n## Página 5: ${p5.title}\n${p5.content}\n🖼️ [Diagrama Metodológico Inserido]\n\n## Página 7: ${p7.title}\n${p7.content}\n🖼️ [Blueprint de Pipeline Inserido]\n`;
-      setLiveStreamText(textAcc);
-      setStreamWordCount(textAcc.split(/\s+/).length);
-    }, 2500);
-
-    // Passo 5 (3400ms)
-    const t4 = setTimeout(() => {
-      setUnfoldingProgress(92);
-      setUnfoldingSteps(prev => prev.map(s => 
-        s.id <= 4 ? { ...s, status: 'done' } :
-        s.id === 5 ? { ...s, status: 'active' } : s
-      ));
-      textAcc += `\n[ETAPA 5: CONCLUINDO E COMPILANDO TODAS AS ${pagesCount} PÁGINAS...]\n• Consolidando índice remissivo e diagramas...\n• Formatando Markdown completo com imagens contextuais...\n\n✨ E-BOOK COM ${pagesCount} PÁGINAS E ${imagesCount} IMAGENS 100% FORJADO!\n`;
-      setLiveStreamText(textAcc);
-      setStreamWordCount(textAcc.split(/\s+/).length);
-    }, 3400);
-
-    // Finalizar (4000ms)
-    const t5 = setTimeout(() => {
-      setUnfoldingProgress(100);
-      setUnfoldingSteps(prev => prev.map(s => ({ ...s, status: 'done' })));
-      setIsUnfolding(false);
-      setIsGeneratingForge(false);
-      setForgeResult(payload);
-      setSelectedChapterIdx(0);
-      setSelectedPageIdx(0);
-      showToast(`✨ E-book com ${pagesCount} páginas e ${imagesCount} imagens forjado com sucesso!`);
-    }, 4000);
-
-    timeoutsRef.current = [t1, t2, t3, t4, t5];
+    setUnfoldingProgress(100);
+    setUnfoldingSteps(initialSteps.map(s => ({ ...s, status: 'done' })));
+    setIsUnfolding(false);
+    setIsGeneratingForge(false);
+    setForgeResult(payload);
+    setSelectedChapterIdx(0);
+    setSelectedPageIdx(0);
+    showToast(`✨ E-book com ${pagesCount} páginas e ${imagesCount} imagens forjado com sucesso!`);
   };
 
   // Helper para gerar páginas e imagens no fallback autônomo com capítulos > 1000 palavras e tema 100% alinhado

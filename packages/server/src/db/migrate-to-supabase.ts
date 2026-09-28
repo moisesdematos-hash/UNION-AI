@@ -19,7 +19,14 @@ async function migrateToSupabase() {
   }
 
   const supabase = getSupabaseClient()!;
-  const localDbPath = path.resolve(process.env.DB_PATH || './data/union.db');
+  const possiblePaths = [
+    process.env.DB_PATH,
+    path.resolve(process.cwd(), 'packages/server/data/union.db'),
+    path.resolve(process.cwd(), 'data/union.db'),
+    path.resolve(__dirname, '../../data/union.db')
+  ].filter(Boolean) as string[];
+
+  const localDbPath = possiblePaths.find(p => fs.existsSync(p)) || path.resolve('./data/union.db');
 
   if (!fs.existsSync(localDbPath)) {
     console.error(`❌ Arquivo SQLite local não encontrado em: ${localDbPath}`);

@@ -57,29 +57,37 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
 authRouter.post('/google', async (req: Request, res: Response) => {
   try {
-    let { email, name, avatarUrl, googleId, credential } = req.body;
+    const { credential } = req.body;
 
-    // Decode Google ID Token / credential if supplied
-    if (credential && (!email || !name)) {
-      try {
-        const decoded = jwt.decode(credential) as any;
-        if (decoded && decoded.email) {
-          email = email || decoded.email;
-          name = name || decoded.name;
-          avatarUrl = avatarUrl || decoded.picture;
-          googleId = googleId || decoded.sub;
-        }
-      } catch {
-        // Fallback to body properties
-      }
+    if (!credential || typeof credential !== 'string') {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Token criptográfico do Google (ID Token / credential) é obrigatório.'
+      });
     }
 
-    const data = GoogleAuthSchema.parse({ email, name, avatarUrl, googleId, credential });
+    // Verify Google ID Token cryptographically via Google's tokeninfo service
+    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!verifyRes.ok) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Token do Google inválido ou expirado. Autenticação rejeitada.'
+      });
+    }
+
+    const payload = (await verifyRes.json()) as any;
+    if (!payload.email || (!payload.email_verified && payload.email_verified !== 'true')) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'O email associado à conta Google não foi verificado.'
+      });
+    }
+
     const session = await authService.loginWithGoogle({
-      email: data.email,
-      name: data.name,
-      avatarUrl: data.avatarUrl,
-      googleId: data.googleId
+      email: payload.email,
+      name: payload.name || payload.email.split('@')[0],
+      avatarUrl: payload.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(payload.email)}`,
+      googleId: payload.sub
     });
 
     res.status(200).json({

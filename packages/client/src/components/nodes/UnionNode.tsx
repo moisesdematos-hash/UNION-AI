@@ -1248,11 +1248,11 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                 { value: 'neo-gotico', label: '🦇 Neo-Gótico' },
               ];
               const aiModels = [
-                { value: 'groq-llama-3', label: '⚡ Groq Llama 3.3 70B (Padrão)' },
-                { value: 'claude-3-7-sonnet', label: 'Claude 3.7 Sonnet' },
-                { value: 'gpt-4o', label: 'GPT-4o' },
-                { value: 'gemini-1-5-pro', label: 'Gemini 1.5 Pro' },
-                { value: 'deepseek-r1', label: 'DeepSeek R1' },
+                { value: 'groq-llama-3', label: '⚡ Groq LPU (Ativo / Integrado)' },
+                { value: 'claude-3-7-sonnet', label: 'Claude 3.7 Sonnet (Requer API Key)' },
+                { value: 'gpt-4o', label: 'GPT-4o (Requer API Key)' },
+                { value: 'gemini-1-5-pro', label: 'Gemini 1.5 Pro (Requer API Key)' },
+                { value: 'deepseek-r1', label: 'DeepSeek R1 (Requer API Key)' },
               ];
 
               const hasSynopsis = Boolean(config.synopsis);
@@ -1471,12 +1471,12 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                           onChange={(e) => handleConfigUpdate('model', e.target.value)}
                           className="px-2 py-0.5 rounded bg-union-surface border border-union-border text-[10px] font-mono text-white focus:border-indigo-400 focus:outline-none cursor-pointer"
                         >
-                          <option value="groq-llama-3">⚡ Groq Llama 3.3 70B (Padrão Ultra Rápido)</option>
-                          <option value="gpt-4o">OpenAI GPT-4o</option>
-                          <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Copywriting)</option>
-                          <option value="deepseek-r1">DeepSeek R1 (Raciocínio Lógico)</option>
-                          <option value="gemini-1-5-flash">Gemini 1.5 Flash (Ultra Rápido)</option>
-                          <option value="auto">Auto Router (Smart)</option>
+                          <option value="groq-llama-3">⚡ Groq LPU (Ativo / Integrado)</option>
+                          <option value="auto">Auto Router (Groq LPU)</option>
+                          <option value="gpt-4o">OpenAI GPT-4o (Requer API Key)</option>
+                          <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Requer API Key)</option>
+                          <option value="deepseek-r1">DeepSeek R1 (Requer API Key)</option>
+                          <option value="gemini-1-5-flash">Gemini 1.5 Flash (Requer API Key)</option>
                         </select>
                       </div>
                       {messages.length > 0 && (
@@ -1634,12 +1634,12 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                     onChange={(e) => handleConfigUpdate('model', e.target.value)}
                     className="px-2 py-1 rounded bg-union-surface border border-union-border text-[11px] font-mono text-white focus:outline-none"
                   >
-                    <option value="groq-llama-3">⚡ Groq Llama 3.3 70B (Padrão)</option>
-                    <option value="auto">Auto Router (Smart)</option>
-                    <option value="gpt-4o">OpenAI GPT-4o</option>
-                    <option value="claude-3-7-sonnet">Claude 3.7 Sonnet</option>
-                    <option value="gemini-1-5-flash">Gemini 1.5 Flash</option>
-                    <option value="deepseek-r1">DeepSeek R1</option>
+                    <option value="groq-llama-3">⚡ Groq LPU (Ativo / Integrado)</option>
+                    <option value="auto">Auto Router (Groq LPU)</option>
+                    <option value="gpt-4o">OpenAI GPT-4o (Requer API Key)</option>
+                    <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Requer API Key)</option>
+                    <option value="gemini-1-5-flash">Gemini 1.5 Flash (Requer API Key)</option>
+                    <option value="deepseek-r1">DeepSeek R1 (Requer API Key)</option>
                   </select>
                 </div>
 

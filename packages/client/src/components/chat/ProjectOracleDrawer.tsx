@@ -748,6 +748,10 @@ export function ProjectOracleDrawer({
                 <Sparkles className="w-3 h-3 text-cyan-300" />
                 Multimodal & Voice
               </span>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30" title="Motor ativo: Groq LPU de altíssima velocidade">
+                <Zap className="w-3 h-3 text-amber-400" />
+                Groq LPU Ativo
+              </span>
               <span 
                 title={activeMemories.length > 0 ? `Memória ativa: ${activeMemories.map(m => `${m.key}: ${m.value}`).join(' • ')}` : 'Memória contínua ativa e persistente'}
                 className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"

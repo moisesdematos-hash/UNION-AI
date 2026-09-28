@@ -36,7 +36,27 @@ export function createApp() {
     crossOriginEmbedderPolicy: false
   }));
 
-  app.use(cors({ origin: true, credentials: true }));
+  const allowedOrigins = [
+    env.CORS_ORIGIN,
+    env.APP_URL,
+    'http://localhost:5173',
+    'http://localhost:1590',
+    'http://localhost:4000',
+    'http://localhost:3000',
+    'https://union-ai-client-omega.vercel.app',
+    'https://union-ai-client.vercel.app',
+  ].filter(Boolean);
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true
+  }));
   app.use(express.json());
 
   // API Rate Limiting (Relaxed in test environment)

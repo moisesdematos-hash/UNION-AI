@@ -3,6 +3,22 @@
 -- Compatible with Supabase PostgreSQL 15+
 -- ==============================================================================
 
+-- 0. Idempotent Column Migrations (ensures pre-existing tables receive required columns)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'USER';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'email';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'workflow_triggers') THEN
+        ALTER TABLE workflow_triggers ADD COLUMN IF NOT EXISTS last_triggered_at BIGINT;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'oracle_chat_messages') THEN
+        ALTER TABLE oracle_chat_messages ADD COLUMN IF NOT EXISTS category TEXT;
+    END IF;
+END $$;
+
 -- 1. Users & Authentication
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
