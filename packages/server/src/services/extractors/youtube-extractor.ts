@@ -27,7 +27,7 @@ export interface YouTubeExtractionResult {
  */
 export function extractYouTubeVideoId(url: string): string | null {
   if (!url) return null;
-  const trimmed = url.trim();
+  const trimmed = url.trim().replace(/^["']|["']$/g, '');
 
   // Handle youtu.be/ID
   const shortMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
@@ -37,8 +37,8 @@ export function extractYouTubeVideoId(url: string): string | null {
   const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
   if (watchMatch) return watchMatch[1];
 
-  // Handle youtube.com/embed/ID or shorts/ID
-  const pathMatch = trimmed.match(/youtube\.com\/(?:embed|shorts|v)\/([a-zA-Z0-9_-]{11})/);
+  // Handle youtube.com/embed/ID, shorts/ID, live/ID
+  const pathMatch = trimmed.match(/youtube\.com\/(?:embed|shorts|v|live)\/([a-zA-Z0-9_-]{11})/);
   if (pathMatch) return pathMatch[1];
 
   // Raw 11-char ID

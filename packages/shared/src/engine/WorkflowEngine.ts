@@ -108,8 +108,9 @@ export class WorkflowEngine {
     for (const node of workflow.nodes) {
       const config = node.config || {};
       if (node.type === 'source-youtube') {
-        const url = String(config.url || '').trim();
-        if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+        const url = String(config.url || '').trim().replace(/^["']|["']$/g, '');
+        const isValid = url.includes('youtube.com') || url.includes('youtu.be') || /^[a-zA-Z0-9_-]{11}$/.test(url);
+        if (!url || !isValid) {
           errors.push({
             nodeId: node.id,
             message: `Nó "${node.label}" requer uma URL válida do YouTube configurada.`,

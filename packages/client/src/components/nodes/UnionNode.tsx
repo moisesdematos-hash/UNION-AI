@@ -30,7 +30,8 @@ import {
   ShieldCheck,
   Bot,
   Send,
-  RotateCcw
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { EbookReaderModal } from '../modals/EbookReaderModal.js';
 import { SalesPageLivePreviewModal } from '../modals/SalesPageLivePreviewModal.js';
@@ -44,12 +45,12 @@ export interface UnionNodeData extends NodeDefinition {
 
 export function extractYouTubeId(url?: string): string | null {
   if (!url) return null;
-  const trimmed = url.trim();
+  const trimmed = url.trim().replace(/^["']|["']$/g, '');
   const shortMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
   if (shortMatch) return shortMatch[1];
   const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
   if (watchMatch) return watchMatch[1];
-  const pathMatch = trimmed.match(/youtube\.com\/(?:embed|shorts|v)\/([a-zA-Z0-9_-]{11})/);
+  const pathMatch = trimmed.match(/youtube\.com\/(?:embed|shorts|v|live)\/([a-zA-Z0-9_-]{11})/);
   if (pathMatch) return pathMatch[1];
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
   return null;
@@ -189,18 +190,30 @@ export function UnionNode({ id, data, selected }: NodeProps) {
 
   useEffect(() => {
     if (nodeData.config) {
-      setConfig(nodeData.config);
+      setConfig((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(nodeData.config)) {
+          return prev;
+        }
+        return { ...prev, ...nodeData.config };
+      });
     }
   }, [nodeData.config]);
 
   const categoryStyle = CATEGORY_COLORS[nodeData.category] || CATEGORY_COLORS.AI;
 
+  const handleConfigUpdates = (partial: Record<string, unknown>) => {
+    setConfig((prev) => {
+      const updated = { ...prev, ...partial };
+      updateNodeData(id, { config: updated });
+      if (nodeData.onConfigChange) {
+        Object.entries(partial).forEach(([k, v]) => nodeData.onConfigChange?.(k, v));
+      }
+      return updated;
+    });
+  };
+
   const handleConfigUpdate = (key: string, value: unknown) => {
-    const updated = { ...config, [key]: value };
-    setConfig(updated);
-    if (nodeData.onConfigChange) {
-      nodeData.onConfigChange(key, value);
-    }
+    handleConfigUpdates({ [key]: value });
   };
 
   const handleExecuteExtractor = async () => {
@@ -842,21 +855,55 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                       <label className="text-[10px] font-mono text-union-muted">URL do Vídeo</label>
                       <span className="text-[9px] font-mono text-zinc-500">ID: {videoId}</span>
                     </div>
-                    <input
-                      type="text"
-                      value={String(config.url || '')}
-                      onChange={(e) => {
-                        const newUrl = e.target.value;
-                        const newId = extractYouTubeId(newUrl);
-                        handleConfigUpdate('url', newUrl);
-                        if (newId) {
-                          handleConfigUpdate('videoId', newId);
-                          handleConfigUpdate('thumbnailUrl', `https://img.youtube.com/vi/${newId}/hqdefault.jpg`);
-                        }
-                      }}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-red-500 focus:outline-none"
-                    />
+                    <div className="relative flex items-center">
+                      <input
+                        type="text"
+                        value={String(config.url || '')}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const newUrl = e.target.value;
+                          const newId = extractYouTubeId(newUrl);
+                          const updates: Record<string, unknown> = { url: newUrl };
+                          if (newId) {
+                            updates.videoId = newId;
+                            updates.thumbnailUrl = `https://img.youtube.com/vi/${newId}/hqdefault.jpg`;
+                          }
+                          handleConfigUpdates(updates);
+                        }}
+                        onBlur={() => {
+                          const currentUrl = String(config.url || '').trim();
+                          const id = extractYouTubeId(currentUrl);
+                          if (id && (!currentUrl.includes('youtube.com') && !currentUrl.includes('youtu.be'))) {
+                            handleConfigUpdates({
+                              url: `https://www.youtube.com/watch?v=${id}`,
+                              videoId: id,
+                              thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+                            });
+                          }
+                        }}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="nodrag nowheel w-full px-2.5 py-1.5 pr-8 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-red-500 focus:outline-none"
+                      />
+                      {Boolean(config.url) && (
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => {
+                            handleConfigUpdates({
+                              url: '',
+                              videoId: '',
+                              thumbnailUrl: '',
+                              videoTitle: '',
+                              extractedSummary: ''
+                            });
+                          }}
+                          className="nodrag absolute right-2 text-zinc-400 hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+                          title="Limpar URL"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -868,9 +915,10 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                 <input
                   type="text"
                   value={String(config.url || '')}
+                  onKeyDown={(e) => e.stopPropagation()}
                   onChange={(e) => handleConfigUpdate('url', e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none"
+                  className="nodrag nowheel w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none"
                 />
               </div>
             )}
@@ -881,9 +929,10 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                 <textarea
                   rows={2}
                   value={String(config.content || '')}
+                  onKeyDown={(e) => e.stopPropagation()}
                   onChange={(e) => handleConfigUpdate('content', e.target.value)}
                   placeholder="Paste text or markdown table..."
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none resize-none"
+                  className="nodrag nowheel w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none resize-none"
                 />
               </div>
             )}
@@ -894,9 +943,10 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                 <textarea
                   rows={2}
                   value={String(config.text || '')}
+                  onKeyDown={(e) => e.stopPropagation()}
                   onChange={(e) => handleConfigUpdate('text', e.target.value)}
                   placeholder="Insert source text..."
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none resize-none"
+                  className="nodrag nowheel w-full px-2.5 py-1.5 rounded-lg bg-union-surface border border-union-border text-white text-xs font-mono focus:border-union-accent focus:outline-none resize-none"
                 />
               </div>
             )}
