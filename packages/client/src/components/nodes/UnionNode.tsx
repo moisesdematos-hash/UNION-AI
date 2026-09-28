@@ -614,6 +614,16 @@ export function UnionNode({ id, data, selected }: NodeProps) {
         { id: `msg-${Date.now()}-a`, role: 'assistant', text: raw.content, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }
       ];
 
+      const updatedConfig = {
+        ...config,
+        aiSummary: raw.content.slice(0, 80) + '...',
+        fullOutput: raw.content,
+        messages: nodeData.type === 'ai-chat' ? newMessages : config.messages,
+        prompt: nodeData.type === 'ai-chat' ? '' : config.prompt
+      };
+
+      setConfig(updatedConfig);
+
       updateNodeData(id, {
         state: 'COMPLETED',
         executionInfo: {
@@ -621,12 +631,21 @@ export function UnionNode({ id, data, selected }: NodeProps) {
           tokens: raw.tokens.totalTokens,
           credits: raw.creditsCost
         },
-        config: {
-          ...config,
-          aiSummary: raw.content.slice(0, 80) + '...',
-          fullOutput: raw.content,
-          messages: nodeData.type === 'ai-chat' ? newMessages : config.messages,
-          prompt: nodeData.type === 'ai-chat' ? '' : config.prompt
+        config: updatedConfig
+      });
+
+      // Propagate to downstream nodes (e.g. Visualizador 3x)
+      const outgoingEdges = edges.filter(e => e.source === id);
+      outgoingEdges.forEach(e => {
+        const targetNode = nodes.find(n => n.id === e.target);
+        if (targetNode) {
+          updateNodeData(e.target, {
+            config: {
+              ...((targetNode.data as any)?.config || {}),
+              fullOutput: raw.content,
+              text: raw.content
+            }
+          });
         }
       });
     } catch (err: unknown) {
@@ -1767,6 +1786,7 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                         value={String(config.prompt || '')}
                         onChange={(e) => handleConfigUpdate('prompt', e.target.value)}
                         onKeyDown={(e) => {
+                          e.stopPropagation();
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             if (!isExtracting && String(config.prompt || '').trim()) {
@@ -1775,12 +1795,13 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                           }
                         }}
                         placeholder="Digite sua mensagem para o assistente (Pressione Enter para enviar)..."
-                        className="w-full px-3 py-2 rounded-xl bg-union-surface border border-union-border text-white text-xs font-sans focus:border-indigo-400 focus:outline-none placeholder:text-zinc-500 resize-none shadow-inner pr-10"
+                        className="nodrag nowheel w-full px-3 py-2 rounded-xl bg-union-surface border border-union-border text-white text-xs font-sans focus:border-indigo-400 focus:outline-none placeholder:text-zinc-500 resize-none shadow-inner pr-10"
                       />
                       <button
+                        type="button"
                         onClick={handleExecuteAiNode}
                         disabled={isExtracting || !String(config.prompt || '').trim()}
-                        className="absolute right-2.5 bottom-2.5 p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all cursor-pointer shadow-md"
+                        className="nodrag absolute right-2.5 bottom-2.5 p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all cursor-pointer shadow-md"
                         title="Enviar Mensagem (Enter)"
                       >
                         {isExtracting ? (
@@ -1796,9 +1817,10 @@ export function UnionNode({ id, data, selected }: NodeProps) {
                         Shift + Enter para quebrar linha
                       </span>
                       <button
+                        type="button"
                         onClick={handleExecuteAiNode}
                         disabled={isExtracting}
-                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs font-sans flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950/40 transition-all cursor-pointer disabled:opacity-50"
+                        className="nodrag px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs font-sans flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950/40 transition-all cursor-pointer disabled:opacity-50"
                       >
                         <Bot className="h-3.5 w-3.5" />
                         <span>{isExtracting ? 'Processando...' : 'Executar Conversação'}</span>
