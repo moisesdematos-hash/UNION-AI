@@ -283,12 +283,15 @@ chatRouter.post('/forge/create', (req: Request, res: Response) => {
     }
 
     res.status(200).json({
+      status: 'success',
       success: true,
       data: resultPayload
     });
   } catch (err: any) {
     res.status(400).json({
+      status: 'error',
       success: false,
+      message: err.message || 'Falha na Union Forge',
       error: err.message || 'Falha na Union Forge'
     });
   }

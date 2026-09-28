@@ -389,8 +389,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       });
 
       const json = await res.json();
-      if (!res.ok || json.status !== 'success') {
-        throw new Error(json.message || 'Falha ao forjar E-book no Canvas');
+      if (!res.ok || (!json.success && json.status !== 'success') || !json.data) {
+        throw new Error(json.message || json.error || 'Falha ao forjar E-book no Canvas');
       }
 
       const ebookData = json.data;
@@ -472,8 +472,8 @@ export function UnionNode({ id, data, selected }: NodeProps) {
       });
 
       const json = await res.json();
-      if (!res.ok || json.status !== 'success' || !json.data) {
-        throw new Error(json.message || 'Falha ao forjar e-book cinematográfico');
+      if (!res.ok || (!json.success && json.status !== 'success') || !json.data) {
+        throw new Error(json.message || json.error || 'Falha ao forjar e-book cinematográfico');
       }
 
       const ebookData = json.data;
