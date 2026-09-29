@@ -24,8 +24,12 @@ import {
   PlusCircle,
   Eye,
   Zap,
-  Terminal,
   ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+  Minimize2,
+  Maximize2,
+  Terminal,
   Wifi
 } from 'lucide-react';
 import { 
@@ -329,6 +333,44 @@ export function ProjectOracleDrawer({
   const [autoSpeechEnabled, setAutoSpeechEnabled] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Estados de colapso de informação e botões
+  const [collapsedMessages, setCollapsedMessages] = useState<Record<string, boolean>>({});
+  const [collapsedButtons, setCollapsedButtons] = useState<Record<string, boolean>>({});
+  const [isQuickPromptsCollapsed, setIsQuickPromptsCollapsed] = useState(false);
+  const [collapsedFollowUps, setCollapsedFollowUps] = useState<Record<string, boolean>>({});
+  const [collapsedRelevantFiles, setCollapsedRelevantFiles] = useState<Record<string, boolean>>({});
+  const [isCompactViewAll, setIsCompactViewAll] = useState(false);
+
+  const toggleMessageCollapse = (id: string) => {
+    setCollapsedMessages(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleButtonsCollapse = (id: string) => {
+    setCollapsedButtons(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleFollowUpsCollapse = (id: string) => {
+    setCollapsedFollowUps(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleRelevantFilesCollapse = (id: string) => {
+    setCollapsedRelevantFiles(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleCompactAll = () => {
+    const nextState = !isCompactViewAll;
+    setIsCompactViewAll(nextState);
+    const updatedMsgs: Record<string, boolean> = {};
+    const updatedBtns: Record<string, boolean> = {};
+    messages.forEach(m => {
+      updatedMsgs[m.id] = nextState;
+      updatedBtns[m.id] = nextState;
+    });
+    setCollapsedMessages(updatedMsgs);
+    setCollapsedButtons(updatedBtns);
+    setIsQuickPromptsCollapsed(nextState);
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -878,6 +920,16 @@ export function ProjectOracleDrawer({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Toggle Colapsar/Expandir Tudo */}
+          <button
+            onClick={toggleCompactAll}
+            title={isCompactViewAll ? 'Expandir todas as mensagens e botões' : 'Colapsar informações e botões para visualização compacta'}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-cyan-300 hover:text-cyan-100 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-800/60 transition cursor-pointer"
+          >
+            {isCompactViewAll ? <Maximize2 className="w-3.5 h-3.5 text-cyan-400" /> : <Minimize2 className="w-3.5 h-3.5 text-cyan-400" />}
+            <span className="hidden sm:inline">{isCompactViewAll ? 'Expandir Tudo' : 'Colapsar Tudo'}</span>
+          </button>
+
           {/* Clear Chat / Limpar Tela Button */}
           <button
             onClick={clearChat}
@@ -923,20 +975,31 @@ export function ProjectOracleDrawer({
         </div>
       )}
 
-      {/* Quick Prompts Bar */}
-      <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
-        <span className="text-[11px] font-semibold text-cyan-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
-          <Lightbulb className="w-3.5 h-3.5" /> Dúvidas Frequentes:
-        </span>
-        {DEFAULT_QUESTIONS.map((q, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleSendMessage(q)}
-            className="text-xs text-slate-300 hover:text-white bg-slate-800/60 hover:bg-cyan-950/50 border border-slate-700/60 hover:border-cyan-500/40 px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer"
-          >
-            {q}
-          </button>
-        ))}
+      {/* Quick Prompts Bar (Collapsible) */}
+      <div className="px-6 py-1.5 bg-slate-950/40 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden">
+        <button
+          onClick={() => setIsQuickPromptsCollapsed(prev => !prev)}
+          className="text-[11px] font-semibold text-cyan-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 hover:text-cyan-300 transition cursor-pointer shrink-0"
+          title="Clique para recolher ou expandir as dúvidas frequentes"
+        >
+          <Lightbulb className="w-3.5 h-3.5" />
+          <span>Dúvidas Frequentes ({DEFAULT_QUESTIONS.length})</span>
+          {isQuickPromptsCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronUp className="w-3.5 h-3.5 text-slate-400" />}
+        </button>
+
+        {!isQuickPromptsCollapsed && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 animate-in fade-in">
+            {DEFAULT_QUESTIONS.map((q, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSendMessage(q)}
+                className="text-xs text-slate-300 hover:text-white bg-slate-800/60 hover:bg-cyan-950/50 border border-slate-700/60 hover:border-cyan-500/40 px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer shrink-0"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Messages Feed */}
@@ -1012,9 +1075,49 @@ export function ProjectOracleDrawer({
                   </div>
                 )}
 
-                <div className="whitespace-pre-line font-sans prose prose-invert max-w-none text-sm select-text cursor-text selection:bg-cyan-500/40 selection:text-white">
-                  {msg.text}
-                </div>
+                {/* Message Text with Collapse/Expand capability */}
+                {(() => {
+                  const isLong = msg.text.length > 280;
+                  const isCollapsed = isLong && Boolean(collapsedMessages[msg.id]);
+
+                  return (
+                    <div className="relative">
+                      <div
+                        className={`whitespace-pre-line font-sans prose prose-invert max-w-none text-sm select-text cursor-text selection:bg-cyan-500/40 selection:text-white transition-all ${
+                          isCollapsed ? 'max-h-28 overflow-hidden' : ''
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+
+                      {/* Fade and expand button if collapsed */}
+                      {isCollapsed && (
+                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent flex items-end justify-center pb-0.5">
+                          <button
+                            onClick={() => toggleMessageCollapse(msg.id)}
+                            className="px-3 py-1 rounded-full bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 text-xs font-semibold border border-cyan-500/40 shadow-md flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <span>Ver resposta completa</span>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Collapse button when expanded and long */}
+                      {!isCollapsed && isLong && (
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            onClick={() => toggleMessageCollapse(msg.id)}
+                            className="text-[11px] text-slate-400 hover:text-cyan-300 flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <span>Recolher texto</span>
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Dote 4: Visual Audit Card if image analyzed */}
                 {msg.visualAudit && (
@@ -1066,145 +1169,212 @@ export function ProjectOracleDrawer({
                   </div>
                 )}
 
-                {/* Dote 1 & Dote 2: 1-Click Action Hub Bar under Oracle answers */}
-                {msg.sender === 'oracle' && (
-                  <div className="mt-3.5 pt-3 border-t border-slate-800/90 flex flex-wrap items-center gap-2">
-                    {/* Simulator Action */}
-                    <button
-                      onClick={() => {
-                        if (onOpenSimulatorWithCopy) {
-                          onOpenSimulatorWithCopy(msg.text);
-                        } else {
-                          alert('Simulador CPS: Abrindo com esta copy...');
-                        }
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/40 transition cursor-pointer shadow-sm"
-                      title="Testar esta copy no Simulador de Conversão CPS com 5 Personas"
-                    >
-                      <Play className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Testar no Simulador</span>
-                    </button>
+                {/* Collapsible Action Hub Bar under Oracle answers */}
+                {msg.sender === 'oracle' && (() => {
+                  const isBtnsCollapsed = Boolean(collapsedButtons[msg.id]);
 
-                    {/* Canvas Injection Action */}
-                    <button
-                      onClick={() => {
-                        if (onInjectIntoCanvas) {
-                          onInjectIntoCanvas({
-                            type: 'ADD_NODE',
-                            nodeType: 'ai-writer',
-                            copyText: msg.text,
-                            label: 'Nó de Copy Injetado'
-                          });
-                        } else {
-                          alert('Nó injetado no Canvas com sucesso!');
-                        }
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 transition cursor-pointer shadow-sm"
-                      title="Injetar nó de copy visual no Canvas"
-                    >
-                      <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Injetar Nó no Canvas</span>
-                    </button>
+                  return (
+                    <div className="mt-3.5 pt-2.5 border-t border-slate-800/90 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {/* Copy button is always handy and compact */}
+                          <button
+                            onClick={() => handleCopyText(msg.id, msg.text)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition cursor-pointer"
+                            title="Copiar texto da mensagem"
+                          >
+                            {copiedId === msg.id ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <span className="text-emerald-400">Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Copiar</span>
+                              </>
+                            )}
+                          </button>
 
-                    {/* Copy to Clipboard */}
-                    <button
-                      onClick={() => handleCopyText(msg.id, msg.text)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition cursor-pointer"
-                      title="Copiar texto da mensagem"
-                    >
-                      {copiedId === msg.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Copiado!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Copiar</span>
-                        </>
-                      )}
-                    </button>
+                          {/* Primary recommendation action button if available */}
+                          {msg.actions && msg.actions.length > 0 && (
+                            <button
+                              onClick={() => {
+                                const act = msg.actions![0];
+                                if (act.type === 'TEST_IN_SIMULATOR' && onOpenSimulatorWithCopy) {
+                                  onOpenSimulatorWithCopy(act.copyText || msg.text);
+                                } else if (onInjectIntoCanvas) {
+                                  if (act.type === 'LOAD_TEMPLATE') {
+                                    onInjectIntoCanvas({
+                                      type: 'LOAD_TEMPLATE',
+                                      payload: { templateId: act.templateId || act.payload?.templateId }
+                                    });
+                                  } else {
+                                    onInjectIntoCanvas(act);
+                                  }
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>{msg.actions[0].label}</span>
+                            </button>
+                          )}
+                        </div>
 
-                    {/* Export as Markdown */}
-                    <button
-                      onClick={() => handleExportMarkdown(msgPersona.name, msg.text)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition cursor-pointer"
-                      title="Exportar como arquivo .MD"
-                    >
-                      <Download className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Exportar .MD</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Specific Backend Actions if returned */}
-                {msg.actions && msg.actions.length > 0 && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {msg.actions.map((act, actIdx) => (
-                      <button
-                        key={actIdx}
-                        onClick={() => {
-                          if (act.type === 'TEST_IN_SIMULATOR' && onOpenSimulatorWithCopy) {
-                            onOpenSimulatorWithCopy(act.copyText || msg.text);
-                          } else if (onInjectIntoCanvas) {
-                            if (act.type === 'LOAD_TEMPLATE') {
-                              onInjectIntoCanvas({
-                                type: 'LOAD_TEMPLATE',
-                                payload: { templateId: act.templateId || act.payload?.templateId }
-                              });
-                            } else {
-                              onInjectIntoCanvas(act);
-                            }
-                          }
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Zap className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>{act.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Relevant Files Box */}
-                {msg.relevantFiles && msg.relevantFiles.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-800/80">
-                    <div className="text-[11px] font-bold text-cyan-400 flex items-center gap-1 mb-1.5">
-                      <FileCode className="w-3.5 h-3.5" /> Arquivos Relevantes no Código:
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {msg.relevantFiles.map((file, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-300 font-mono"
-                        >
-                          {file}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Follow-up suggestions */}
-                {msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0 && (
-                  <div className="mt-3 pt-2 border-t border-slate-800/60 space-y-1.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                      Perguntas Sugeridas:
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      {msg.suggestedFollowUps.map((su, idx) => (
+                        {/* Toggle to collapse / expand other action buttons */}
                         <button
-                          key={idx}
-                          onClick={() => handleSendMessage(su)}
-                          className="text-left text-xs text-cyan-300 hover:text-cyan-200 flex items-center gap-1.5 py-0.5 hover:underline cursor-pointer"
+                          onClick={() => toggleButtonsCollapse(msg.id)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800 transition cursor-pointer"
+                          title={isBtnsCollapsed ? 'Mostrar todos os botões de ação' : 'Recolher botões secundários'}
                         >
-                          <ChevronRight className="w-3 h-3 text-cyan-400" />
-                          {su}
+                          <MoreHorizontal className="w-3.5 h-3.5" />
+                          <span>{isBtnsCollapsed ? 'Mais Botões ▾' : 'Recolher Botões ▴'}</span>
                         </button>
-                      ))}
+                      </div>
+
+                      {/* Secondary Actions Row (Collapsible) */}
+                      {!isBtnsCollapsed && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/40 animate-in fade-in duration-150">
+                          {/* Simulator Action */}
+                          <button
+                            onClick={() => {
+                              if (onOpenSimulatorWithCopy) {
+                                onOpenSimulatorWithCopy(msg.text);
+                              } else {
+                                alert('Simulador CPS: Abrindo com esta copy...');
+                              }
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/40 transition cursor-pointer shadow-sm"
+                            title="Testar esta copy no Simulador de Conversão CPS com 5 Personas"
+                          >
+                            <Play className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Testar no Simulador</span>
+                          </button>
+
+                          {/* Canvas Injection Action */}
+                          <button
+                            onClick={() => {
+                              if (onInjectIntoCanvas) {
+                                onInjectIntoCanvas({
+                                  type: 'ADD_NODE',
+                                  nodeType: 'ai-writer',
+                                  copyText: msg.text,
+                                  label: 'Nó de Copy Injetado'
+                                });
+                              } else {
+                                alert('Nó injetado no Canvas com sucesso!');
+                              }
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 transition cursor-pointer shadow-sm"
+                            title="Injetar nó de copy visual no Canvas"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Injetar Nó no Canvas</span>
+                          </button>
+
+                          {/* Export as Markdown */}
+                          <button
+                            onClick={() => handleExportMarkdown(msgPersona.name, msg.text)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition cursor-pointer"
+                            title="Exportar como arquivo .MD"
+                          >
+                            <Download className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Exportar .MD</span>
+                          </button>
+
+                          {/* Actions beyond the first */}
+                          {msg.actions && msg.actions.slice(1).map((act, actIdx) => (
+                            <button
+                              key={actIdx + 1}
+                              onClick={() => {
+                                if (act.type === 'TEST_IN_SIMULATOR' && onOpenSimulatorWithCopy) {
+                                  onOpenSimulatorWithCopy(act.copyText || msg.text);
+                                } else if (onInjectIntoCanvas) {
+                                  if (act.type === 'LOAD_TEMPLATE') {
+                                    onInjectIntoCanvas({
+                                      type: 'LOAD_TEMPLATE',
+                                      payload: { templateId: act.templateId || act.payload?.templateId }
+                                    });
+                                  } else {
+                                    onInjectIntoCanvas(act);
+                                  }
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>{act.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
+
+                {/* Relevant Files Box (Collapsible) */}
+                {msg.relevantFiles && msg.relevantFiles.length > 0 && (() => {
+                  const isFilesOpen = !collapsedRelevantFiles[msg.id];
+                  return (
+                    <div className="mt-3 pt-2 border-t border-slate-800/80">
+                      <button
+                        onClick={() => toggleRelevantFilesCollapse(msg.id)}
+                        className="w-full flex items-center justify-between text-[11px] font-bold text-cyan-400 hover:text-cyan-300 py-0.5 cursor-pointer transition"
+                      >
+                        <span className="flex items-center gap-1">
+                          <FileCode className="w-3.5 h-3.5" /> Arquivos Relevantes ({msg.relevantFiles.length})
+                        </span>
+                        {isFilesOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                      {isFilesOpen && (
+                        <div className="flex flex-wrap gap-1.5 pt-1.5 animate-in fade-in">
+                          {msg.relevantFiles.map((file, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-300 font-mono"
+                            >
+                              {file}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Follow-up suggestions (Collapsible) */}
+                {msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0 && (() => {
+                  const isFollowUpsOpen = !collapsedFollowUps[msg.id];
+                  return (
+                    <div className="mt-3 pt-2 border-t border-slate-800/60">
+                      <button
+                        onClick={() => toggleFollowUpsCollapse(msg.id)}
+                        className="w-full flex items-center justify-between text-[10px] uppercase font-bold text-slate-500 hover:text-slate-300 tracking-wider py-1 cursor-pointer transition"
+                      >
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-cyan-400" />
+                          Perguntas Sugeridas ({msg.suggestedFollowUps.length})
+                        </span>
+                        {isFollowUpsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                      {isFollowUpsOpen && (
+                        <div className="flex flex-col gap-1 pt-1 animate-in fade-in">
+                          {msg.suggestedFollowUps.map((su, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSendMessage(su)}
+                              className="text-left text-xs text-cyan-300 hover:text-cyan-200 flex items-center gap-1.5 py-0.5 hover:underline cursor-pointer"
+                            >
+                              <ChevronRight className="w-3 h-3 text-cyan-400" />
+                              {su}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );
