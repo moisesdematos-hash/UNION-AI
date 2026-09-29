@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { ConversionSimulatorModal } from '../components/marketing/ConversionSimulatorModal.js';
 import { ProjectOracleDrawer } from '../components/chat/ProjectOracleDrawer.js';
 import { NODE_TEMPLATES } from '../components/nodes/nodeRegistry.js';
 import { useCanvasStore } from '../store/canvasStore.js';
+
+afterEach(() => {
+  cleanup();
+});
 
 describe('Exclusive Feature & Project Oracle UI Tests', () => {
   describe('Node Registry Integration', () => {
@@ -175,10 +179,10 @@ describe('Exclusive Feature & Project Oracle UI Tests', () => {
         />
       );
 
-      const simBtn = screen.getByText(/Testar no Simulador/i);
-      const injectBtn = screen.getByText(/Injetar Nó no Canvas/i);
-      const copyBtn = screen.getByText(/Copiar/i);
-      const exportBtn = screen.getByText(/Exportar \.MD/i);
+      const simBtn = screen.getAllByText(/Testar no Simulador/i)[0];
+      const injectBtn = screen.getAllByText(/Injetar Nó no Canvas/i)[0];
+      const copyBtn = screen.getAllByText(/Copiar/i)[0];
+      const exportBtn = screen.getAllByText(/Exportar \.MD/i)[0];
 
       expect(simBtn).toBeDefined();
       expect(injectBtn).toBeDefined();

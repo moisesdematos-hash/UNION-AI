@@ -119,6 +119,10 @@ export function App() {
         e.preventDefault();
         saveWorkflow(true);
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setIsOracleOpen((prev) => !prev);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
 
@@ -554,6 +558,17 @@ export function App() {
 
               {/* Execution Action Buttons */}
               <div className="flex items-center space-x-1.5">
+                {/* Botão Assistente IA (100% Offline & Online) */}
+                <button
+                  onClick={() => setIsOracleOpen(true)}
+                  title="Abrir Assistente da Plataforma (100% Offline & Online - Atalho: Ctrl+J)"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                >
+                  <Bot className="h-3.5 w-3.5 text-indigo-400" />
+                  <span className="hidden sm:inline">Assistente IA</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </button>
+
                 {/* Botão de Execução em Cascata 1-Clique */}
                 <button
                   onClick={() => executeCascadeWorkflow()}
@@ -863,6 +878,34 @@ export function App() {
           </div>
 
           <UnionCanvas />
+
+          {/* Floating Assistant Widget (100% Offline & Online) */}
+          <div className="absolute bottom-6 right-6 z-30">
+            <button
+              onClick={() => setIsOracleOpen(true)}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-slate-950/95 via-indigo-950/90 to-slate-950/95 hover:from-slate-900 hover:to-indigo-900 text-white font-bold text-xs shadow-2xl shadow-indigo-950/80 border border-indigo-500/50 hover:border-indigo-400 transition-all cursor-pointer group hover:scale-105 active:scale-95 backdrop-blur-md"
+              title="Abrir Assistente da Plataforma (100% Offline & Online - Tire qualquer dúvida)"
+            >
+              <div className="relative">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/30">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white tracking-wide text-xs">Assistente UNION</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono font-semibold">
+                    100% OFFLINE
+                  </span>
+                </div>
+                <span className="text-[10px] text-zinc-400 font-normal block">Tire dúvidas de toda a plataforma</span>
+              </div>
+            </button>
+          </div>
         </section>
 
         {/* UNION Data Bus & Engine Modals */}

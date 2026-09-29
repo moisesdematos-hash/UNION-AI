@@ -25,8 +25,13 @@ import {
   Eye,
   Zap,
   Terminal,
-  ChevronDown
+  ChevronDown,
+  Wifi
 } from 'lucide-react';
+import { 
+  searchUnionKnowledgeBase, 
+  QUICK_KNOWLEDGE_QUESTIONS 
+} from '../../services/unionKnowledgeBase.js';
 
 export type PersonaMode = 'ORACLE' | 'SKEPTIC' | 'EXECUTIVE' | 'COPYWRITER' | 'ARCHITECT';
 
@@ -236,23 +241,23 @@ const STORAGE_PERSONA_KEY = 'union_oracle_persona_v2';
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   sender: 'oracle',
-  text: `Olá! Sou o **UNION.AI Project Oracle Supercharged** 🚀 com **5 Superpoderes Ativos**:\n\n• 🎮 **Ação Direta no Canvas**: Posso injetar nós, templates e conexões diretamente na sua tela.\n• ⚡ **Injeção em 1 Clique**: Teste qualquer copy gerada no Simulador CPS ou injete em nós com 1 clique.\n• 🎭 **Modos Especialistas & Sabatina**: Alterne entre o **Dr. Roberto Meirelles (Cético)**, a **Ana Lívia (Executiva)**, o **Mestre de Copy** e o **Arquiteto de Software**.\n• 👁️ **Auditoria Visual de Criativos**: Arraste imagens para obter notas de Contraste, Legibilidade e CTA.\n• ⌨️ **Comandos por Barra (\`/\`)**: Digite \`/\` para abrir o menu de atalhos rápidos (\`/simular\`, \`/14blocos\`, etc.).\n\nComo posso acelerar seu projeto hoje?`,
+  text: `Olá! Sou o **UNION.AI Assistente & Oráculo Oficial** 🚀\n\nConheço **100% da plataforma** e funciono **100% OFFLINE ou ONLINE**!\n\n• 🌐 **Modo Offline Ativo**: Posso responder a qualquer dúvida de funcionamento, nós, templates, botões e resolução de erros sem precisar de internet ou servidor.\n• 🎮 **Ação Direta no Canvas**: Posso injetar nós, templates (como Chave de Ouro) e conexões na sua tela.\n• ⚡ **Injeção em 1 Clique**: Teste qualquer copy no Simulador CPS ou injete em nós com 1 clique.\n• 🎭 **Modos Especialistas & Sabatina**: Alterne entre o **Dr. Roberto Meirelles (Cético)**, a **Ana Lívia (Executiva)**, o **Mestre de Copy** e o **Arquiteto de Software**.\n• ⌨️ **Comandos Rápidos (\`/\`)**: Digite \`/\` para atalhos rápidos (\`/simular\`, \`/14blocos\`, \`/conexoes\`, etc.).\n\nComo posso te ajudar agora?`,
   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   category: 'QUICK_START',
   personaMode: 'ORACLE',
   suggestedFollowUps: [
-    'Como funciona o Simulador de Conversão CPS?',
-    'O que é o Data Bus e os tipos de portas?',
-    'Quais são os 14 blocos de copy?'
+    'Como crio o e-book?',
+    'Onde vejo o e-book pronto?',
+    'O que faz o botão cascata?',
+    'Como criar página de vendas?',
+    'Como funciona o Simulador CPS?'
   ]
 };
 
 const DEFAULT_QUESTIONS = [
+  ...QUICK_KNOWLEDGE_QUESTIONS,
   'Como funciona o Data Bus e o DataPacket?',
-  'O que é o Simulador de Conversão com Heatmap (Chave de Ouro)?',
-  'Quais são os 14 blocos da Página de Vendas da Seção 27?',
-  'Quais templates prontos estão disponíveis para uso?',
-  'Como acessar as métricas Prometheus do backend?'
+  'Quais templates prontos estão disponíveis para uso?'
 ];
 
 export function ProjectOracleDrawer({ 
@@ -611,6 +616,55 @@ export function ProjectOracleDrawer({
     setAttachments([]);
     setIsLoading(true);
 
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+    // Se estiver explicitamente offline, responde instantaneamente pela base local embarcada
+    if (isOffline) {
+      const offlineResult = searchUnionKnowledgeBase(text);
+      let answer = offlineResult.answer;
+
+      if (personaMode === 'SKEPTIC') {
+        answer = `[Dr. Roberto Meirelles - Cético]: Sabatinando sua dúvida sobre "${text}":\n\n` + answer;
+      } else if (personaMode === 'EXECUTIVE') {
+        answer = `[Ana Lívia Siqueira - Executiva C-Level]: Direto ao ponto sobre "${text}":\n\n` + answer;
+      } else if (personaMode === 'COPYWRITER') {
+        answer = `[Mestre Direct Response]: Analisando o ângulo de copy para "${text}":\n\n` + answer;
+      } else if (personaMode === 'ARCHITECT') {
+        answer = `[Engenheiro de Software & Bus]: Visão técnica e Data Bus para "${text}":\n\n` + answer;
+      }
+
+      if (currentAttachments.length > 0) {
+        answer += `\n\nRecebi com sucesso seus ${currentAttachments.length} anexo(s) (${currentAttachments.map(a => a.name).join(', ')}). Esse conteúdo está indexado e pronto para alimentar o Simulador de Conversão CPS ou ser auditado.`;
+      }
+
+      const fallbackActions: OracleAction[] = (offlineResult.actions || []).map(a => ({
+        type: a.type,
+        label: a.label,
+        nodeType: a.nodeType,
+        templateId: a.templateId,
+        copyText: a.copyText || text || answer,
+        payload: a.payload
+      }));
+
+      const offlineMsg: ChatMessage = {
+        id: `oracle-${Date.now()}`,
+        sender: 'oracle',
+        text: answer,
+        category: offlineResult.category,
+        suggestedFollowUps: offlineResult.suggestedFollowUps,
+        personaMode,
+        actions: fallbackActions,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages(prev => [...prev, offlineMsg]);
+      setIsLoading(false);
+      if (autoSpeechEnabled) {
+        speakText(answer);
+      }
+      return;
+    }
+
     try {
       const response = await fetch('/api/chat/ask-oracle', {
         method: 'POST',
@@ -655,41 +709,48 @@ export function ProjectOracleDrawer({
         throw new Error(resData.error || 'Erro na resposta do Oracle');
       }
     } catch {
-      // Fallback offline intelligent answer tailored to active persona
-      let answer = `Entendido! Analisando sua solicitação sobre "${text}". O UNION.AI integra pipelines visuais com tipos estritos no Data Bus, simulador de conversão preditivo com heatmap e agora análise multimodal completa de arquivos e voz.`;
+      // Fallback para o motor de conhecimento 100% da plataforma embarcado no cliente
+      const offlineResult = searchUnionKnowledgeBase(text);
+      let answer = offlineResult.answer;
       
       if (personaMode === 'SKEPTIC') {
-        answer = `[Dr. Roberto Meirelles - Cético]: Recebi sua afirmação sobre "${text}". Como auditor e comprador desconfiado, minha primeira pergunta é: onde estão os dados que comprovam isso? Se não houver garantia incondicional formalizada e termos de uso claros, eu não arrisco meu capital. Mostre-me os testes de estresse antes de tentar me vender qualquer promessa.`;
+        answer = `[Dr. Roberto Meirelles - Cético]: Sabatinando sua dúvida sobre "${text}":\n\n` + answer;
       } else if (personaMode === 'EXECUTIVE') {
-        answer = `[Ana Lívia Siqueira - Executiva C-Level]: Vamos direto ao ponto: sua proposta sobre "${text}" precisa gerar impacto nos primeiros 3 segundos. Qual é o tempo economizado e o ROI tangível? Se a equipe demorar mais de uma tarde para configurar, perde o sentido. Simplifique o gancho e entregue a vitória rápida já no bloco inicial.`;
+        answer = `[Ana Lívia Siqueira - Executiva C-Level]: Direto ao ponto sobre "${text}":\n\n` + answer;
       } else if (personaMode === 'COPYWRITER') {
-        answer = `[Mestre Direct Response]: Para "${text}", recomendo estruturarmos a narrativa segundo os 14 Blocos de Conversão: Gancho magnético (Bloco 1), agitação da dor invisível (Bloco 3), revelação do mecanismo único (Bloco 6) e empilhamento de valor com garantia tripla (Blocos 11-13). Deseja que eu redija o Bloco 1 agora?`;
+        answer = `[Mestre Direct Response]: Analisando o ângulo de copy para "${text}":\n\n` + answer;
       } else if (personaMode === 'ARCHITECT') {
-        answer = `[Engenheiro de Software & Bus]: Analisando os tipos do Data Bus para "${text}": garanta que o nó emissor despache um DataPacket estruturado em vez de string crua. Use as portas tipadas (ex: TextDataPacket com payload: { text, metadata }) para que os nós subsequentes não entrem em modo degraded.`;
+        answer = `[Engenheiro de Software & Bus]: Visão de arquitetura e Data Bus para "${text}":\n\n` + answer;
       }
 
       if (currentAttachments.length > 0) {
         answer += `\n\nRecebi com sucesso seus ${currentAttachments.length} anexo(s) (${currentAttachments.map(a => a.name).join(', ')}). Esse conteúdo está indexado e pronto para alimentar o Simulador de Conversão CPS ou ser auditado.`;
       }
 
-      // Detect actions in offline fallback
-      const fallbackActions: OracleAction[] = [
-        {
+      // Converte ações locais para botões interativos
+      const fallbackActions: OracleAction[] = (offlineResult.actions || []).map(a => ({
+        type: a.type,
+        label: a.label,
+        nodeType: a.nodeType,
+        templateId: a.templateId,
+        copyText: a.copyText || text || answer,
+        payload: a.payload
+      }));
+
+      if (fallbackActions.length === 0) {
+        fallbackActions.push({
           type: 'TEST_IN_SIMULATOR',
           label: 'Testar no Simulador CPS',
           copyText: text || answer
-        },
-        {
-          type: 'ADD_NODE',
-          label: 'Injetar Nó no Canvas',
-          nodeType: 'ai-writer'
-        }
-      ];
+        });
+      }
 
       const fallbackMsg: ChatMessage = {
         id: `oracle-${Date.now()}`,
         sender: 'oracle',
         text: answer,
+        category: offlineResult.category,
+        suggestedFollowUps: offlineResult.suggestedFollowUps,
         personaMode,
         actions: fallbackActions,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -744,6 +805,10 @@ export function ProjectOracleDrawer({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-bold text-white">UNION.AI Project Oracle</h2>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" title="Base de conhecimento de 100% da plataforma embarcada localmente (funciona sem internet)">
+                <Wifi className="w-3 h-3 text-emerald-400" />
+                100% Offline & Online
+              </span>
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 <Sparkles className="w-3 h-3 text-cyan-300" />
                 Multimodal & Voice
@@ -1082,7 +1147,14 @@ export function ProjectOracleDrawer({
                           if (act.type === 'TEST_IN_SIMULATOR' && onOpenSimulatorWithCopy) {
                             onOpenSimulatorWithCopy(act.copyText || msg.text);
                           } else if (onInjectIntoCanvas) {
-                            onInjectIntoCanvas(act);
+                            if (act.type === 'LOAD_TEMPLATE') {
+                              onInjectIntoCanvas({
+                                type: 'LOAD_TEMPLATE',
+                                payload: { templateId: act.templateId || act.payload?.templateId }
+                              });
+                            } else {
+                              onInjectIntoCanvas(act);
+                            }
                           }
                         }}
                         className="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
