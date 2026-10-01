@@ -1,8 +1,8 @@
 {
   "name": "union-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "UNION.AI — Visual AI Workspace & Intelligent Orchestration Platform",
+  "description": "UNION.AI \u2014 Visual AI Workspace & Intelligent Orchestration Platform",
   "workspaces": [
     "packages/*"
   ],
@@ -12,7 +12,9 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:server": "npm run dev --workspace=packages/server",
     "dev:client": "npm run dev --workspace=packages/client",
-    "dev": "npm run dev --workspaces"
+    "dev": "npm run dev --workspaces",
+    "pretest": "npm run build --workspace=@union/shared && npm run build --workspace=@union/server",
+    "load": "node scripts/load.mjs"
   },
   "keywords": [
     "ai",

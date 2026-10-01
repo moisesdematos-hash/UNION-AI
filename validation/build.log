@@ -1,0 +1,40 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> union-ai@0.2.0 build
+> npm run build --workspace=@union/shared && npm run build --workspace=@union/server && npm run build --workspace=@union/client && node -e "require('fs').cpSync('packages/client/dist', 'dist', {recursive: true})"
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @union/shared@0.1.0 build
+> tsc
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @union/server@0.1.0 build
+> tsc
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @union/client@0.1.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1791 modules transformed.
+rendering chunks...
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /workspace/scratch/5b42f391f5f0/union-audit/packages/shared/src/index.ts is dynamically imported by /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/App.tsx but also statically imported by /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/components/inspector/DataInspectorModal.tsx, /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/components/landing/LandingPage.tsx, /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/components/modals/ConnectionStandardsModal.tsx, /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/components/modals/TemplateLibraryModal.tsx, /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/components/welcome/WelcomeModal.tsx, /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/services/workflowExecution.ts, /workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/store/canvasStore.ts, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                   1.08 kB │ gzip:   0.56 kB
+dist/assets/index-BoxKz-ni.css  114.74 kB │ gzip:  17.46 kB
+dist/assets/react-DO46SlZz.js     0.06 kB │ gzip:   0.07 kB
+dist/assets/icons-BZv_YpnI.js    58.30 kB │ gzip:  12.40 kB
+dist/assets/canvas-BgaPItQH.js  319.90 kB │ gzip: 103.28 kB
+dist/assets/index-B2KL_tr1.js   693.01 kB │ gzip: 159.34 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.28s

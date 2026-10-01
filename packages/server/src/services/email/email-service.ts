@@ -1,23 +1,16 @@
 import { env } from '../../config/env.js';
-
 export interface EmailSendResult {
-  id: string;
-  delivered: boolean;
-  provider: 'resend' | 'console';
+    id: string;
+    delivered: boolean;
+    provider: 'resend' | 'console';
 }
-
 export class EmailService {
-  /**
-   * Dispatches a password reset email with secure token link.
-   */
-  public static async sendPasswordResetEmail(
-    to: string,
-    name: string,
-    token: string
-  ): Promise<EmailSendResult> {
-    const resetUrl = `${env.APP_URL}/reset-password?token=${token}`;
-
-    const htmlContent = `<!DOCTYPE html>
+    /**
+     * Dispatches a password reset email with secure token link.
+     */
+    public static async sendPasswordResetEmail(to: string, name: string, token: string): Promise<EmailSendResult> {
+        const resetUrl = escapeHtml(`${env.APP_URL}/reset-password?token=${encodeURIComponent(token)}`);
+        const htmlContent = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -57,51 +50,54 @@ export class EmailService {
   </div>
 </body>
 </html>`;
-
-    if (env.RESEND_API_KEY && env.NODE_ENV !== 'test') {
-      try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: env.EMAIL_FROM,
-            to: [to],
-            subject: 'Redefinição de Senha | UNION.AI',
-            html: htmlContent
-          })
-        });
-
-        if (res.ok) {
-          const data = (await res.json()) as { id: string };
-          return { id: data.id, delivered: true, provider: 'resend' };
-        } else {
-          const errText = await res.text();
-          console.error('[EmailService: Resend Error]:', errText);
+        if (env.RESEND_API_KEY && env.NODE_ENV !== 'test') {
+            try {
+                const res = await fetch('https://api.resend.com/emails', {
+                    method: 'POST', signal: AbortSignal.timeout(10000),
+                    headers: {
+                        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        from: env.EMAIL_FROM,
+                        to: [to],
+                        subject: 'Redefinição de Senha | UNION.AI',
+                        html: htmlContent
+                    })
+                });
+                if (res.ok) {
+                    const data = (await res.json()) as {
+                        id: string;
+                    };
+                    return { id: data.id, delivered: true, provider: 'resend' };
+                }
+                else {
+                    const errText = await res.text();
+                    console.error('[EmailService: Resend Error]:', errText);
+                }
+            }
+            catch (err) {
+                console.error('[EmailService: Resend Dispatch Exception]:', err);
+            }
         }
-      } catch (err) {
-        console.error('[EmailService: Resend Dispatch Exception]:', err);
-      }
+        if (env.NODE_ENV === 'production')
+            throw new Error('EMAIL_PROVIDER_UNAVAILABLE');
+        // Explicit offline mode for development and tests
+        // Never log password reset tokens.
+        return {
+            id: `dev-reset-${Date.now()}`,
+            delivered: false,
+            provider: 'console'
+        };
     }
-
-    // Fallback in test / dev or if Resend key is not set
-    console.log(`[EmailService: Dev Fallback] Password reset link for ${to}: ${resetUrl}`);
-    return {
-      id: `dev-reset-${Date.now()}`,
-      delivered: true,
-      provider: 'console'
-    };
-  }
 }
-
 function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    if (!str)
+        return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }

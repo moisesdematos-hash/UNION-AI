@@ -11,7 +11,12 @@ export class SalesPageRenderer {
    * Generates a modern, high-converting, fully responsive HTML5 page using Tailwind CSS CDN
    */
   public static renderToHtml(copy: SalesPageCopy, options: RenderOptions = {}): string {
-    const checkoutUrl = options.checkoutUrl || '#checkout';
+    const rawCheckoutUrl = options.checkoutUrl || '#checkout';
+    if (rawCheckoutUrl !== '#checkout') {
+      const parsed = new URL(rawCheckoutUrl);
+      if (parsed.protocol !== 'https:') throw new Error('Checkout URL deve usar HTTPS');
+    }
+    const checkoutUrl = escapeHtml(rawCheckoutUrl);
     const isDark = (options.theme || 'dark') === 'dark';
     const pageTitle = options.customTitle || copy.title || 'Oferta Exclusiva';
 

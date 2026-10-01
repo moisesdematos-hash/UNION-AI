@@ -1,58 +1,49 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService, UserProfile } from '../services/auth.js';
-
 export interface AuthenticatedRequest extends Request {
-  user?: UserProfile;
+    user?: UserProfile;
 }
-
-export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Authorization header with Bearer token is required'
-    });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const payload = authService.verifyToken(token);
-    const user = authService.getUserById(payload.sub);
-
-    if (!user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'User belonging to token no longer exists'
-      });
+export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Authorization header with Bearer token is required'
+        });
     }
-
-    req.user = user;
-    next();
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Invalid authentication token';
-    return res.status(401).json({
-      status: 'error',
-      message
-    });
-  }
+    const token = authHeader.split(' ')[1];
+    try {
+        const payload = authService.verifyToken(token);
+        const user = (await authService.getUserById(payload.sub));
+        if (!user) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'User belonging to token no longer exists'
+            });
+        }
+        req.user = user;
+        next();
+    }
+    catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Invalid authentication token';
+        return res.status(401).json({
+            status: 'error',
+            message
+        });
+    }
 }
-
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Autenticação necessária para acessar esta área'
-    });
-  }
-
-  if (req.user.role !== 'ADMIN') {
-    return res.status(403).json({
-      status: 'error',
-      message: 'Acesso negado: Requer privilégios de administrador (ADMIN)'
-    });
-  }
-
-  next();
+    if (!req.user) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Autenticação necessária para acessar esta área'
+        });
+    }
+    if (req.user.role !== 'ADMIN') {
+        return res.status(403).json({
+            status: 'error',
+            message: 'Acesso negado: Requer privilégios de administrador (ADMIN)'
+        });
+    }
+    next();
 }

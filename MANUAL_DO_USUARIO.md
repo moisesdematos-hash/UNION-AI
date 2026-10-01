@@ -1,3 +1,5 @@
+> Manual histórico: alguns nós/integrações aqui descritos permanecem indisponíveis nesta versão. Consulte README.md e CORRECOES_UNION_AI_2026-10-01.md para o estado operacional verificado.
+
 # UNION.AI — MANUAL DE INSTRUÇÕES COMPLETO
 ## Guia Definitivo do Usuário, Operador e Engenheiro de Workflows
 

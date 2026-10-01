@@ -9,6 +9,7 @@ export default defineConfig({
       '@union/shared': path.resolve(__dirname, '../shared/src/index.ts')
     }
   },
+  build: { rollupOptions: { output: { manualChunks: { react: ['react', 'react-dom'], canvas: ['@xyflow/react'], icons: ['lucide-react'] } } } },
   server: {
     port: 1590,
     host: true,

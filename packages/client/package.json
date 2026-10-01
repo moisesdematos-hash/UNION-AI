@@ -8,7 +8,7 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run --maxWorkers=2 --minWorkers=1"
   },
   "dependencies": {
     "@union/shared": "*",

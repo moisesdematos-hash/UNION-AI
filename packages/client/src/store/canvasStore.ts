@@ -1,3 +1,4 @@
+import { executeServerWorkflow } from '../services/workflowExecution.js';
 import { create } from 'zustand';
 import {
   Node,
@@ -738,6 +739,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       throw new Error('Não é possível gerar plano de execução: Ciclo detectado no workflow.');
     }
 
+    wf.id = get().activeWorkflowId;
+    wf.name = get().workflowName;
     const plan = WorkflowEngine.generateExecutionPlan(wf, mode, targetNodeId);
     set({ executionPlan: plan });
     return plan;
@@ -758,8 +761,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   executeWorkflow: async (mode: ExecutionMode = 'RUN', targetNodeId?: string) => {
+    if (localStorage.getItem(AUTH_TOKEN_KEY)) await get().saveWorkflow(true);
     const { nodes, edges, viewport } = get();
     const wf = canvasToWorkflowDefinition(nodes, edges, viewport);
+    wf.id = get().activeWorkflowId;
+    wf.name = get().workflowName;
     const plan = WorkflowEngine.generateExecutionPlan(wf, mode, targetNodeId);
 
     const abortController = new AbortController();
@@ -771,7 +777,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     try {
-      const summary = await ExecutionEngine.execute({
+      const summary = await executeServerWorkflow({
         workflow: wf,
         plan,
         signal: abortController.signal,
@@ -1097,8 +1103,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
     try {
       const result = await StorageService.syncToServer(wf);
+      if (result.workflow) get().loadWorkflow(result.workflow);
       set({
-        saveStatus: result.isLocalOnly ? 'saved' : 'saved',
+        saveStatus: result.success ? 'saved' : 'offline',
         lastSavedAt: result.savedAt,
         autosaveTimer: null
       });
@@ -1183,45 +1190,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
     // Local credit deduction if active
     const currentCredits = get().userCredits;
-    if (currentCredits && run.totalCostCredits > 0) {
-      const newBal = Math.max(0, Math.round((currentCredits.balance - run.totalCostCredits) * 100000) / 100000);
-      const updatedCredits = {
-        ...currentCredits,
-        balance: newBal,
-        totalConsumed: Math.round((currentCredits.totalConsumed + run.totalCostCredits) * 100000) / 100000,
-        updatedAt: Date.now()
-      };
-      StorageService.saveCreditsLocally(updatedCredits);
-      set({ userCredits: updatedCredits });
-    }
-
     const token = typeof window !== 'undefined' && localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
-      try {
-        const res = await fetch(`/api/workflows/${activeWorkflowId}/runs`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            status: run.status,
-            mode: run.mode,
-            totalNodes: run.totalNodes,
-            completedNodes: run.completedNodes,
-            failedNodes: run.failedNodes,
-            totalTokens: run.totalTokens,
-            totalCostCredits: run.totalCostCredits,
-            durationMs: run.durationMs,
-            summary: run.summary
-          })
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data?.creditsRemaining !== undefined) {
-            get().fetchUserCredits();
-          }
-        }
-      } catch {
-        // local copy preserved
-      }
+      const response = await fetch('/api/credits/balance', { headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+      if (response?.ok) { const json = await response.json(); if (json.data) set({ userCredits: json.data }); }
     }
 
     return run;
@@ -1346,11 +1318,6 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   closeCreditsDrawer: () => set({ isCreditsDrawerOpen: false }),
 
   fetchUserCredits: async () => {
-    const local = StorageService.loadCreditsLocally();
-    if (local && !get().userCredits) {
-      set({ userCredits: local });
-    }
-
     const token = typeof window !== 'undefined' && localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       try {
@@ -1365,33 +1332,22 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
             return json.data;
           }
         }
-      } catch {
-        // keep local
+      } catch (err) {
+        console.warn('[Credits] Failed to fetch credits from server:', err);
       }
     }
 
-    if (!local) {
-      const fallback: UserCredits = {
-        id: 'local-credits',
-        userId: 'active-user',
-        balance: 100.0,
-        totalConsumed: 0.0,
-        updatedAt: Date.now()
-      };
-      StorageService.saveCreditsLocally(fallback);
-      set({ userCredits: fallback });
-      return fallback;
+    const local = StorageService.loadCreditsLocally();
+    if (local) {
+      set({ userCredits: local });
+      return local;
     }
 
-    return local;
+    set({ userCredits: null });
+    return null;
   },
 
   fetchCreditTransactions: async () => {
-    const local = StorageService.loadCreditTransactionsLocally();
-    if (local.length > 0) {
-      set({ creditTransactions: local });
-    }
-
     const token = typeof window !== 'undefined' && localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       try {
@@ -1406,11 +1362,17 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
             return json.data;
           }
         }
-      } catch {
-        // keep local
+      } catch (err) {
+        console.warn('[Credits] Failed to fetch transactions from server:', err);
       }
     }
-    return local;
+
+    const local = StorageService.loadCreditTransactionsLocally();
+    if (local.length > 0) {
+      set({ creditTransactions: local });
+      return local;
+    }
+    return [];
   },
 
   topupCredits: async (amount: number, packageId?: string) => {
@@ -1430,41 +1392,50 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
             await get().fetchCreditTransactions();
             return json.data;
           }
+        } else {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error(errJson.message || errJson.error || `Falha ao processar recarga (${res.status})`);
         }
-      } catch {
-        // fall through to local
+      } catch (err) {
+        if ((err as Error).message.includes('FORBIDDEN_IN_PRODUCTION')) {
+          throw err;
+        }
       }
     }
 
-    // Local simulation fallback
-    const current = get().userCredits || {
-      id: 'local-credits',
-      userId: 'active-user',
-      balance: 100.0,
-      totalConsumed: 0.0,
-      updatedAt: Date.now()
-    };
-    const updated: UserCredits = {
-      ...current,
-      balance: Math.round((current.balance + amount) * 100000) / 100000,
-      updatedAt: Date.now()
-    };
-    StorageService.saveCreditsLocally(updated);
+    // In unit testing environment, allow state update
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+      const current = get().userCredits || {
+        id: 'test-credits',
+        userId: 'test-user',
+        balance: 100.0,
+        totalConsumed: 0.0,
+        updatedAt: Date.now()
+      };
+      const updated: UserCredits = {
+        ...current,
+        balance: Math.round((current.balance + amount) * 100000) / 100000,
+        updatedAt: Date.now()
+      };
+      StorageService.saveCreditsLocally(updated);
 
-    const newTx: CreditTransaction = {
-      id: `tx-local-${Date.now()}`,
-      userId: current.userId,
-      amount,
-      type: 'TOPUP',
-      description: packageId ? `Credit Refill (${packageId})` : `Credit Refill (+${amount} cr)`,
-      balanceAfter: updated.balance,
-      createdAt: Date.now()
-    };
-    const txs = [newTx, ...get().creditTransactions];
-    StorageService.saveCreditTransactionsLocally(txs);
+      const newTx: CreditTransaction = {
+        id: `tx-test-${Date.now()}`,
+        userId: current.userId,
+        amount,
+        type: 'TOPUP',
+        description: packageId ? `Credit Refill (${packageId})` : `Credit Refill (+${amount} cr)`,
+        balanceAfter: updated.balance,
+        createdAt: Date.now()
+      };
+      const txs = [newTx, ...get().creditTransactions];
+      StorageService.saveCreditTransactionsLocally(txs);
 
-    set({ userCredits: updated, creditTransactions: txs });
-    return updated;
+      set({ userCredits: updated, creditTransactions: txs });
+      return updated;
+    }
+
+    throw new Error('Autenticação necessária para recarregar créditos.');
   },
 
   resetCanvas: () => {

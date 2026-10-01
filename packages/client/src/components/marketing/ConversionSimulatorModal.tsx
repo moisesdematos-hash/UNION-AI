@@ -1,3 +1,4 @@
+import { authHeaders } from '../../services/authHeaders.js';
 import { useState } from 'react';
 import { 
   Sparkles, 
@@ -163,7 +164,7 @@ export function ConversionSimulatorModal({
     try {
       const response = await fetch('/api/marketing/auto-heal-block', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           blockId: `block-${block.blockIndex}`,
           blockName: block.blockName,

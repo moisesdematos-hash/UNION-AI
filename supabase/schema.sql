@@ -3,12 +3,31 @@
 -- Compatible with Supabase PostgreSQL 15+
 -- ==============================================================================
 
+-- 0. Idempotent Column Migrations (ensures pre-existing tables receive required columns)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'USER';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'email';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'workflow_triggers') THEN
+        ALTER TABLE workflow_triggers ADD COLUMN IF NOT EXISTS last_triggered_at BIGINT;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'oracle_chat_messages') THEN
+        ALTER TABLE oracle_chat_messages ADD COLUMN IF NOT EXISTS category TEXT;
+    END IF;
+END $$;
+
 -- 1. Users & Authentication
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'USER', -- 'ADMIN' | 'USER'
+    avatar_url TEXT,
+    auth_provider TEXT NOT NULL DEFAULT 'email', -- 'email' | 'google'
     created_at BIGINT NOT NULL,
     updated_at BIGINT NOT NULL
 );
@@ -343,6 +362,53 @@ CREATE TABLE IF NOT EXISTS processed_payments (
 CREATE INDEX IF NOT EXISTS idx_processed_payments_provider_id ON processed_payments(provider_payment_id);
 CREATE INDEX IF NOT EXISTS idx_processed_payments_user ON processed_payments(user_id);
 
--- ==============================================================================
--- Summary: 21 Tables & 44 Indexes successfully defined for UNION.AI on Supabase!
--- ==============================================================================
+-- 22. User Storage Files (Persistent Cloud Storage - Supabase Storage & PostgreSQL)
+CREATE TABLE IF NOT EXISTS user_storage_files (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    category TEXT NOT NULL, -- 'projects' | 'ebooks' | 'assets'
+    file_name TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    storage_provider TEXT NOT NULL DEFAULT 'database', -- 'supabase' | 'database'
+    storage_path TEXT NOT NULL,
+    file_content TEXT,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    UNIQUE(user_id, category, file_name),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_storage_files_user ON user_storage_files(user_id, category);
+
+-- Migrations & Non-destructive Updates
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'USER';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'email';
+ALTER TABLE workflows ADD COLUMN IF NOT EXISTS groups_json TEXT NOT NULL DEFAULT '[]';
+
+
+
+CREATE TABLE IF NOT EXISTS workflow_jobs (
+ id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ workflow_json TEXT NOT NULL, status TEXT NOT NULL, result_json TEXT, error TEXT,
+ created_at BIGINT NOT NULL, updated_at BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_jobs_queue ON workflow_jobs(status, created_at);
+
+-- Own application JWTs are verified by the backend, not Supabase Auth.
+-- All browser/anon access is denied. Backend connection role must own these
+-- tables (or have explicit BYPASSRLS), and every API enforces user ownership.
+DO $$
+DECLARE item RECORD;
+BEGIN
+ FOR item IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('users','organizations','org_members','org_invitations','user_credits','credit_transactions','projects','workflows','workflow_nodes','workflow_connections','execution_history','workflow_runs','workflow_versions','workflow_triggers','audit_logs','oracle_chat_sessions','oracle_chat_messages','oracle_chat_memories','published_sales_pages','password_reset_tokens','processed_payments','user_storage_files','workflow_jobs') LOOP
+  EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', item.tablename);
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+   EXECUTE format('REVOKE ALL ON public.%I FROM anon', item.tablename);
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+   EXECUTE format('REVOKE ALL ON public.%I FROM authenticated', item.tablename);
+  END IF;
+ END LOOP;
+END $$;

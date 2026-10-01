@@ -12,6 +12,7 @@ export interface StorageSyncResult {
   isLocalOnly: boolean;
   error?: string;
   savedAt: number;
+  workflow?: WorkflowDefinition;
 }
 
 export class StorageService {
@@ -93,10 +94,18 @@ export class StorageService {
           name: workflow.name,
           viewport: workflow.viewport,
           nodes: workflow.nodes,
-          connections: workflow.connections
+          connections: workflow.connections,
+          groups: workflow.groups
         })
       });
 
+      if (response.status === 404) {
+        const imported = await fetch('/api/workflows/import', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ workflow }) });
+        const json = await imported.json();
+        if (!imported.ok) return { success: false, isLocalOnly: true, savedAt: now, error: json.message || 'Falha ao importar workflow' };
+        this.saveToLocalStorage(json.data.workflow);
+        return { success: true, isLocalOnly: false, savedAt: now, workflow: json.data.workflow };
+      }
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
         return {

@@ -1,3 +1,4 @@
+import { closeOperationalDatabase } from './db/operational-database.js';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 
@@ -9,7 +10,8 @@ const server = app.listen(env.PORT, () => {
 
 process.on('SIGTERM', () => {
   console.log('[UNION.AI Server] SIGTERM received. Graceful shutdown...');
-  server.close(() => {
+  server.close(async () => {
+    await closeOperationalDatabase();
     process.exit(0);
   });
 });

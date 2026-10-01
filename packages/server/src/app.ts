@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,7 +7,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { healthRouter } from './routes/health.js';
@@ -26,64 +26,89 @@ import { chatRouter } from './routes/chat.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
 import { metricsCollector } from './services/metrics-collector.js';
-
 export function createApp() {
-  const app = express();
-
-  // Security Headers
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
-  }));
-
-  const allowedOrigins = [
-    env.CORS_ORIGIN,
-    env.APP_URL,
-    'http://localhost:5173',
-    'http://localhost:1590',
-    'http://localhost:4000',
-    'http://localhost:3000',
-    'https://union-ai-client-omega.vercel.app',
-    'https://union-ai-client.vercel.app',
-  ].filter(Boolean);
-
-  app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: true
-  }));
-  app.use(express.json());
-
-  // API Rate Limiting (Relaxed in test environment)
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: env.NODE_ENV === 'test' ? 10000 : 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      status: 'error',
-      message: 'Too many requests from this IP, please try again after 15 minutes'
-    }
-  });
-  app.use('/api', apiLimiter);
-
-  // Prometheus Metrics Scrape Endpoint
-  app.get('/metrics', (_req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
-    res.send(metricsCollector.getPrometheusFormat());
-  });
-
-  // Public Sales Page Live Render Endpoint (/p/:slug)
-  app.get('/p/:slug', (req: Request, res: Response) => {
-    const { slug } = req.params;
-    const page = publishedPagesStore.get(slug);
-    if (!page) {
-      return res.status(404).send(`<!DOCTYPE html>
+    const app = express();
+    // Security Headers: Strict CSP, HSTS, and Frameguard
+    app.use(helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", 'https://cdn.tailwindcss.com'],
+                styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+                fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+                imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+                connectSrc: ["'self'", 'https:', 'wss:', 'http://localhost:*'],
+                frameAncestors: ["'none'"],
+                objectSrc: ["'none'"],
+                upgradeInsecureRequests: env.NODE_ENV === 'production' ? [] : null
+            }
+        },
+        crossOriginEmbedderPolicy: false,
+        frameguard: { action: 'deny' },
+        hsts: env.NODE_ENV === 'production' ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true
+        } : false
+    }));
+    const allowedOrigins = [
+        env.CORS_ORIGIN,
+        env.APP_URL,
+        'http://localhost:5173',
+        'http://localhost:1590',
+        'http://localhost:4000',
+        'http://localhost:3000',
+        'https://union-ai-client-omega.vercel.app',
+        'https://union-ai-client.vercel.app',
+    ].filter(Boolean);
+    app.use(cors({
+        origin: (origin, callback) => {
+            if (!origin)
+                return callback(null, true);
+            // Strictly restrict Vercel deployments to authorized UNION.AI subdomains
+            const isAllowedVercelOrigin = /^https:\/\/union-ai(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
+            if (allowedOrigins.includes(origin) || isAllowedVercelOrigin) {
+                return callback(null, true);
+            }
+            return callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
+        credentials: true
+    }));
+    // Request Correlation Middleware (X-Request-Id, X-Trace-Id)
+    app.use((req: Request, res: Response, next: NextFunction) => {
+        const requestId = (req.headers['x-request-id'] as string) || `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const traceId = (req.headers['x-trace-id'] as string) || `trace_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        res.setHeader('X-Request-Id', requestId);
+        res.setHeader('X-Trace-Id', traceId);
+        (req as any).requestId = requestId;
+        (req as any).traceId = traceId;
+        next();
+    });
+    app.use(express.json({ limit: '3mb', verify: (req, _res, buffer) => { (req as any).rawBody = Buffer.from(buffer); } }));
+    // API Rate Limiting (Relaxed in test environment)
+    const apiLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        skip: req => req.method === 'GET' && /^\/workflows\/jobs\/[^/]+$/.test(req.path),
+        max: env.NODE_ENV === 'test' ? 10000 : 300,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+            status: 'error',
+            message: 'Too many requests from this IP, please try again after 15 minutes'
+        }
+    });
+    app.use('/api', apiLimiter);
+    // Prometheus Metrics Scrape Endpoint
+    app.get('/metrics', (_req: Request, res: Response) => {
+        res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+        res.send(metricsCollector.getPrometheusFormat());
+    });
+    // Public Sales Page Live Render Endpoint (/p/:slug)
+    app.get('/p/:slug', async (req: Request, res: Response) => {
+        const { slug } = req.params;
+        const page = (await publishedPagesStore.get(slug));
+        if (!page) {
+            return res.status(404).send(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><title>Página Não Encontrada | UNION.AI</title>
@@ -98,71 +123,68 @@ export function createApp() {
   </div>
 </body>
 </html>`);
+        }
+        (await publishedPagesStore.incrementViews(slug));
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(page.html);
+    });
+    // API Routes
+    app.use('/api', healthRouter);
+    app.use('/api/auth', authRouter);
+    app.use('/api/credits', creditsRouter);
+    app.use('/api/organizations', organizationsRouter);
+    app.use('/api/observability', observabilityRouter);
+    app.use('/api/templates', templatesRouter);
+    app.use('/api/projects', projectsRouter);
+    app.use('/api/workflows', workflowsRouter);
+    app.use('/api/extractors', extractorsRouter);
+    app.use('/api/ai/router', aiRouterRouter);
+    app.use('/api/ai', aiRouter);
+    app.use('/api/marketing', marketingRouter);
+    app.use('/api/chat', chatRouter);
+    app.use('/api/webhooks', webhooksRouter);
+    app.use('/api/payments', paymentsRouter);
+    app.use('/api/admin', adminRouter);
+    // Static Frontend Serving for Client SPA
+    const clientDistCandidates = [
+        path.resolve(process.cwd(), 'packages/client/dist'),
+        path.resolve(process.cwd(), '../client/dist'),
+        path.resolve(process.cwd(), 'dist'),
+        path.resolve(__dirname, '../../../packages/client/dist'),
+        path.resolve(__dirname, '../../client/dist'),
+        path.resolve(__dirname, '../client/dist')
+    ];
+    const clientDistPath = clientDistCandidates.find(p => fs.existsSync(p));
+    if (clientDistPath) {
+        app.use(express.static(clientDistPath));
+        app.get('*', (req: Request, res: Response, next: NextFunction) => {
+            if (req.path.startsWith('/api') || req.path.startsWith('/metrics') || req.path.startsWith('/p/')) {
+                return next();
+            }
+            res.sendFile(path.join(clientDistPath, 'index.html'));
+        });
     }
-
-    publishedPagesStore.incrementViews(slug);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(page.html);
-  });
-
-  // API Routes
-  app.use('/api', healthRouter);
-  app.use('/api/auth', authRouter);
-  app.use('/api/credits', creditsRouter);
-  app.use('/api/organizations', organizationsRouter);
-  app.use('/api/observability', observabilityRouter);
-  app.use('/api/templates', templatesRouter);
-  app.use('/api/projects', projectsRouter);
-  app.use('/api/workflows', workflowsRouter);
-  app.use('/api/extractors', extractorsRouter);
-  app.use('/api/ai/router', aiRouterRouter);
-  app.use('/api/ai', aiRouter);
-  app.use('/api/marketing', marketingRouter);
-  app.use('/api/chat', chatRouter);
-  app.use('/api/webhooks', webhooksRouter);
-  app.use('/api/payments', paymentsRouter);
-  app.use('/api/admin', adminRouter);
-
-  // Static Frontend Serving for Client SPA
-  const clientDistCandidates = [
-    path.resolve(process.cwd(), 'packages/client/dist'),
-    path.resolve(process.cwd(), '../client/dist'),
-    path.resolve(process.cwd(), 'dist'),
-    path.resolve(__dirname, '../../../packages/client/dist'),
-    path.resolve(__dirname, '../../client/dist'),
-    path.resolve(__dirname, '../client/dist')
-  ];
-
-  const clientDistPath = clientDistCandidates.find(p => fs.existsSync(p));
-
-  if (clientDistPath) {
-    app.use(express.static(clientDistPath));
-    app.get('*', (req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith('/api') || req.path.startsWith('/metrics') || req.path.startsWith('/p/')) {
-        return next();
-      }
-      res.sendFile(path.join(clientDistPath, 'index.html'));
+    // Global Error Handler
+    app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+        console.error('[UNION.AI Server Error]:', err);
+        const isProduction = env.NODE_ENV === 'production';
+        const message = isProduction
+            ? 'Ocorreu um erro interno no servidor. Por favor, tente novamente mais tarde.'
+            : (err.message || 'Internal Server Error');
+        res.status(500).json({
+            status: 'error',
+            message
+        });
     });
-  }
-
-  // Global Error Handler
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('[UNION.AI Server Error]:', err);
-    res.status(500).json({
-      status: 'error',
-      message: err.message || 'Internal Server Error'
-    });
-  });
-
-  return app;
+    return app;
 }
-
 function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    if (!str)
+        return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }

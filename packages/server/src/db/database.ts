@@ -11,7 +11,14 @@ export function getDatabase(customPath?: string): Database.Database {
   }
 
   const isVercel = Boolean(process.env.VERCEL);
-  const defaultPath = isVercel ? '/tmp/union.db' : env.DB_PATH;
+  const isProd = env.NODE_ENV === 'production';
+
+  // Section 4.1 Mandate: SQLite and /tmp/union.db are strictly FORBIDDEN in production
+  if ((isVercel || isProd) && !customPath && env.NODE_ENV !== 'test') {
+    throw new Error('[DATABASE_FATAL] É expressamente proibido usar SQLite (/tmp/union.db) como banco operacional de produção. O PostgreSQL/Supabase é a fonte de verdade exclusiva em produção. Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.');
+  }
+
+  const defaultPath = env.DB_PATH;
   const targetPath = customPath || (env.NODE_ENV === 'test' ? ':memory:' : defaultPath);
 
   if (targetPath !== ':memory:') {
@@ -20,8 +27,7 @@ export function getDatabase(customPath?: string): Database.Database {
       try {
         fs.mkdirSync(dir, { recursive: true });
       } catch (err) {
-        console.warn('[Database] Could not create directory, falling back to memory:', err);
-        return new Database(':memory:');
+        throw new Error(`[Database] Não foi possível criar diretório de banco: ${err}`);
       }
     }
   }
@@ -53,6 +59,8 @@ export function closeDatabase(): void {
 
 export function resetTestDatabase(): void {
   const db = getDatabase();
+  db.prepare('DELETE FROM workflow_jobs').run();
+  db.prepare('DELETE FROM user_storage_files').run();
   db.prepare('DELETE FROM password_reset_tokens').run();
   db.prepare('DELETE FROM processed_payments').run();
   db.prepare('DELETE FROM published_sales_pages').run();
@@ -78,6 +86,13 @@ export function resetTestDatabase(): void {
 
 function initializeSchema(db: Database.Database): void {
   db.exec(`
+
+CREATE TABLE IF NOT EXISTS workflow_jobs (
+ id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ workflow_json TEXT NOT NULL, status TEXT NOT NULL, result_json TEXT, error TEXT,
+ created_at BIGINT NOT NULL, updated_at BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_jobs_queue ON workflow_jobs(status, created_at);
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -371,6 +386,24 @@ function initializeSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_processed_payments_provider_id ON processed_payments(provider_payment_id);
     CREATE INDEX IF NOT EXISTS idx_processed_payments_user ON processed_payments(user_id);
+
+    CREATE TABLE IF NOT EXISTS user_storage_files (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      category TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      content_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+      size_bytes INTEGER NOT NULL DEFAULT 0,
+      storage_provider TEXT NOT NULL DEFAULT 'database',
+      storage_path TEXT NOT NULL,
+      file_content TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE(user_id, category, file_name),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_storage_files_user ON user_storage_files(user_id, category);
   `);
 
   try {

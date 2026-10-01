@@ -131,8 +131,8 @@ describe('Gate 15: Automations & Autonomous Agents Nodes on Client', () => {
       nodeDef.config = { agentGoal: 'Otimizar CTR de anúncios do Meta' };
 
       const result = await defaultNodeHandler(nodeDef, {}, controller.signal);
-      expect(result.tokens).toBeGreaterThan(500);
-      expect(result.credits).toBeGreaterThan(0.03);
+      expect(result.tokens).toBe(0);
+      expect(result.credits).toBe(0);
 
       expect(result.outputs['out-result']).toBeDefined();
       expect(result.outputs['out-result'].type).toBe('AI_RESPONSE');

@@ -1,3 +1,5 @@
+import { fetchWithWorkflowJob } from '../../services/forgeJob.js';
+import { authHeaders } from '../../services/authHeaders.js';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Zap,
@@ -704,9 +706,9 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
     const requestedWords = forgeWordsPerChapter ? Number(forgeWordsPerChapter) : 1000;
 
     try {
-      const res = await fetch('/api/chat/forge/create', {
+      const res = await fetchWithWorkflowJob('/api/chat/forge/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           type: forgeType,
           prompt: effectivePrompt,
@@ -732,6 +734,7 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
         throw new Error(data.error || 'Falha na resposta');
       }
     } catch (_err) {
+      if (import.meta.env.PROD) { setIsGeneratingForge(false); showToast(_err instanceof Error ? _err.message : 'Falha na geração'); return; }
       // Offline fallback com garantia autônoma de 10+ páginas e imagens
       const promptClean = effectivePrompt;
       const nicheClean = forgeNiche.trim() || 'Geral e Empreendedorismo';
@@ -802,7 +805,7 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
     try {
       const res = await fetch('/api/chat/forge/run-accelerator', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           acceleratorId: selectedAccelerator.id,
           input: acceleratorInput.trim()
@@ -817,6 +820,7 @@ export const UnionForgeModal: React.FC<UnionForgeModalProps> = ({
         throw new Error(data.error || 'Falha no acelerador');
       }
     } catch (_err) {
+      if (import.meta.env.PROD) { showToast(_err instanceof Error ? _err.message : 'Falha no acelerador'); return; }
       const output = `# ⚡ ${selectedAccelerator.name}\n\n**Tema/Entrada:** ${acceleratorInput}\n\n---\n\n### 1. Gancho Inicial Magnético (0-3s)\n"Se você ainda tenta resolver ${acceleratorInput} sem um mecanismo único, você está competindo no nível mais difícil."\n\n### 2. Desenvolvimento com Alto Valor Percebido\nEm vez de entregar mais do mesmo, nós agredimos a causa-raiz invisível. Isso gera contraste imediato com todos os concorrentes do mercado.\n\n### 3. Chamada para Ação Estratégica (CTA)\nClique no link abaixo, teste no **Simulador CPS do UNION.AI** e comprove a nota de conversão!`;
       setAcceleratorResult({
         acceleratorId: selectedAccelerator.id,

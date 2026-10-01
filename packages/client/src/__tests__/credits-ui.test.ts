@@ -48,7 +48,7 @@ describe('Gate 13: Client Credits Store & UI Accounting', () => {
     expect(saved?.balance).toBe(150.0);
   });
 
-  it('should deduct credits when recording workflow execution run with cost', async () => {
+  it('should not change authoritative balance from client-recorded execution cost', async () => {
     const store = useCanvasStore.getState();
     expect(store.userCredits?.balance).toBe(100.0);
 
@@ -66,8 +66,8 @@ describe('Gate 13: Client Credits Store & UI Accounting', () => {
     });
 
     const state = useCanvasStore.getState();
-    expect(state.userCredits?.balance).toBe(99.75);
-    expect(state.userCredits?.totalConsumed).toBe(0.25);
+    expect(state.userCredits?.balance).toBe(100);
+    expect(state.userCredits?.totalConsumed).toBe(0);
   });
 
   it('should load saved credits from localStorage via fetchUserCredits', async () => {

@@ -1,212 +1,75 @@
-import fs from 'fs';
-import path from 'path';
-
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { getOperationalDatabase, databaseProvider } from '../db/operational-database.js';
 export interface UserFileItem {
-  name: string;
-  relativePath: string;
-  category: 'projects' | 'ebooks' | 'assets';
-  sizeBytes: number;
-  updatedAt: number;
-  mimeType?: string;
+    name: string;
+    relativePath: string;
+    category: 'projects' | 'ebooks' | 'assets';
+    sizeBytes: number;
+    updatedAt: number;
+    mimeType?: string;
 }
-
 export interface UserStorageOverview {
-  userId: string;
-  userDir: string;
-  totalFiles: number;
-  totalSizeBytes: number;
-  categories: {
-    projects: UserFileItem[];
-    ebooks: UserFileItem[];
-    assets: UserFileItem[];
-  };
+    userId: string;
+    userDir: string;
+    totalFiles: number;
+    totalSizeBytes: number;
+    categories: {
+        projects: UserFileItem[];
+        ebooks: UserFileItem[];
+        assets: UserFileItem[];
+    };
 }
-
 export class UserStorageService {
-  private baseDir: string;
-
-  constructor(customBaseDir?: string) {
-    if (customBaseDir) {
-      this.baseDir = customBaseDir;
-    } else if (process.env.VERCEL) {
-      this.baseDir = '/tmp/union-data/users';
-    } else {
-      // Default to data/users relative to root or server directory
-      const defaultDir = path.resolve(process.cwd(), 'packages/server/data/users');
-      const fallbackDir = path.resolve(process.cwd(), 'data/users');
-      this.baseDir = fs.existsSync(path.resolve(process.cwd(), 'packages/server')) ? defaultDir : fallbackDir;
+    constructor(_legacyLocalDirectory?: string) { }
+    // Logical namespace only; never an authoritative local filesystem path.
+    getUserDir(userId: string): string { return `storage://${userId}`; }
+    private name(value: string): string {
+        if (!value || path.basename(value) !== value || value.includes('..') || /[\\/\x00]/.test(value))
+            throw new Error('Nome de ficheiro inválido');
+        return value.replace(/[^a-zA-Z0-9._-]/g, '_');
     }
-    this.ensureDirectory(this.baseDir);
-  }
-
-  private ensureDirectory(dirPath: string): void {
-    try {
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-      }
-    } catch (err) {
-      console.warn('[UserStorageService] Directory creation failed, falling back to /tmp:', err);
-      this.baseDir = '/tmp/union-data/users';
-      try {
-        if (!fs.existsSync(this.baseDir)) {
-          fs.mkdirSync(this.baseDir, { recursive: true });
+    private async save(userId: string, category: 'projects' | 'ebooks' | 'assets', fileName: string, content: string, contentType: string) {
+        fileName = this.name(fileName);
+        const sizeBytes = Buffer.byteLength(content, 'utf8');
+        if (sizeBytes > 2 * 1024 * 1024)
+            throw new Error('Ficheiro excede o limite de 2 MB deste armazenamento de texto');
+        const now = Date.now();
+        await getOperationalDatabase().prepare(`INSERT INTO user_storage_files
+      (id, user_id, category, file_name, content_type, size_bytes, storage_provider, storage_path, file_content, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, category, file_name) DO UPDATE SET
+        file_content = excluded.file_content, content_type = excluded.content_type,
+        size_bytes = excluded.size_bytes, updated_at = excluded.updated_at`).run(randomUUID(), userId, category, fileName, contentType, sizeBytes, databaseProvider(), `${category}/${fileName}`, content, now, now);
+        return { filePath: `${this.getUserDir(userId)}/${category}/${fileName}`, fileName, sizeBytes };
+    }
+    async saveProjectFile(userId: string, name: string, content: object | string) {
+        const fileName = name.endsWith('.json') ? name : `${name}.json`;
+        return (await this.save(userId, 'projects', fileName, typeof content === 'string' ? content : JSON.stringify(content, null, 2), 'application/json'));
+    }
+    async saveEbookFile(userId: string, name: string, content: string, extension: 'md' | 'json' | 'html' = 'md') {
+        const fileName = name.endsWith(`.${extension}`) ? name : `${name}.${extension}`;
+        return (await this.save(userId, 'ebooks', fileName, content, extension === 'json' ? 'application/json' : extension === 'html' ? 'text/html' : 'text/markdown'));
+    }
+    async saveAssetFile(userId: string, name: string, content: object | string) {
+        return (await this.save(userId, 'assets', name, typeof content === 'string' ? content : JSON.stringify(content), 'text/plain'));
+    }
+    async getFileContent(userId: string, category: 'projects' | 'ebooks' | 'assets', name: string) {
+        const row = await getOperationalDatabase().prepare('SELECT file_name, file_content, size_bytes FROM user_storage_files WHERE user_id = ? AND category = ? AND file_name = ?').get(userId, category, this.name(name));
+        return row ? { fileName: row.file_name, content: row.file_content, sizeBytes: row.size_bytes } : null;
+    }
+    async deleteFile(userId: string, category: 'projects' | 'ebooks' | 'assets', name: string) {
+        return (await getOperationalDatabase().prepare('DELETE FROM user_storage_files WHERE user_id = ? AND category = ? AND file_name = ?').run(userId, category, this.name(name))).changes > 0;
+    }
+    async listUserFiles(userId: string): Promise<UserStorageOverview> {
+        const rows = await getOperationalDatabase().prepare('SELECT file_name, category, size_bytes, updated_at, content_type FROM user_storage_files WHERE user_id = ? ORDER BY updated_at DESC').all(userId);
+        const categories: UserStorageOverview['categories'] = { projects: [], ebooks: [], assets: [] };
+        for (const row of rows) {
+            const category = row.category as keyof typeof categories;
+            if (categories[category])
+                categories[category].push({ name: row.file_name, relativePath: `${category}/${row.file_name}`, category, sizeBytes: row.size_bytes, updatedAt: row.updated_at, mimeType: row.content_type });
         }
-      } catch {}
+        return { userId, userDir: this.getUserDir(userId), categories, totalFiles: rows.length, totalSizeBytes: rows.reduce((sum, row) => sum + row.size_bytes, 0) };
     }
-  }
-
-  private sanitizeName(name: string): string {
-    return name.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_{2,}/g, '_');
-  }
-
-  public getUserDir(userId: string): string {
-    const safeUserId = this.sanitizeName(userId);
-    const userDir = path.join(this.baseDir, safeUserId);
-    this.ensureDirectory(userDir);
-    this.ensureDirectory(path.join(userDir, 'projects'));
-    this.ensureDirectory(path.join(userDir, 'ebooks'));
-    this.ensureDirectory(path.join(userDir, 'assets'));
-    return userDir;
-  }
-
-  public saveProjectFile(
-    userId: string,
-    projectName: string,
-    content: object | string
-  ): { filePath: string; fileName: string; sizeBytes: number } {
-    const userDir = this.getUserDir(userId);
-    const safeName = this.sanitizeName(projectName);
-    const fileName = safeName.endsWith('.json') ? safeName : `${safeName}.json`;
-    const filePath = path.join(userDir, 'projects', fileName);
-
-    const stringData = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
-    fs.writeFileSync(filePath, stringData, 'utf-8');
-    const stats = fs.statSync(filePath);
-
-    return {
-      filePath,
-      fileName,
-      sizeBytes: stats.size
-    };
-  }
-
-  public saveEbookFile(
-    userId: string,
-    title: string,
-    content: string,
-    extension: 'md' | 'json' | 'html' = 'md'
-  ): { filePath: string; fileName: string; sizeBytes: number } {
-    const userDir = this.getUserDir(userId);
-    const safeTitle = this.sanitizeName(title);
-    const fileName = safeTitle.endsWith(`.${extension}`) ? safeTitle : `${safeTitle}.${extension}`;
-    const filePath = path.join(userDir, 'ebooks', fileName);
-
-    fs.writeFileSync(filePath, content, 'utf-8');
-    const stats = fs.statSync(filePath);
-
-    return {
-      filePath,
-      fileName,
-      sizeBytes: stats.size
-    };
-  }
-
-  public getFileContent(
-    userId: string,
-    category: 'projects' | 'ebooks' | 'assets',
-    fileName: string
-  ): { fileName: string; content: string; sizeBytes: number } | null {
-    const userDir = this.getUserDir(userId);
-    const safeName = path.basename(fileName);
-    const targetPath = path.join(userDir, category, safeName);
-
-    if (!fs.existsSync(targetPath)) {
-      return null;
-    }
-
-    const content = fs.readFileSync(targetPath, 'utf-8');
-    const stats = fs.statSync(targetPath);
-
-    return {
-      fileName: safeName,
-      content,
-      sizeBytes: stats.size
-    };
-  }
-
-  public deleteFile(
-    userId: string,
-    category: 'projects' | 'ebooks' | 'assets',
-    fileName: string
-  ): boolean {
-    const userDir = this.getUserDir(userId);
-    const safeName = path.basename(fileName);
-    const targetPath = path.join(userDir, category, safeName);
-
-    if (fs.existsSync(targetPath)) {
-      fs.unlinkSync(targetPath);
-      return true;
-    }
-    return false;
-  }
-
-  public listUserFiles(userId: string): UserStorageOverview {
-    const userDir = this.getUserDir(userId);
-    const categories: UserStorageOverview['categories'] = {
-      projects: [],
-      ebooks: [],
-      assets: []
-    };
-
-    let totalFiles = 0;
-    let totalSizeBytes = 0;
-
-    const subDirs: Array<'projects' | 'ebooks' | 'assets'> = ['projects', 'ebooks', 'assets'];
-
-    for (const cat of subDirs) {
-      const catPath = path.join(userDir, cat);
-      if (fs.existsSync(catPath)) {
-        const files = fs.readdirSync(catPath);
-        for (const file of files) {
-          const filePath = path.join(catPath, file);
-          try {
-            const stat = fs.statSync(filePath);
-            if (stat.isFile()) {
-              const item: UserFileItem = {
-                name: file,
-                relativePath: `${cat}/${file}`,
-                category: cat,
-                sizeBytes: stat.size,
-                updatedAt: stat.mtimeMs,
-                mimeType: file.endsWith('.json')
-                  ? 'application/json'
-                  : file.endsWith('.md')
-                  ? 'text/markdown'
-                  : 'application/octet-stream'
-              };
-              categories[cat].push(item);
-              totalFiles += 1;
-              totalSizeBytes += stat.size;
-            }
-          } catch {
-            // Ignore unreadable
-          }
-        }
-      }
-    }
-
-    categories.projects.sort((a, b) => b.updatedAt - a.updatedAt);
-    categories.ebooks.sort((a, b) => b.updatedAt - a.updatedAt);
-    categories.assets.sort((a, b) => b.updatedAt - a.updatedAt);
-
-    return {
-      userId,
-      userDir,
-      totalFiles,
-      totalSizeBytes,
-      categories
-    };
-  }
 }
-
 export const userStorageService = new UserStorageService();

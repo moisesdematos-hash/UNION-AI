@@ -134,8 +134,9 @@ export interface TokenMetrics {
 
 export interface AiExecutionResult {
   role: AiNodeRole;
-  modelUsed: AiModel;
+  modelUsed: string;
   provider: AiProviderName;
+  executionMode?: 'REAL_AI' | 'FALLBACK_OFFLINE';
   content: string;
   structured?: Record<string, unknown>;
   tokens: TokenMetrics;

@@ -1,0 +1,26 @@
+// Readiness contract. SQL migrations live exclusively in supabase/schema.sql.
+export const REQUIRED_TABLES = [
+    'workflow_jobs',
+    'users',
+    'organizations',
+    'org_members',
+    'org_invitations',
+    'user_credits',
+    'credit_transactions',
+    'projects',
+    'workflows',
+    'workflow_nodes',
+    'workflow_connections',
+    'execution_history',
+    'workflow_runs',
+    'workflow_versions',
+    'workflow_triggers',
+    'audit_logs',
+    'oracle_chat_sessions',
+    'oracle_chat_messages',
+    'oracle_chat_memories',
+    'published_sales_pages',
+    'password_reset_tokens',
+    'processed_payments',
+    'user_storage_files'
+];

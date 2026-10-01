@@ -47,6 +47,8 @@ export function CreditsDrawer() {
     closeCreditsDrawer,
     userCredits,
     creditTransactions,
+    fetchUserCredits,
+    fetchCreditTransactions,
     topupCredits
   } = useCanvasStore();
 
@@ -63,9 +65,11 @@ export function CreditsDrawer() {
   const [refModalData, setRefModalData] = useState<{ entity: string; reference: string; amountAoa: string; pkg: TopupPackage } | null>(null);
   const [paypayModalData, setPaypayModalData] = useState<{ account: string; qrCode: string; amountAoa: string; pkg: TopupPackage } | null>(null);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   if (!isCreditsDrawerOpen) return null;
 
-  const balance = userCredits?.balance ?? 100.0;
+  const balance = userCredits?.balance ?? 0.0;
   const totalConsumed = userCredits?.totalConsumed ?? 0.0;
 
   const handleCopy = (text: string, key: string) => {
@@ -87,99 +91,59 @@ export function CreditsDrawer() {
 
   const handleTopup = async (pkg: TopupPackage) => {
     setIsProcessing(pkg.id);
+    setErrorMessage(null);
+    setSuccessNotice(null);
+
     try {
       const token = typeof window !== 'undefined' && localStorage.getItem('union_auth_token');
-      
-      // Real API checkout call if token exists
-      if (token) {
-        try {
-          const res = await fetch('/api/payments/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ 
-              packageId: pkg.id, 
-              provider: selectedProvider,
-              phone: mcxPhone.replace(/\D/g, '')
-            })
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const session = data.data;
-
-            if (selectedProvider === 'pix' && session?.pixCopiaECola) {
-              setPixModalData({ code: session.pixCopiaECola, pkg });
-              return;
-            }
-
-            if (selectedProvider === 'multicaixa_express') {
-              setMcxModalData({
-                phone: session?.multicaixaPhone || mcxPhone,
-                amountAoa: pkg.priceAoa,
-                pkg,
-                sessionId: session?.sessionId || 'mcx_sim'
-              });
-              return;
-            }
-
-            if (selectedProvider === 'multicaixa_ref') {
-              setRefModalData({
-                entity: session?.multicaixaEntity || '00142',
-                reference: session?.multicaixaReference || '123 456 789',
-                amountAoa: pkg.priceAoa,
-                pkg
-              });
-              return;
-            }
-
-            if (selectedProvider === 'paypay') {
-              setPaypayModalData({
-                account: session?.paypayAccount || '+244 924 112 233',
-                qrCode: session?.paypayQrCode || '',
-                amountAoa: pkg.priceAoa,
-                pkg
-              });
-              return;
-            }
-
-            if (selectedProvider === 'stripe' && session?.checkoutUrl) {
-              if (session.checkoutUrl.includes('simulated')) {
-                // fall through to topup credits
-              } else {
-                window.location.href = session.checkoutUrl;
-                return;
-              }
-            }
-          }
-        } catch {
-          // fallback to modal simulation
-        }
+      if (!token) {
+        setErrorMessage('Inicie sessão na sua conta UNION.AI para adquirir créditos.');
+        return;
       }
 
-      // Offline / Local Simulation fallback
-      if (selectedProvider === 'pix') {
-        setPixModalData({
-          code: `00020126580014br.gov.bcb.pix0136union-pix-${pkg.id}5204000053039865405${pkg.priceBrl}5802BR5908UNION AI6009SAO PAULO62070503***6304ABCD`,
-          pkg
-        });
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ 
+          packageId: pkg.id, 
+          provider: selectedProvider,
+          phone: mcxPhone.replace(/\D/g, '')
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        const errorMsg = data.error || 'Falha ao iniciar checkout.';
+        if (data.code === 'PROVIDER_NOT_CONFIGURED' || errorMsg.includes('PROVIDER_NOT_CONFIGURED')) {
+          setErrorMessage('Este método de pagamento não está ativado com credenciais válidas no servidor.');
+        } else {
+          setErrorMessage(errorMsg);
+        }
+        return;
+      }
+
+      const session = data.data;
+
+      if (selectedProvider === 'pix' && session?.pixCopiaECola) {
+        setPixModalData({ code: session.pixCopiaECola, pkg });
         return;
       }
 
       if (selectedProvider === 'multicaixa_express') {
         setMcxModalData({
-          phone: `+244 ${mcxPhone}`,
+          phone: session?.multicaixaPhone || mcxPhone,
           amountAoa: pkg.priceAoa,
           pkg,
-          sessionId: `mcx_${Date.now()}`
+          sessionId: session?.sessionId || ''
         });
         return;
       }
 
       if (selectedProvider === 'multicaixa_ref') {
-        const randRef = `${Math.floor(100 + Math.random() * 900)} ${Math.floor(100 + Math.random() * 900)} ${Math.floor(100 + Math.random() * 900)}`;
         setRefModalData({
-          entity: '00142',
-          reference: randRef,
+          entity: session?.multicaixaEntity || '00142',
+          reference: session?.multicaixaReference || '',
           amountAoa: pkg.priceAoa,
           pkg
         });
@@ -188,33 +152,44 @@ export function CreditsDrawer() {
 
       if (selectedProvider === 'paypay') {
         setPaypayModalData({
-          account: '+244 924 112 233',
-          qrCode: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-28 h-28 mx-auto"><rect width="100" height="100" fill="#000"/><rect x="10" y="10" width="30" height="30" fill="#fff"/><rect x="60" y="10" width="30" height="30" fill="#fff"/><rect x="10" y="60" width="30" height="30" fill="#fff"/><rect x="18" y="18" width="14" height="14" fill="#000"/><rect x="68" y="18" width="14" height="14" fill="#000"/><rect x="18" y="68" width="14" height="14" fill="#000"/><rect x="45" y="45" width="10" height="10" fill="#10b981"/></svg>`,
+          account: session?.paypayAccount || '',
+          qrCode: session?.paypayQrCode || '',
           amountAoa: pkg.priceAoa,
           pkg
         });
         return;
       }
 
-      // Default Stripe direct
-      await topupCredits(pkg.amount, pkg.id);
-      setSuccessNotice(`Recarga de +${pkg.amount} créditos confirmada com sucesso!`);
-      setTimeout(() => setSuccessNotice(null), 4000);
+      if (selectedProvider === 'stripe' && session?.checkoutUrl) {
+        window.location.href = session.checkoutUrl;
+        return;
+      }
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Falha na comunicação com o servidor.');
     } finally {
       setIsProcessing(null);
     }
   };
 
-  const handleConfirmGenericPayment = async (pkg: TopupPackage, providerName: string) => {
+  const handleVerifyPayment = async (pkg: TopupPackage) => {
     setIsProcessing(pkg.id);
+    setErrorMessage(null);
     try {
-      await topupCredits(pkg.amount, pkg.id);
-      setSuccessNotice(`Pagamento ${providerName} confirmado! +${pkg.amount} créditos adicionados à sua conta.`);
-      setPixModalData(null);
-      setMcxModalData(null);
-      setRefModalData(null);
-      setPaypayModalData(null);
-      setTimeout(() => setSuccessNotice(null), 4000);
+      const updated = await fetchUserCredits();
+      await fetchCreditTransactions();
+      if (updated && updated.balance > balance) {
+        setSuccessNotice(`Pagamento confirmado com sucesso! Saldo atualizado para ${updated.balance.toFixed(2)} cr.`);
+        setPixModalData(null);
+        setMcxModalData(null);
+        setRefModalData(null);
+        setPaypayModalData(null);
+        setTimeout(() => setSuccessNotice(null), 5000);
+      } else {
+        setSuccessNotice('Aguardando compensação do banco/provedor via webhook. Verifique novamente em instantes.');
+        setTimeout(() => setSuccessNotice(null), 6000);
+      }
+    } catch {
+      setErrorMessage('Erro ao consultar saldo atualizado.');
     } finally {
       setIsProcessing(null);
     }
@@ -270,6 +245,14 @@ export function CreditsDrawer() {
             <div className="mx-4 mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
               <span>{successNotice}</span>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="mx-4 mt-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+              <X className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -500,12 +483,12 @@ export function CreditsDrawer() {
 
               <button
                 type="button"
-                onClick={() => handleConfirmGenericPayment(mcxModalData.pkg, 'Multicaixa Express')}
+                onClick={() => handleVerifyPayment(mcxModalData.pkg)}
                 disabled={isProcessing !== null}
                 className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Simular Confirmação com PIN MCX</span>
+                <Clock className="w-3.5 h-3.5" />
+                <span>Verificar Confirmação</span>
               </button>
             </div>
           )}
@@ -577,12 +560,12 @@ export function CreditsDrawer() {
 
               <button
                 type="button"
-                onClick={() => handleConfirmGenericPayment(refModalData.pkg, 'Referência Multicaixa')}
+                onClick={() => handleVerifyPayment(refModalData.pkg)}
                 disabled={isProcessing !== null}
                 className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Simular Compensação de Referência</span>
+                <Clock className="w-3.5 h-3.5" />
+                <span>Verificar Compensação</span>
               </button>
             </div>
           )}
@@ -638,12 +621,12 @@ export function CreditsDrawer() {
 
               <button
                 type="button"
-                onClick={() => handleConfirmGenericPayment(paypayModalData.pkg, 'PayPay AO')}
+                onClick={() => handleVerifyPayment(paypayModalData.pkg)}
                 disabled={isProcessing !== null}
                 className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Simular Transferência PayPay</span>
+                <Clock className="w-3.5 h-3.5" />
+                <span>Verificar Confirmação</span>
               </button>
             </div>
           )}
@@ -690,12 +673,12 @@ export function CreditsDrawer() {
 
               <button
                 type="button"
-                onClick={() => handleConfirmGenericPayment(pixModalData.pkg, 'PIX')}
+                onClick={() => handleVerifyPayment(pixModalData.pkg)}
                 disabled={isProcessing !== null}
                 className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Simular Confirmação Bancária PIX</span>
+                <Clock className="w-3.5 h-3.5" />
+                <span>Verificar Confirmação</span>
               </button>
             </div>
           )}

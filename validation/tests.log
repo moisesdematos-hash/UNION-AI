@@ -1,0 +1,174 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> union-ai@0.2.0 pretest
+> npm run build --workspace=@union/shared && npm run build --workspace=@union/server
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @union/shared@0.1.0 build
+> tsc
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @union/server@0.1.0 build
+> tsc
+
+
+> union-ai@0.2.0 test
+> npm run test --workspaces --if-present
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @union/client@0.1.0 test
+> vitest run --maxWorkers=2 --minWorkers=1
+
+
+ RUN  v2.1.9 /workspace/scratch/5b42f391f5f0/union-audit/packages/client
+
+ ✓ src/__tests__/canvasStore.test.ts (15 tests) 26ms
+ ✓ src/__tests__/output-modal-viewer.test.tsx (4 tests) 119ms
+ ✓ src/__tests__/UnionNode.test.tsx (8 tests) 272ms
+ ✓ src/__tests__/simulator-and-oracle-ui.test.tsx (13 tests) 440ms
+ ✓ src/__tests__/multi-video-canvas-forge.test.tsx (4 tests) 124ms
+ ✓ src/__tests__/ebook-canvas-forge.test.tsx (4 tests) 214ms
+ ✓ src/__tests__/landing-page.test.tsx (10 tests) 1426ms
+ ✓ src/__tests__/auto-layout-and-cascade.test.ts (5 tests) 23ms
+ ✓ src/__tests__/marketing-nodes.test.ts (9 tests) 9ms
+ ✓ src/__tests__/storage-autosave.test.ts (6 tests) 12ms
+ ✓ src/__tests__/automation-nodes.test.ts (9 tests) 11ms
+ ✓ src/__tests__/UnionEdge.test.tsx (5 tests) 77ms
+ ✓ src/__tests__/execution-history.test.ts (4 tests) 6ms
+ ✓ src/__tests__/welcome-page.test.tsx (6 tests) 413ms
+ ✓ src/__tests__/ai-chat-node.test.tsx (3 tests) 101ms
+ ✓ src/__tests__/canvas-groups.test.tsx (5 tests) 6ms
+ ✓ src/__tests__/ModalsAndInspector.test.tsx (2 tests) 153ms
+ ✓ src/__tests__/App.test.tsx (4 tests) 413ms
+ ✓ src/__tests__/templates-ui.test.tsx (3 tests) 802ms
+   ✓ Gate 18: Template Library UI & Canvas Loading > opens TemplateLibraryModal and displays all official templates with categories 339ms
+ ✓ src/__tests__/ExecutionPlanModal.test.tsx (3 tests) 142ms
+ ✓ src/__tests__/offline-knowledge-base.test.ts (9 tests) 5ms
+ ✓ src/__tests__/credits-ui.test.ts (4 tests) 4ms
+ ✓ src/__tests__/sales-page-preview.test.tsx (4 tests) 141ms
+ ✓ src/__tests__/canvas-controls-drag.test.tsx (2 tests) 54ms
+stderr | src/__tests__/union-forge.test.tsx > Union Forge & Aceleradores (Inspired by Furion.ai enhancements) > renders the ⚡ Union Forge button in the main top header
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/workspace/scratch/5b42f391f5f0/union-audit/packages/client/src/App.tsx:52:63)
+
+ ✓ src/__tests__/union-forge.test.tsx (3 tests) 339ms
+ ✓ src/__tests__/telemetry-ui.test.tsx (2 tests) 201ms
+ ✓ src/__tests__/organizations-ui.test.tsx (1 test) 184ms
+
+ Test Files  27 passed (27)
+      Tests  147 passed (147)
+   Start at  08:25:07
+   Duration  13.87s (transform 1.26s, setup 1.10s, collect 6.98s, tests 5.72s, environment 7.81s, prepare 1.33s)
+
+
+> @union/server@0.1.0 test
+> vitest run --pool=forks --maxWorkers=2 --minWorkers=1
+
+
+ RUN  v2.1.9 /workspace/scratch/5b42f391f5f0/union-audit/packages/server
+
+ ✓ src/__tests__/simulation-and-oracle.test.ts (13 tests) 42ms
+stderr | src/__tests__/security-hardening.test.ts > Production regression and security > denies arbitrary CORS origins and sets security headers
+[UNION.AI Server Error]: Error: CORS blocked for origin: https://evil-attacker.vercel.app
+    at origin (/workspace/scratch/5b42f391f5f0/union-audit/packages/server/src/app.ts:73:29)
+    at /workspace/scratch/5b42f391f5f0/union-audit/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/cors/lib/index.js:204:7)
+    at newFn (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/express-async-errors/index.js:16:20)
+    at Layer.handle [as handle_request] (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/express/lib/router/index.js:328:13)
+    at /workspace/scratch/5b42f391f5f0/union-audit/node_modules/express/lib/router/index.js:286:9
+    at router.process_params (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/express/lib/router/index.js:346:12)
+    at next (/workspace/scratch/5b42f391f5f0/union-audit/node_modules/express/lib/router/index.js:280:10)
+
+ ✓ src/__tests__/workflow-storage.test.ts (4 tests) 692ms
+stderr | src/__tests__/security-hardening.test.ts > Production regression and security > does not report password email delivered when the production provider fails
+[EmailService: Resend Error]: {}
+
+ ✓ src/__tests__/security-hardening.test.ts (14 tests) 1021ms
+   ✓ Production regression and security > does not exhaust the general API rate limit while polling a long-running job 466ms
+ ✓ src/__tests__/extractors.test.ts (10 tests) 52ms
+ ✓ src/__tests__/observability-audit.test.ts (8 tests) 698ms
+ ✓ src/__tests__/workflow-runs-versions.test.ts (3 tests) 568ms
+ ✓ src/__tests__/ai-engine.test.ts (8 tests) 707ms
+ ✓ src/__tests__/admin-and-google-auth.test.ts (5 tests) 774ms
+stderr | src/__tests__/automations-webhooks.test.ts > Gate 15: Automations, Webhooks & Autonomous Trigger API > External Webhook Invocation (/api/webhooks/v1/trigger/:workflowId) > rejects webhook call with invalid token
+DEBUG WEBHOOK EXECUTION ERROR: Error: Invalid or disabled webhook token
+    at AutomationsService.executeWebhookTrigger (/workspace/scratch/5b42f391f5f0/union-audit/packages/server/src/services/automations-service.ts:94:19)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /workspace/scratch/5b42f391f5f0/union-audit/packages/server/src/routes/webhooks.ts:64:24
+
+stderr | src/__tests__/automations-webhooks.test.ts > Gate 15: Automations, Webhooks & Autonomous Trigger API > External Webhook Invocation (/api/webhooks/v1/trigger/:workflowId) > rejects webhook call when user has insufficient credits
+DEBUG WEBHOOK EXECUTION ERROR: Error: Insufficient credits to execute webhook workflow: balance 0, shortfall 0.05
+    at AutomationsService.executeWebhookTrigger (/workspace/scratch/5b42f391f5f0/union-audit/packages/server/src/services/automations-service.ts:100:19)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /workspace/scratch/5b42f391f5f0/union-audit/packages/server/src/routes/webhooks.ts:64:24
+
+ ✓ src/__tests__/automations-webhooks.test.ts (6 tests) 553ms
+ ✓ src/__tests__/organizations-rbac.test.ts (7 tests) 1398ms
+ ✓ src/__tests__/credits.test.ts (9 tests) 1509ms
+ ✓ src/__tests__/payments-service.test.ts (3 tests) 232ms
+ ✓ src/__tests__/postgres-production.test.ts (7 tests) 2394ms
+ ✓ src/__tests__/templates-api.test.ts (7 tests) 663ms
+ ✓ src/__tests__/sales-page-render.test.ts (4 tests) 294ms
+ ✓ src/__tests__/workflow-engine-api.test.ts (2 tests) 236ms
+ ✓ src/__tests__/marketing-engine.test.ts (9 tests) 773ms
+ ✓ src/__tests__/ai-router-api.test.ts (6 tests) 551ms
+ ✓ src/__tests__/concurrency-and-load.test.ts (5 tests) 265ms
+ ✓ src/__tests__/password-reset.test.ts (3 tests) 604ms
+   ✓ Password Reset & Email Recovery Workflow > should reset password with valid token and allow subsequent login with new password 329ms
+ ✓ src/__tests__/pdf-extractor.test.ts (4 tests) 84ms
+ ✓ src/__tests__/auth.test.ts (4 tests) 552ms
+ ✓ src/__tests__/sales-page-api.test.ts (1 test) 123ms
+ ✓ src/__tests__/real-ebook.test.ts (2 tests) 8ms
+ ✓ src/__tests__/ebook-word-count.test.ts (2 tests) 139ms
+ ✓ src/__tests__/supabase-integration.test.ts (5 tests) 40ms
+ ✓ src/__tests__/ssrf-redirect.test.ts (1 test) 4ms
+ ✓ src/__tests__/payments-angola.test.ts (4 tests) 285ms
+ ✓ src/__tests__/health.test.ts (1 test) 20ms
+
+ Test Files  29 passed (29)
+      Tests  157 passed (157)
+   Start at  08:25:22
+   Duration  19.20s (transform 696ms, setup 0ms, collect 17.24s, tests 15.28s, environment 4ms, prepare 1.36s)
+
+
+> @union/shared@0.1.0 test
+> vitest run --maxWorkers=2 --minWorkers=1
+
+
+ RUN  v2.1.9 /workspace/scratch/5b42f391f5f0/union-audit/packages/shared
+
+ ✓ src/__tests__/execution-engine.test.ts (5 tests) 10ms
+ ✓ src/__tests__/workflow-engine.test.ts (7 tests) 8ms
+ ✓ src/__tests__/ai-router.test.ts (9 tests) 6ms
+ ✓ src/__tests__/marketing-types.test.ts (4 tests) 5ms
+ ✓ src/__tests__/data-bus.test.ts (5 tests) 9ms
+ ✓ src/__tests__/schemas.test.ts (6 tests) 6ms
+ ✓ src/__tests__/simulation-types.test.ts (3 tests) 5ms
+ ✓ src/__tests__/sales-page-types.test.ts (2 tests) 5ms
+ ✓ src/__tests__/automations-types.test.ts (5 tests) 8ms
+ ✓ src/__tests__/ai-types.test.ts (7 tests) 5ms
+ ✓ src/__tests__/template-types.test.ts (3 tests) 14ms
+ ✓ src/__tests__/organization-types.test.ts (3 tests) 5ms
+ ✓ src/__tests__/compatibility.test.ts (5 tests) 3ms
+ ✓ src/__tests__/observability-types.test.ts (3 tests) 5ms
+ ✓ src/__tests__/credits.test.ts (4 tests) 4ms
+
+ Test Files  15 passed (15)
+      Tests  71 passed (71)
+   Start at  08:25:41
+   Duration  1.73s (transform 332ms, setup 0ms, collect 707ms, tests 97ms, environment 2ms, prepare 771ms)
+

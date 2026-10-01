@@ -70,6 +70,7 @@ export async function defaultNodeHandler(
     throw new Error('Execução abortada pelo usuário');
   }
 
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') throw new Error('REAL_HANDLER_REQUIRED');
   const startTime = Date.now();
   const outputs: Record<string, DataPacket> = {};
   let tokens = 100;
@@ -652,6 +653,9 @@ export async function defaultNodeHandler(
     }
   }
 
+  // Demonstration outputs are never billable or reported as external AI usage.
+  for (const packet of Object.values(outputs)) packet.metadata = { ...packet.metadata, tokens: 0, creditsCost: 0, provider: 'local', model: 'offline-demo' };
+  tokens = 0; credits = 0;
   return {
     outputs,
     tokens,

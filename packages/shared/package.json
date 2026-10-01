@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --maxWorkers=2 --minWorkers=1"
   },
   "dependencies": {
     "zod": "^3.23.8"

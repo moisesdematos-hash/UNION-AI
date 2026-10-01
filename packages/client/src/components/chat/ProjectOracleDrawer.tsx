@@ -1,3 +1,4 @@
+import { authHeaders } from '../../services/authHeaders.js';
 import { useState, useRef, useEffect } from 'react';
 import { 
   Bot, 
@@ -612,7 +613,7 @@ export function ProjectOracleDrawer({
     try {
       fetch('/api/chat/clear-history', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ sessionId })
       }).catch(() => {});
     } catch {}
@@ -710,7 +711,7 @@ export function ProjectOracleDrawer({
     try {
       const response = await fetch('/api/chat/ask-oracle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ 
           question: text || 'Analise os arquivos anexados e me dê orientações.',
           attachments: currentAttachments,
@@ -750,7 +751,11 @@ export function ProjectOracleDrawer({
       } else {
         throw new Error(resData.error || 'Erro na resposta do Oracle');
       }
-    } catch {
+    } catch (error) {
+      if (import.meta.env.PROD) {
+        setMessages(prev => [...prev, { id: crypto.randomUUID(), sender: 'oracle', text: error instanceof Error ? error.message : 'Oracle indisponível. Tente novamente.', timestamp: new Date().toLocaleTimeString() }]);
+        return;
+      }
       // Fallback para o motor de conhecimento 100% da plataforma embarcado no cliente
       const offlineResult = searchUnionKnowledgeBase(text);
       let answer = offlineResult.answer;

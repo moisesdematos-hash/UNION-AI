@@ -1,3 +1,5 @@
+> Documento histórico da versão anterior. Estado atual: README.md e CORRECOES_UNION_AI_2026-10-01.md. As alegações antigas de integração/produção não certificam esta versão.
+
 # RELATÓRIO FORENSE CONSOLIDADO DE ENGENHARIA DE SOFTWARE & AUDITORIA INTEGRAL
 ## Plataforma UNION.AI — Diagnóstico, Perícia de 14 Etapas e Registro de Remediação
 

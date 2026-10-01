@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-01",
+  "version": "0.2.0",
+  "build": "passed",
+  "typecheck": "passed",
+  "tests": {
+    "passed": 375,
+    "failed": 0,
+    "client": 147,
+    "server": 157,
+    "shared": 71,
+    "files": 71
+  },
+  "runtime_dependency_advisories": 0,
+  "external_system_changes": false,
+  "production_certified": false,
+  "limits": [
+    "PostgreSQL integration uses embedded single-session PGlite",
+    "No live commercial gateway, Google, email or Groq calls",
+    "No Docker or remote CI execution",
+    "No external database migration or deployment",
+    "Bundle size warning remains"
+  ]
+}

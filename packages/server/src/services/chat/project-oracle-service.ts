@@ -1,322 +1,305 @@
+import { executeBilledAi } from '../ai/billed-ai.js';
 import { env } from '../../config/env.js';
-import { getDatabase } from '../../db/database.js';
+import { getOperationalDatabase } from '../../db/operational-database.js';
 import { randomUUID } from 'node:crypto';
-
 export type PersonaMode = 'ORACLE' | 'SKEPTIC' | 'EXECUTIVE' | 'COPYWRITER' | 'ARCHITECT';
-
 export interface OracleAction {
-  id: string;
-  type: 'ADD_NODE' | 'LOAD_TEMPLATE' | 'RUN_WORKFLOW' | 'TEST_IN_SIMULATOR';
-  label: string;
-  description: string;
-  payload: any;
+    id: string;
+    type: 'ADD_NODE' | 'LOAD_TEMPLATE' | 'RUN_WORKFLOW' | 'TEST_IN_SIMULATOR';
+    label: string;
+    description: string;
+    payload: any;
 }
-
 export interface VisualAuditReport {
-  ctaContrastScore: number;
-  readabilityScore: number;
-  mobileClutterScore: number;
-  aboveFoldHookGrade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
-  recommendations: string[];
+    ctaContrastScore: number;
+    readabilityScore: number;
+    mobileClutterScore: number;
+    aboveFoldHookGrade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+    recommendations: string[];
 }
-
 export interface OracleAttachment {
-  name: string;
-  type: 'image' | 'pdf' | 'document' | 'audio';
-  dataUrl?: string; // base64 / data URL
-  extractedText?: string;
-  size?: number;
+    name: string;
+    type: 'image' | 'pdf' | 'document' | 'audio';
+    dataUrl?: string; // base64 / data URL
+    extractedText?: string;
+    size?: number;
 }
-
 export interface OracleQuestionRequest {
-  question: string;
-  context?: string;
-  sessionId?: string;
-  userId?: string;
-  personaMode?: PersonaMode;
-  attachments?: OracleAttachment[];
-  conversationHistory?: Array<{
-    sender: 'user' | 'oracle';
-    text: string;
-  }>;
+    question: string;
+    context?: string;
+    sessionId?: string;
+    userId?: string;
+    personaMode?: PersonaMode;
+    attachments?: OracleAttachment[];
+    conversationHistory?: Array<{
+        sender: 'user' | 'oracle';
+        text: string;
+    }>;
 }
-
 export interface OracleAnswerResponse {
-  answer: string;
-  category: 'ARCHITECTURE' | 'DATA_BUS' | 'MARKETING_ENGINES' | 'SIMULATOR' | 'TEMPLATES' | 'OBSERVABILITY' | 'MULTIMODAL' | 'QUICK_START';
-  relevantFiles: string[];
-  suggestedFollowUps: string[];
-  memoriesRetained?: Array<{ key: string; value: string }>;
-  personaMode?: PersonaMode;
-  actions?: OracleAction[];
-  visualAudit?: VisualAuditReport;
-  attachmentAnalysis?: {
-    filesProcessed: number;
-    summary: string;
-    detectedInsights: string[];
-  };
+    answer: string;
+    category: 'ARCHITECTURE' | 'DATA_BUS' | 'MARKETING_ENGINES' | 'SIMULATOR' | 'TEMPLATES' | 'OBSERVABILITY' | 'MULTIMODAL' | 'QUICK_START';
+    relevantFiles: string[];
+    suggestedFollowUps: string[];
+    memoriesRetained?: Array<{
+        key: string;
+        value: string;
+    }>;
+    personaMode?: PersonaMode;
+    actions?: OracleAction[];
+    visualAudit?: VisualAuditReport;
+    attachmentAnalysis?: {
+        filesProcessed: number;
+        summary: string;
+        detectedInsights: string[];
+    };
 }
-
 function detectActions(q: string, answer: string, cat: string): OracleAction[] {
-  const actions: OracleAction[] = [];
-  const lowerQ = q.toLowerCase();
-  const lowerA = answer.toLowerCase();
-
-  // Test in Simulator action & inject node
-  if (
-    cat === 'SIMULATOR' ||
-    cat === 'MARKETING_ENGINES' ||
-    lowerQ.includes('simul') ||
-    lowerQ.includes('copy') ||
-    lowerQ.includes('headline') ||
-    lowerQ.includes('14 blocos') ||
-    lowerQ.includes('vsl') ||
-    lowerA.includes('headline') ||
-    lowerA.includes('bloco 1')
-  ) {
-    actions.push({
-      id: 'act-test-sim',
-      type: 'TEST_IN_SIMULATOR',
-      label: '🧪 Testar no Simulador de Conversão',
-      description: 'Executa simulação com as 5 personas sintéticas e mapa de calor CPS',
-      payload: {
-        copyText: answer
-      }
-    });
-
-    actions.push({
-      id: 'act-add-sales-node',
-      type: 'ADD_NODE',
-      label: '📥 Injetar Nó de Vendas no Canvas',
-      description: 'Adiciona nó SalesPageNode ao canvas com a copy gerada',
-      payload: {
-        nodeType: 'sales-page',
-        data: {
-          label: 'Página de Vendas (14 Blocos)',
-          copyContent: answer
-        }
-      }
-    });
-  }
-
-  // Load Template action
-  if (lowerQ.includes('template 1') || lowerQ.includes('youtube to vsl') || (lowerQ.includes('template') && lowerQ.includes('youtube')) || lowerQ.includes('youtube content factory')) {
-    actions.push({
-      id: 'act-load-tpl-1',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 1: YouTube Content Factory',
-      description: 'Instancia o fluxo oficial 1 diretamente no Canvas',
-      payload: { templateId: 'youtube-content-factory' }
-    });
-  } else if (lowerQ.includes('template 2') || lowerQ.includes('concorrente') || (lowerQ.includes('template') && lowerQ.includes('swot')) || lowerQ.includes('competitor')) {
-    actions.push({
-      id: 'act-load-tpl-2',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 2: Competitor Intelligence Matrix',
-      description: 'Instancia o fluxo oficial 2 diretamente no Canvas',
-      payload: { templateId: 'competitor-intel-report' }
-    });
-  } else if (lowerQ.includes('template 3') || lowerQ.includes('marketing vsl') || lowerQ.includes('vsl engine')) {
-    actions.push({
-      id: 'act-load-tpl-3',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 3: Autonomous Marketing VSL Engine',
-      description: 'Instancia o fluxo oficial 3 diretamente no Canvas',
-      payload: { templateId: 'marketing-vsl-engine' }
-    });
-  } else if (lowerQ.includes('template 4') || lowerQ.includes('full funnel') || lowerQ.includes('launch machine')) {
-    actions.push({
-      id: 'act-load-tpl-4',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 4: Full Funnel Launch Machine',
-      description: 'Instancia o fluxo oficial 4 diretamente no Canvas',
-      payload: { templateId: 'full-funnel-launch-machine' }
-    });
-  } else if (lowerQ.includes('template 5') || lowerQ.includes('sales page') || lowerQ.includes('14 blocos') || lowerQ.includes('cps')) {
-    actions.push({
-      id: 'act-load-tpl-5',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 5: Sales Page 14-Blocos & Simulador CPS',
-      description: 'Instancia a esteira padronizada de alta conversão no Canvas',
-      payload: { templateId: 'sales-page-cps-machine' }
-    });
-  } else if (lowerQ.includes('template 6') || lowerQ.includes('rag') || lowerQ.includes('documento') || lowerQ.includes('pdf')) {
-    actions.push({
-      id: 'act-load-tpl-6',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 6: Chat com Documentos & RAG',
-      description: 'Instancia a esteira de RAG e PDF com Chat Assistant',
-      payload: { templateId: 'document-rag-chat' }
-    });
-  } else if (lowerQ.includes('template 7') || lowerQ.includes('react') || lowerQ.includes('agente autônomo') || lowerQ.includes('autonomous')) {
-    actions.push({
-      id: 'act-load-tpl-7',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 7: Agente Autônomo Reflexivo (ReAct)',
-      description: 'Instancia o agente autônomo com simulador CPS',
-      payload: { templateId: 'autonomous-react-agent' }
-    });
-  } else if (lowerQ.includes('template 8') || lowerQ.includes('cron') || lowerQ.includes('schedule') || lowerQ.includes('recorrente') || lowerQ.includes('automacao')) {
-    actions.push({
-      id: 'act-load-tpl-8',
-      type: 'LOAD_TEMPLATE',
-      label: '⚡ Carregar 8: Automação Recorrente (Cron Schedule)',
-      description: 'Instancia o fluxo de automação agendada diária',
-      payload: { templateId: 'recurring-automation-pipeline' }
-    });
-  }
-
-  return actions;
-}
-
-function generateVisualAudit(imageAttachment: OracleAttachment): VisualAuditReport {
-  return {
-    ctaContrastScore: 89,
-    readabilityScore: 94,
-    mobileClutterScore: 86,
-    aboveFoldHookGrade: 'A',
-    recommendations: [
-      'Garantir contraste mínimo de 4.5:1 (WCAG AA) entre o botão de CTA e o fundo.',
-      'Headline principal visível em smartphones sem exigir rolagem na dobra inicial.',
-      'Reduzir densidade de texto lateral para guiar o foco visual diretamente para o botão de ação.'
-    ]
-  };
-}
-
-function extractMemoriesFromText(text: string): Array<{ key: string; value: string }> {
-  const memories: Array<{ key: string; value: string }> = [];
-
-  // Name extraction
-  const nameMatch = text.match(/(?:me chamo|meu nome [eé]|sou o|sou a)\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)?)(?=\s+e\b|\s+que\b|[.,;\n!?]|$)/i);
-  if (nameMatch && nameMatch[1]) {
-    const name = nameMatch[1].trim();
-    if (name.length >= 2 && !['um', 'uma', 'apenas', 'muito', 'o', 'a'].includes(name.toLowerCase())) {
-      memories.push({ key: 'Nome do Usuário', value: name });
+    const actions: OracleAction[] = [];
+    const lowerQ = q.toLowerCase();
+    const lowerA = answer.toLowerCase();
+    // Test in Simulator action & inject node
+    if (cat === 'SIMULATOR' ||
+        cat === 'MARKETING_ENGINES' ||
+        lowerQ.includes('simul') ||
+        lowerQ.includes('copy') ||
+        lowerQ.includes('headline') ||
+        lowerQ.includes('14 blocos') ||
+        lowerQ.includes('vsl') ||
+        lowerA.includes('headline') ||
+        lowerA.includes('bloco 1')) {
+        actions.push({
+            id: 'act-test-sim',
+            type: 'TEST_IN_SIMULATOR',
+            label: '🧪 Testar no Simulador de Conversão',
+            description: 'Executa simulação com as 5 personas sintéticas e mapa de calor CPS',
+            payload: {
+                copyText: answer
+            }
+        });
+        actions.push({
+            id: 'act-add-sales-node',
+            type: 'ADD_NODE',
+            label: '📥 Injetar Nó de Vendas no Canvas',
+            description: 'Adiciona nó SalesPageNode ao canvas com a copy gerada',
+            payload: {
+                nodeType: 'sales-page',
+                data: {
+                    label: 'Página de Vendas (14 Blocos)',
+                    copyContent: answer
+                }
+            }
+        });
     }
-  }
-
-  // Business / Product extraction
-  const bizMatch = text.match(/(?:minha empresa [eé]|meu negócio [eé]|meu nicho [eé]|trabalho com|vendo|meu produto [eé])\s+([^.,;\n!?]{3,60})/i);
-  if (bizMatch && bizMatch[1]) {
-    memories.push({ key: 'Negócio / Nicho', value: bizMatch[1].trim() });
-  }
-
-  // Goal / Project extraction
-  const goalMatch = text.match(/(?:meu objetivo [eé]|quero criar|estou criando|planejo lançar)\s+([^.,;\n!?]{3,80})/i);
-  if (goalMatch && goalMatch[1]) {
-    memories.push({ key: 'Objetivo do Projeto', value: goalMatch[1].trim() });
-  }
-
-  // Preference extraction
-  const prefMatch = text.match(/(?:minha preferência [eé]|prefiro|gosto de trabalhar com)\s+([^.,;\n!?]{3,60})/i);
-  if (prefMatch && prefMatch[1]) {
-    memories.push({ key: 'Preferência', value: prefMatch[1].trim() });
-  }
-
-  return memories;
+    // Load Template action
+    if (lowerQ.includes('template 1') || lowerQ.includes('youtube to vsl') || (lowerQ.includes('template') && lowerQ.includes('youtube')) || lowerQ.includes('youtube content factory')) {
+        actions.push({
+            id: 'act-load-tpl-1',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 1: YouTube Content Factory',
+            description: 'Instancia o fluxo oficial 1 diretamente no Canvas',
+            payload: { templateId: 'youtube-content-factory' }
+        });
+    }
+    else if (lowerQ.includes('template 2') || lowerQ.includes('concorrente') || (lowerQ.includes('template') && lowerQ.includes('swot')) || lowerQ.includes('competitor')) {
+        actions.push({
+            id: 'act-load-tpl-2',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 2: Competitor Intelligence Matrix',
+            description: 'Instancia o fluxo oficial 2 diretamente no Canvas',
+            payload: { templateId: 'competitor-intel-report' }
+        });
+    }
+    else if (lowerQ.includes('template 3') || lowerQ.includes('marketing vsl') || lowerQ.includes('vsl engine')) {
+        actions.push({
+            id: 'act-load-tpl-3',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 3: Autonomous Marketing VSL Engine',
+            description: 'Instancia o fluxo oficial 3 diretamente no Canvas',
+            payload: { templateId: 'marketing-vsl-engine' }
+        });
+    }
+    else if (lowerQ.includes('template 4') || lowerQ.includes('full funnel') || lowerQ.includes('launch machine')) {
+        actions.push({
+            id: 'act-load-tpl-4',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 4: Full Funnel Launch Machine',
+            description: 'Instancia o fluxo oficial 4 diretamente no Canvas',
+            payload: { templateId: 'full-funnel-launch-machine' }
+        });
+    }
+    else if (lowerQ.includes('template 5') || lowerQ.includes('sales page') || lowerQ.includes('14 blocos') || lowerQ.includes('cps')) {
+        actions.push({
+            id: 'act-load-tpl-5',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 5: Sales Page 14-Blocos & Simulador CPS',
+            description: 'Instancia a esteira padronizada de alta conversão no Canvas',
+            payload: { templateId: 'sales-page-cps-machine' }
+        });
+    }
+    else if (lowerQ.includes('template 6') || lowerQ.includes('rag') || lowerQ.includes('documento') || lowerQ.includes('pdf')) {
+        actions.push({
+            id: 'act-load-tpl-6',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 6: Chat com Documentos & RAG',
+            description: 'Instancia a esteira de RAG e PDF com Chat Assistant',
+            payload: { templateId: 'document-rag-chat' }
+        });
+    }
+    else if (lowerQ.includes('template 7') || lowerQ.includes('react') || lowerQ.includes('agente autônomo') || lowerQ.includes('autonomous')) {
+        actions.push({
+            id: 'act-load-tpl-7',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 7: Agente Autônomo Reflexivo (ReAct)',
+            description: 'Instancia o agente autônomo com simulador CPS',
+            payload: { templateId: 'autonomous-react-agent' }
+        });
+    }
+    else if (lowerQ.includes('template 8') || lowerQ.includes('cron') || lowerQ.includes('schedule') || lowerQ.includes('recorrente') || lowerQ.includes('automacao')) {
+        actions.push({
+            id: 'act-load-tpl-8',
+            type: 'LOAD_TEMPLATE',
+            label: '⚡ Carregar 8: Automação Recorrente (Cron Schedule)',
+            description: 'Instancia o fluxo de automação agendada diária',
+            payload: { templateId: 'recurring-automation-pipeline' }
+        });
+    }
+    return actions;
 }
-
+function generateVisualAudit(imageAttachment: OracleAttachment): VisualAuditReport {
+    return {
+        ctaContrastScore: 89,
+        readabilityScore: 94,
+        mobileClutterScore: 86,
+        aboveFoldHookGrade: 'A',
+        recommendations: [
+            'Garantir contraste mínimo de 4.5:1 (WCAG AA) entre o botão de CTA e o fundo.',
+            'Headline principal visível em smartphones sem exigir rolagem na dobra inicial.',
+            'Reduzir densidade de texto lateral para guiar o foco visual diretamente para o botão de ação.'
+        ]
+    };
+}
+function extractMemoriesFromText(text: string): Array<{
+    key: string;
+    value: string;
+}> {
+    const memories: Array<{
+        key: string;
+        value: string;
+    }> = [];
+    // Name extraction
+    const nameMatch = text.match(/(?:me chamo|meu nome [eé]|sou o|sou a)\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)?)(?=\s+e\b|\s+que\b|[.,;\n!?]|$)/i);
+    if (nameMatch && nameMatch[1]) {
+        const name = nameMatch[1].trim();
+        if (name.length >= 2 && !['um', 'uma', 'apenas', 'muito', 'o', 'a'].includes(name.toLowerCase())) {
+            memories.push({ key: 'Nome do Usuário', value: name });
+        }
+    }
+    // Business / Product extraction
+    const bizMatch = text.match(/(?:minha empresa [eé]|meu negócio [eé]|meu nicho [eé]|trabalho com|vendo|meu produto [eé])\s+([^.,;\n!?]{3,60})/i);
+    if (bizMatch && bizMatch[1]) {
+        memories.push({ key: 'Negócio / Nicho', value: bizMatch[1].trim() });
+    }
+    // Goal / Project extraction
+    const goalMatch = text.match(/(?:meu objetivo [eé]|quero criar|estou criando|planejo lançar)\s+([^.,;\n!?]{3,80})/i);
+    if (goalMatch && goalMatch[1]) {
+        memories.push({ key: 'Objetivo do Projeto', value: goalMatch[1].trim() });
+    }
+    // Preference extraction
+    const prefMatch = text.match(/(?:minha preferência [eé]|prefiro|gosto de trabalhar com)\s+([^.,;\n!?]{3,60})/i);
+    if (prefMatch && prefMatch[1]) {
+        memories.push({ key: 'Preferência', value: prefMatch[1].trim() });
+    }
+    return memories;
+}
 export class ProjectOracleService {
-  /**
-   * System knowledge base mapping deep project topics, files, explanations and Multimodal inputs.
-   */
-  public static async answerQuestion(req: OracleQuestionRequest): Promise<OracleAnswerResponse> {
-    const q = req.question.toLowerCase();
-    const attachments = req.attachments || [];
-    const sessionId = req.sessionId;
-    let storedMemories: Array<{ memory_key: string; memory_value: string }> = [];
-
-    // 1. Session Memory & Persistent Storage in SQLite
-    if (sessionId) {
-      try {
-        const db = getDatabase();
-        const now = Date.now();
-        db.prepare(`
+    /**
+     * System knowledge base mapping deep project topics, files, explanations and Multimodal inputs.
+     */
+    public static async answerQuestion(req: OracleQuestionRequest): Promise<OracleAnswerResponse> {
+        const q = req.question.toLowerCase();
+        const attachments = req.attachments || [];
+        const sessionId = req.sessionId;
+        let storedMemories: Array<{
+            memory_key: string;
+            memory_value: string;
+        }> = [];
+        // 1. Session Memory & Persistent Storage in SQLite
+        if (sessionId) {
+            try {
+                const db = getOperationalDatabase();
+                const now = Date.now();
+                (await db.prepare(`
           INSERT INTO oracle_chat_sessions (id, user_id, created_at, updated_at)
           VALUES (?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET updated_at = ?
-        `).run(sessionId, req.userId || null, now, now, now);
-
-        // Extract and upsert new persistent memories from text
-        const extracted = extractMemoriesFromText(req.question);
-        const upsertMem = db.prepare(`
+        `).run(sessionId, req.userId || null, now, now, now));
+                // Extract and upsert new persistent memories from text
+                const extracted = extractMemoriesFromText(req.question);
+                const upsertMem = db.prepare(`
           INSERT INTO oracle_chat_memories (id, session_id, memory_key, memory_value, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(session_id, memory_key) DO UPDATE SET memory_value = excluded.memory_value, updated_at = excluded.updated_at
         `);
-        for (const m of extracted) {
-          upsertMem.run(randomUUID(), sessionId, m.key, m.value, now, now);
-        }
-
-        // Save incoming user message
-        db.prepare(`
+                for (const m of extracted) {
+                    (await upsertMem.run(randomUUID(), sessionId, m.key, m.value, now, now));
+                }
+                // Save incoming user message
+                (await db.prepare(`
           INSERT INTO oracle_chat_messages (id, session_id, sender, text, attachments_json, created_at)
           VALUES (?, ?, 'user', ?, ?, ?)
-        `).run(randomUUID(), sessionId, req.question, JSON.stringify(attachments), now);
-
-        // Retrieve all retained memories for this session
-        storedMemories = db.prepare(`
+        `).run(randomUUID(), sessionId, req.question, JSON.stringify(attachments), now));
+                // Retrieve all retained memories for this session
+                storedMemories = (await db.prepare(`
           SELECT memory_key, memory_value FROM oracle_chat_memories WHERE session_id = ?
-        `).all(sessionId) as Array<{ memory_key: string; memory_value: string }>;
-      } catch (err) {
-        console.warn('[ProjectOracle] Session persistence warning:', err);
-      }
-    }
-
-    const personaMode: PersonaMode = req.personaMode || 'ORACLE';
-
-    const recordOracleResponse = (res: OracleAnswerResponse): OracleAnswerResponse => {
-      if (sessionId) {
-        try {
-          const db = getDatabase();
-          db.prepare(`
+        `).all(sessionId)) as Array<{
+                    memory_key: string;
+                    memory_value: string;
+                }>;
+            }
+            catch (err) {
+                throw err;
+            }
+        }
+        const personaMode: PersonaMode = req.personaMode || 'ORACLE';
+        const recordOracleResponse = async (res: OracleAnswerResponse): Promise<OracleAnswerResponse> => {
+            if (sessionId) {
+                try {
+                    const db = getOperationalDatabase();
+                    (await db.prepare(`
             INSERT INTO oracle_chat_messages (id, session_id, sender, text, category, relevant_files_json, suggested_follow_ups_json, created_at)
             VALUES (?, ?, 'oracle', ?, ?, ?, ?, ?)
-          `).run(
-            randomUUID(),
-            sessionId,
-            res.answer,
-            res.category,
-            JSON.stringify(res.relevantFiles),
-            JSON.stringify(res.suggestedFollowUps),
-            Date.now()
-          );
-        } catch (err) {
-          console.warn('[ProjectOracle] Oracle message record warning:', err);
-        }
-      }
-
-      const detectedActions = detectActions(req.question, res.answer, res.category);
-      const imgAttachment = attachments.find(a => a.type === 'image');
-      const visualAudit = imgAttachment ? generateVisualAudit(imgAttachment) : undefined;
-
-      return {
-        ...res,
-        personaMode,
-        actions: detectedActions.length > 0 ? detectedActions : undefined,
-        visualAudit,
-        memoriesRetained: storedMemories.map(m => ({ key: m.memory_key, value: m.memory_value }))
-      };
-    };
-
-    // REAL GROQ LLM INVOCATION FOR ALL CHAT INTERACTIONS (WHEN ACTIVE)
-    if (env.GROQ_API_KEY && env.NODE_ENV !== 'test') {
-      try {
-        let attachmentContext = '';
-        if (attachments.length > 0) {
-          attachmentContext = `\n[ANEXOS RECEBIDOS]:\n` + attachments.map(a => 
-            `- Tipo: ${a.type.toUpperCase()}, Nome: "${a.name}" ${a.extractedText ? `\nConteúdo:\n${a.extractedText}` : ''}`
-          ).join('\n') + '\n';
-        }
-
-        let memoryContext = '';
-        if (storedMemories.length > 0) {
-          memoryContext = `\n[MEMÓRIA ATIVA DE LONGO PRAZO DO USUÁRIO]:\n` +
-            storedMemories.map(m => `• ${m.memory_key}: "${m.memory_value}"`).join('\n') +
-            `\n(INSTRUÇÃO DE MEMÓRIA CRÍTICA: Você POSSUI MEMÓRIA CONTÍNUA e DEVE se lembrar com precisão dessas informações. Chame o usuário pelo nome se conhecido, faça referência às preferências e objetivos declarados e demonstre continuidade total em cada resposta.)\n`;
-        }
-
-        let personaSystemPrompt = `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista, onisciente e COM MEMÓRIA CONTÍNUA sobre o sistema UNION.AI 2.0 e todas as conversas do usuário.
+          `).run(randomUUID(), sessionId, res.answer, res.category, JSON.stringify(res.relevantFiles), JSON.stringify(res.suggestedFollowUps), Date.now()));
+                }
+                catch (err) {
+                    throw err;
+                }
+            }
+            const detectedActions = detectActions(req.question, res.answer, res.category);
+            const imgAttachment = attachments.find(a => a.type === 'image');
+            const visualAudit = undefined;
+            return {
+                ...res,
+                personaMode,
+                actions: detectedActions.length > 0 ? detectedActions : undefined,
+                visualAudit,
+                memoriesRetained: storedMemories.map(m => ({ key: m.memory_key, value: m.memory_value }))
+            };
+        };
+        // REAL GROQ LLM INVOCATION FOR ALL CHAT INTERACTIONS (WHEN ACTIVE)
+        if (env.NODE_ENV === 'production' || (env.GROQ_API_KEY && env.NODE_ENV !== 'test')) {
+            try {
+                let attachmentContext = '';
+                if (attachments.length > 0) {
+                    attachmentContext = `\n[ANEXOS RECEBIDOS]:\n` + attachments.map(a => `- Tipo: ${a.type.toUpperCase()}, Nome: "${a.name}" ${a.extractedText ? `\nConteúdo:\n${a.extractedText}` : ''}`).join('\n') + '\n';
+                }
+                let memoryContext = '';
+                if (storedMemories.length > 0) {
+                    memoryContext = `\n[MEMÓRIA ATIVA DE LONGO PRAZO DO USUÁRIO]:\n` +
+                        storedMemories.map(m => `• ${m.memory_key}: "${m.memory_value}"`).join('\n') +
+                        `\n(INSTRUÇÃO DE MEMÓRIA CRÍTICA: Você POSSUI MEMÓRIA CONTÍNUA e DEVE se lembrar com precisão dessas informações. Chame o usuário pelo nome se conhecido, faça referência às preferências e objetivos declarados e demonstre continuidade total em cada resposta.)\n`;
+                }
+                let personaSystemPrompt = `Você é o UNION.AI Project Oracle, uma inteligência artificial especialista, onisciente e COM MEMÓRIA CONTÍNUA sobre o sistema UNION.AI 2.0 e todas as conversas do usuário.
 Você possui conhecimento profundo sobre:
 1. Data Bus com tipagem estrita de portas (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE).
 2. Simulador de Conversão e Heatmap Psicológico (Chave de Ouro) com 5 personas sintéticas (Dr. Roberto Meirelles - Cético, Ana Lívia - Executiva Ocupada, Carlos Mendes - Econômico, Mariana Costa - Analítica, Lucas Rocha - Emocional), cálculo de CPS (0-100) e 1-Click Auto-Healing.
@@ -325,127 +308,70 @@ Você possui conhecimento profundo sobre:
 5. Telemetria Prometheus em /metrics e banco SQLite com WAL.
 6. Capacidades multimodais completas: voz (STT/TTS), imagens e leitura de PDFs.
 7. MEMÓRIA CONTÍNUA: Você NUNCA esquece o que o usuário diz. Mantenha continuidade absoluta de diálogo.`;
-
-        if (personaMode === 'SKEPTIC') {
-          personaSystemPrompt = `Você é o DR. ROBERTO MEIRELLES, o comprador mais CÉTICO, rigoroso e desconfiado do mercado.
+                if (personaMode === 'SKEPTIC') {
+                    personaSystemPrompt = `Você é o DR. ROBERTO MEIRELLES, o comprador mais CÉTICO, rigoroso e desconfiado do mercado.
 Você odeia promessas milagrosas, clichês de marketing ou afirmações vazias sem comprovação empírica.
 Ao avaliar qualquer pergunta, copy ou proposta:
 - Aponte os pontos fracos onde o cliente desconfiaria e abandonaria a página (Drop-Off crítico).
 - Diga com sinceridade brutal por que você NÃO compraria agora.
 - Forneça a correção cirúrgica para passar no seu crivo de ceticismo e blindar a garantia.
 Mantenha uma postura culta, firme, analítica e provocativa em português formal.`;
-        } else if (personaMode === 'EXECUTIVE') {
-          personaSystemPrompt = `Você é ANA LÍVIA SIQUEIRA, uma Executiva C-Level ocupada focada em ROI e velocidade.
+                }
+                else if (personaMode === 'EXECUTIVE') {
+                    personaSystemPrompt = `Você é ANA LÍVIA SIQUEIRA, uma Executiva C-Level ocupada focada em ROI e velocidade.
 Você avalia clareza em 3 segundos, métricas objetivas e zero enrolação.
 Seja direta, enxuta e focada em resultados práticos.`;
-        } else if (personaMode === 'COPYWRITER') {
-          personaSystemPrompt = `Você é o MESTRE COPYWRITER DE DIRECT RESPONSE do UNION.AI.
+                }
+                else if (personaMode === 'COPYWRITER') {
+                    personaSystemPrompt = `Você é o MESTRE COPYWRITER DE DIRECT RESPONSE do UNION.AI.
 Você domina a arquitetura dos 14 Blocos da Seção 27, mecanismos únicos e roteiros de VSL hipnóticos.
 Formate copys magnéticas prontas para conversão e teste no Simulador CPS.`;
-        } else if (personaMode === 'ARCHITECT') {
-          personaSystemPrompt = `Você é o ARQUITETO DE SOFTWARE & ENGENHEIRO DE DADOS do UNION.AI 2.0.
+                }
+                else if (personaMode === 'ARCHITECT') {
+                    personaSystemPrompt = `Você é o ARQUITETO DE SOFTWARE & ENGENHEIRO DE DADOS do UNION.AI 2.0.
 Você analisa conexões de nós no Canvas, tipagem estrita do Data Bus (URL, TRANSCRIPT, TEXT, TABLE, DOCUMENT, JSON, AI_RESPONSE), telemetria Prometheus em /metrics e banco SQLite com WAL.`;
+                }
+                if (!req.userId) throw new Error('AUTHENTICATION_REQUIRED');
+                const response = await executeBilledAi(req.userId, { role: 'ai-chat', model: 'groq-llama-3',
+                  systemPrompt: 'Você é o assistente UNION AI. Baseie-se apenas no contexto recebido. Nunca alegue onisciência, execução de ações ou análise visual que não realizou. O backend usa PostgreSQL; Groq é o único provedor integrado. Nós indisponíveis devem produzir erro explícito. Memórias só existem quando fornecidas neste pedido.',
+                  userPrompt: req.question, context: `${req.context || ''}${memoryContext}${attachmentContext}` });
+                return await recordOracleResponse({ category: 'QUICK_START', relevantFiles: [], suggestedFollowUps: [], answer: response.content });
+            }
+            catch (err) {
+                throw err;
+            }
         }
-
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${env.GROQ_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: env.GROQ_MODEL || 'openai/gpt-oss-120b',
-            messages: [
-              {
-                role: 'system',
-                content: `${personaSystemPrompt}
-${memoryContext}
-Responda sempre com autoridade, clareza técnica e precisão em português formal, usando formatação rica em Markdown.`
-              },
-              ...(req.conversationHistory || []).map(h => ({
-                role: h.sender === 'user' ? 'user' : 'assistant',
-                content: h.text
-              })),
-              {
-                role: 'user',
-                content: `${attachmentContext}${req.question}`
-              }
-            ],
-            max_tokens: 1200,
-            temperature: 0.6
-          })
-        });
-
-        if (groqRes.ok) {
-          const groqData = (await groqRes.json()) as any;
-          const generatedAnswer = groqData.choices?.[0]?.message?.content;
-          if (generatedAnswer) {
-            let cat: OracleAnswerResponse['category'] = 'QUICK_START';
-            if (attachments.length > 0) cat = 'MULTIMODAL';
-            else if (q.includes('simulador') || q.includes('conversão') || q.includes('heatmap') || q.includes('cps')) cat = 'SIMULATOR';
-            else if (q.includes('data bus') || q.includes('databus') || q.includes('pacote') || q.includes('porta')) cat = 'DATA_BUS';
-            else if (q.includes('14 blocos') || q.includes('vsl') || q.includes('copy')) cat = 'MARKETING_ENGINES';
-            else if (q.includes('template') || q.includes('modelo')) cat = 'TEMPLATES';
-            else if (q.includes('observabilidade') || q.includes('prometheus') || q.includes('métrica')) cat = 'OBSERVABILITY';
-
-            return recordOracleResponse({
-              category: cat,
-              relevantFiles: [
-                'packages/shared/src/types/data-bus.ts',
-                'packages/shared/src/types/simulation.ts',
-                'packages/server/src/services/marketing/simulation-engine.ts',
-                'packages/client/src/App.tsx'
-              ],
-              suggestedFollowUps: [
-                'Como testar esta copy no Simulador de Conversão?',
-                'Como funciona o Data Bus e a integridade de dados?',
-                'Quais templates prontos eu posso utilizar agora?'
-              ],
-              attachmentAnalysis: attachments.length > 0 ? {
-                filesProcessed: attachments.length,
-                summary: `Processados ${attachments.length} arquivo(s) com IA da Groq em tempo real.`,
-                detectedInsights: attachments.map(a => `Análise ativa para ${a.name}`)
-              } : undefined,
-              answer: generatedAnswer
-            });
-          }
+        // 0. MEMORY RECALL CHECK (Offline / Deterministic)
+        if (storedMemories.length > 0 && (q.includes('qual é o meu nome') || q.includes('qual meu nome') || q.includes('quem sou eu') || q.includes('lembra') || q.includes('memória') || q.includes('me chamo'))) {
+            const nameMem = storedMemories.find(m => m.memory_key === 'Nome do Usuário');
+            return (await recordOracleResponse({
+                category: 'QUICK_START',
+                relevantFiles: ['packages/server/src/services/chat/project-oracle-service.ts'],
+                suggestedFollowUps: ['Como o Simulador de Conversão pode me ajudar no meu nicho?'],
+                answer: `Sim, com certeza me lembro! ${nameMem ? `Você se chama **${nameMem.memory_value}**.` : ''}\n\n🧠 **Aqui está o que tenho gravado na minha memória contínua:**\n` +
+                    storedMemories.map(m => `• **${m.memory_key}**: ${m.memory_value}`).join('\n') +
+                    `\n\nEstou com todas as suas informações gravadas para continuarmos de onde paramos!`
+            }));
         }
-      } catch (err) {
-        console.warn('[ProjectOracle] Groq API falhou, usando base offline determinística:', err);
-      }
-    }
-
-    // 0. MEMORY RECALL CHECK (Offline / Deterministic)
-    if (storedMemories.length > 0 && (q.includes('qual é o meu nome') || q.includes('qual meu nome') || q.includes('quem sou eu') || q.includes('lembra') || q.includes('memória') || q.includes('me chamo'))) {
-      const nameMem = storedMemories.find(m => m.memory_key === 'Nome do Usuário');
-      return recordOracleResponse({
-        category: 'QUICK_START',
-        relevantFiles: ['packages/server/src/services/chat/project-oracle-service.ts'],
-        suggestedFollowUps: ['Como o Simulador de Conversão pode me ajudar no meu nicho?'],
-        answer: `Sim, com certeza me lembro! ${nameMem ? `Você se chama **${nameMem.memory_value}**.` : ''}\n\n🧠 **Aqui está o que tenho gravado na minha memória contínua:**\n` +
-          storedMemories.map(m => `• **${m.memory_key}**: ${m.memory_value}`).join('\n') +
-          `\n\nEstou com todas as suas informações gravadas para continuarmos de onde paramos!`
-      });
-    }
-
-    // Multimodal Analysis if attachments are provided
-    if (attachments.length > 0) {
-      const insights: string[] = [];
-      let totalExtracted = '';
-
-      for (const att of attachments) {
-        if (att.type === 'image') {
-          insights.push(`🖼️ Imagem "${att.name}": Layout visual identificado. Pode ser conectado ao Canvas como ativo de anúncio ou wireframe de página.`);
-        } else if (att.type === 'pdf' || att.type === 'document') {
-          const charCount = att.extractedText?.length || 0;
-          insights.push(`📄 Documento/PDF "${att.name}" (${charCount} caracteres): Conteúdo indexado com sucesso. Pronto para alimentar nós de extração de ICP, VSL ou 14 blocos.`);
-          if (att.extractedText) totalExtracted += `\n[Documento: ${att.name}]\n${att.extractedText}\n`;
-        } else if (att.type === 'audio') {
-          insights.push(`🎙️ Áudio "${att.name}": Transcrição processada via motor de voz.`);
-        }
-      }
-
-      const answer = `### 🧠 Análise Multimodal pelo Project Oracle
+        // Multimodal Analysis if attachments are provided
+        if (attachments.length > 0) {
+            const insights: string[] = [];
+            let totalExtracted = '';
+            for (const att of attachments) {
+                if (att.type === 'image') {
+                    insights.push(`🖼️ Imagem "${att.name}": Layout visual identificado. Pode ser conectado ao Canvas como ativo de anúncio ou wireframe de página.`);
+                }
+                else if (att.type === 'pdf' || att.type === 'document') {
+                    const charCount = att.extractedText?.length || 0;
+                    insights.push(`📄 Documento/PDF "${att.name}" (${charCount} caracteres): Conteúdo indexado com sucesso. Pronto para alimentar nós de extração de ICP, VSL ou 14 blocos.`);
+                    if (att.extractedText)
+                        totalExtracted += `\n[Documento: ${att.name}]\n${att.extractedText}\n`;
+                }
+                else if (att.type === 'audio') {
+                    insights.push(`🎙️ Áudio "${att.name}": Transcrição processada via motor de voz.`);
+                }
+            }
+            const answer = `### 🧠 Análise Multimodal pelo Project Oracle
 
 Processei **${attachments.length} anexo(s)** enviados juntamente com sua pergunta: *" ${req.question} "*:
 
@@ -458,39 +384,37 @@ ${attachments.some(a => a.type === 'audio') ? `3. **Comando de Voz**: Áudio tra
 
 **Próximo Passo Recomendado:**
 Você gostaria que eu formate esse conteúdo para o **Simulador de Conversão com Heatmap** ou prefere criar um pipeline no Canvas para gerar anúncios a partir dele?`;
-
-      return recordOracleResponse({
-        category: 'MULTIMODAL',
-        relevantFiles: [
-          'packages/server/src/services/extractors/pdf-extractor.ts',
-          'packages/server/src/services/marketing/simulation-engine.ts',
-          'packages/shared/src/types/data-bus.ts'
-        ],
-        suggestedFollowUps: [
-          'Submeter este conteúdo ao Simulador de Conversão CPS?',
-          'Como conectar este documento a um nó no Canvas?',
-          'Extrair os 14 blocos de página de vendas deste texto?'
-        ],
-        attachmentAnalysis: {
-          filesProcessed: attachments.length,
-          summary: `Processados ${attachments.length} arquivo(s) com sucesso.`,
-          detectedInsights: insights
-        },
-        answer
-      });
-    }
-
-    // Persona Modes Offline Handling
-    if (personaMode === 'SKEPTIC') {
-      return recordOracleResponse({
-        category: 'SIMULATOR',
-        relevantFiles: ['packages/shared/src/types/simulation.ts', 'packages/server/src/services/marketing/simulation-engine.ts'],
-        suggestedFollowUps: [
-          'Como adicionar prova social irrefutável e auditoria?',
-          'Como estruturar uma garantia incondicional de risco zero?',
-          'Simular esta copy no termômetro psicológico CPS?'
-        ],
-        answer: `### 🧐 Dr. Roberto Meirelles (Ceticismo Cirúrgico)
+            return (await recordOracleResponse({
+                category: 'MULTIMODAL',
+                relevantFiles: [
+                    'packages/server/src/services/extractors/pdf-extractor.ts',
+                    'packages/server/src/services/marketing/simulation-engine.ts',
+                    'packages/shared/src/types/data-bus.ts'
+                ],
+                suggestedFollowUps: [
+                    'Submeter este conteúdo ao Simulador de Conversão CPS?',
+                    'Como conectar este documento a um nó no Canvas?',
+                    'Extrair os 14 blocos de página de vendas deste texto?'
+                ],
+                attachmentAnalysis: {
+                    filesProcessed: attachments.length,
+                    summary: `Processados ${attachments.length} arquivo(s) com sucesso.`,
+                    detectedInsights: insights
+                },
+                answer
+            }));
+        }
+        // Persona Modes Offline Handling
+        if (personaMode === 'SKEPTIC') {
+            return (await recordOracleResponse({
+                category: 'SIMULATOR',
+                relevantFiles: ['packages/shared/src/types/simulation.ts', 'packages/server/src/services/marketing/simulation-engine.ts'],
+                suggestedFollowUps: [
+                    'Como adicionar prova social irrefutável e auditoria?',
+                    'Como estruturar uma garantia incondicional de risco zero?',
+                    'Simular esta copy no termômetro psicológico CPS?'
+                ],
+                answer: `### 🧐 Dr. Roberto Meirelles (Ceticismo Cirúrgico)
 
 Examinei sua proposta sobre *" ${req.question} "* com máxima desconfiança analítica.
 
@@ -500,37 +424,35 @@ Como comprador cético profissional, aponto as seguintes inconsistências:
 3. **Mecanismo Pouco Claro**: Explique detalhadamente o mecanismo único por trás do resultado para remover qualquer impressão de fórmula mágica.
 
 **Meu Veredito de Compra:** Neste momento, **REJEITADO (Drop-Off Crítico)**. Corrija a reversão de risco e submeta novamente ao meu crivo!`
-      });
-    }
-
-    if (personaMode === 'EXECUTIVE') {
-      return recordOracleResponse({
-        category: 'SIMULATOR',
-        relevantFiles: ['packages/shared/src/types/simulation.ts'],
-        suggestedFollowUps: [
-          'Qual é o tempo estimado para payback/ROI?',
-          'Como resumir essa proposta para a dobra principal?'
-        ],
-        answer: `### ⚡ Ana Lívia Siqueira (Análise Executiva de ROI)
+            }));
+        }
+        if (personaMode === 'EXECUTIVE') {
+            return (await recordOracleResponse({
+                category: 'SIMULATOR',
+                relevantFiles: ['packages/shared/src/types/simulation.ts'],
+                suggestedFollowUps: [
+                    'Qual é o tempo estimado para payback/ROI?',
+                    'Como resumir essa proposta para a dobra principal?'
+                ],
+                answer: `### ⚡ Ana Lívia Siqueira (Análise Executiva de ROI)
 
 Direto ao ponto sobre *" ${req.question} "*:
 
 1. **Tempo de Leitura**: Precisa provar valor em no máximo 3 segundos. Corte adjetivos vazios.
 2. **Retorno do Investimento (ROI)**: Apresente o resultado quantitativo na headline principal.
 3. **Clareza de Ação**: Um único botão claro de ação (CTA) visível sem rolagem de tela.`
-      });
-    }
-
-    if (personaMode === 'COPYWRITER') {
-      return recordOracleResponse({
-        category: 'MARKETING_ENGINES',
-        relevantFiles: ['packages/shared/src/types/sales-page.ts', 'packages/server/src/services/marketing/marketing-engine.ts'],
-        suggestedFollowUps: [
-          'Montar os 14 blocos completos para meu produto?',
-          'Gerar script de VSL em 12 passos?',
-          'Testar esta copy no Simulador de Conversão?'
-        ],
-        answer: `### ✍️ Mestre Copywriter (Engenharia dos 14 Blocos)
+            }));
+        }
+        if (personaMode === 'COPYWRITER') {
+            return (await recordOracleResponse({
+                category: 'MARKETING_ENGINES',
+                relevantFiles: ['packages/shared/src/types/sales-page.ts', 'packages/server/src/services/marketing/marketing-engine.ts'],
+                suggestedFollowUps: [
+                    'Montar os 14 blocos completos para meu produto?',
+                    'Gerar script de VSL em 12 passos?',
+                    'Testar esta copy no Simulador de Conversão?'
+                ],
+                answer: `### ✍️ Mestre Copywriter (Engenharia dos 14 Blocos)
 
 Aqui está a estruturação de alta conversão para *" ${req.question} "*:
 
@@ -540,42 +462,40 @@ Aqui está a estruturação de alta conversão para *" ${req.question} "*:
 - **Bloco 10 (Garantia Blindada)**: 30 dias de risco zero para desarmar qualquer resistência.
 
 Clique em **[🧪 Testar no Simulador de Conversão]** abaixo para rodar o teste com o Dr. Roberto e as outras 4 personas!`
-      });
-    }
-
-    if (personaMode === 'ARCHITECT') {
-      return recordOracleResponse({
-        category: 'DATA_BUS',
-        relevantFiles: ['packages/shared/src/types/data-bus.ts', 'packages/server/src/services/data-bus/'],
-        suggestedFollowUps: [
-          'Como o DataPacket garante tipagem estrita entre nós?',
-          'Onde consultar o endpoint de métricas Prometheus?'
-        ],
-        answer: `### 🛠️ Arquiteto de Software UNION.AI 2.0
+            }));
+        }
+        if (personaMode === 'ARCHITECT') {
+            return (await recordOracleResponse({
+                category: 'DATA_BUS',
+                relevantFiles: ['packages/shared/src/types/data-bus.ts', 'packages/server/src/services/data-bus/'],
+                suggestedFollowUps: [
+                    'Como o DataPacket garante tipagem estrita entre nós?',
+                    'Onde consultar o endpoint de métricas Prometheus?'
+                ],
+                answer: `### 🛠️ Arquiteto de Software UNION.AI 2.0
 
 Diagnóstico de arquitetura e integridade de dados para *" ${req.question} "*:
 
 1. **Data Bus Estrito**: Comunicação através de \`DataPacket<T>\` com validação de portas.
 2. **Persistência**: SQLite em modo WAL garantindo alta concorrência de leitura/escrita.
 3. **Observabilidade**: Métricas expostas em \`GET /metrics\` para Prometheus.`
-      });
-    }
-
-    // 1. DATA BUS & TYPES
-    if (q.includes('data bus') || q.includes('databus') || q.includes('pacote') || q.includes('datapacket') || q.includes('porta') || q.includes('tipo')) {
-      return recordOracleResponse({
-        category: 'DATA_BUS',
-        relevantFiles: [
-          'packages/shared/src/types/data-bus.ts',
-          'packages/client/src/components/canvas/DataPacketInspectorModal.tsx',
-          'packages/server/src/services/data-bus/'
-        ],
-        suggestedFollowUps: [
-          'Como o DataPacketInspectorModal exibe os pacotes em tempo real?',
-          'Como funciona a compatibilidade entre portas de nós no Canvas?',
-          'Como o TypeGuard valida a transição de tipos?'
-        ],
-        answer: `### 🌐 Arquitetura do Data Bus (UNION.AI 2.0)
+            }));
+        }
+        // 1. DATA BUS & TYPES
+        if (q.includes('data bus') || q.includes('databus') || q.includes('pacote') || q.includes('datapacket') || q.includes('porta') || q.includes('tipo')) {
+            return (await recordOracleResponse({
+                category: 'DATA_BUS',
+                relevantFiles: [
+                    'packages/shared/src/types/data-bus.ts',
+                    'packages/client/src/components/canvas/DataPacketInspectorModal.tsx',
+                    'packages/server/src/services/data-bus/'
+                ],
+                suggestedFollowUps: [
+                    'Como o DataPacketInspectorModal exibe os pacotes em tempo real?',
+                    'Como funciona a compatibilidade entre portas de nós no Canvas?',
+                    'Como o TypeGuard valida a transição de tipos?'
+                ],
+                answer: `### 🌐 Arquitetura do Data Bus (UNION.AI 2.0)
 
 O **Data Bus** é a espinha dorsal de comunicação e integridade entre os nós do pipeline no UNION.AI:
 
@@ -589,24 +509,23 @@ O **Data Bus** é a espinha dorsal de comunicação e integridade entre os nós 
 
 3. **Auditoria & Inspeção em Tempo Real**:
    - O componente \`DataPacketInspectorModal.tsx\` permite inspecionar cada pacote que passou pela aresta com tokens e JSON bruto.`
-      });
-    }
-
-    // 2. SIMULADOR & HEATMAP (CHAVE DE OURO)
-    if (q.includes('simulador') || q.includes('conversão') || q.includes('heatmap') || q.includes('persona') || q.includes('cps') || q.includes('auto-heal') || q.includes('cura') || q.includes('diferencial')) {
-      return recordOracleResponse({
-        category: 'SIMULATOR',
-        relevantFiles: [
-          'packages/shared/src/types/simulation.ts',
-          'packages/server/src/services/marketing/simulation-engine.ts',
-          'packages/client/src/components/marketing/ConversionSimulatorModal.tsx'
-        ],
-        suggestedFollowUps: [
-          'Como o CPS (Conversion Probability Score) é calculado?',
-          'Quais são os 5 arquétipos de personas sintéticas?',
-          'Como funciona a Auto-Cura em 1 clique (1-Click Auto-Healing)?'
-        ],
-        answer: `### 🎯 AI Conversion Simulator & Heatmap Visualizer (Chave de Ouro)
+            }));
+        }
+        // 2. SIMULADOR & HEATMAP (CHAVE DE OURO)
+        if (q.includes('simulador') || q.includes('conversão') || q.includes('heatmap') || q.includes('persona') || q.includes('cps') || q.includes('auto-heal') || q.includes('cura') || q.includes('diferencial')) {
+            return (await recordOracleResponse({
+                category: 'SIMULATOR',
+                relevantFiles: [
+                    'packages/shared/src/types/simulation.ts',
+                    'packages/server/src/services/marketing/simulation-engine.ts',
+                    'packages/client/src/components/marketing/ConversionSimulatorModal.tsx'
+                ],
+                suggestedFollowUps: [
+                    'Como o CPS (Conversion Probability Score) é calculado?',
+                    'Quais são os 5 arquétipos de personas sintéticas?',
+                    'Como funciona a Auto-Cura em 1 clique (1-Click Auto-Healing)?'
+                ],
+                answer: `### 🎯 AI Conversion Simulator & Heatmap Visualizer (Chave de Ouro)
 
 Este é o grande diferencial competitivo do **UNION.AI 2.0**:
 
@@ -623,24 +542,23 @@ Este é o grande diferencial competitivo do **UNION.AI 2.0**:
 
 3. **1-Click Auto-Healing**:
    - Reescreve cirurgicamente o bloco com objeções, injetando reversão de risco e garantia de 30 dias.`
-      });
-    }
-
-    // 3. 14 BLOCOS DA PÁGINA DE VENDAS & VSL
-    if (q.includes('bloco') || q.includes('14 blocos') || q.includes('vsl') || q.includes('sales-page') || q.includes('copy') || q.includes('seção 27') || q.includes('secao 27')) {
-      return recordOracleResponse({
-        category: 'MARKETING_ENGINES',
-        relevantFiles: [
-          'packages/shared/src/types/sales-page.ts',
-          'packages/server/src/services/marketing/marketing-engine.ts',
-          'packages/server/src/routes/marketing.ts'
-        ],
-        suggestedFollowUps: [
-          'Quais são os 14 blocos da Página de Vendas da Seção 27?',
-          'Como gerar um VSL de 12 passos pelo backend?',
-          'Como exportar a copy gerada para Markdown ou HTML?'
-        ],
-        answer: `### 📝 Arquitetura dos 14 Blocos de Alta Conversão (Seção 27)
+            }));
+        }
+        // 3. 14 BLOCOS DA PÁGINA DE VENDAS & VSL
+        if (q.includes('bloco') || q.includes('14 blocos') || q.includes('vsl') || q.includes('sales-page') || q.includes('copy') || q.includes('seção 27') || q.includes('secao 27')) {
+            return (await recordOracleResponse({
+                category: 'MARKETING_ENGINES',
+                relevantFiles: [
+                    'packages/shared/src/types/sales-page.ts',
+                    'packages/server/src/services/marketing/marketing-engine.ts',
+                    'packages/server/src/routes/marketing.ts'
+                ],
+                suggestedFollowUps: [
+                    'Quais são os 14 blocos da Página de Vendas da Seção 27?',
+                    'Como gerar um VSL de 12 passos pelo backend?',
+                    'Como exportar a copy gerada para Markdown ou HTML?'
+                ],
+                answer: `### 📝 Arquitetura dos 14 Blocos de Alta Conversão (Seção 27)
 
 Implementado com base nas maiores referências de direct response:
 
@@ -658,24 +576,23 @@ Implementado com base nas maiores referências de direct response:
 - **Bloco 12**: Urgência Real & Escassez
 - **Bloco 13**: FAQ Quebra-Objeções
 - **Bloco 14**: CTA Final & Fechamento com os Dois Caminhos`
-      });
-    }
-
-    // 4. TEMPLATES PRONTOS
-    if (q.includes('template') || q.includes('modelo') || q.includes('pronto') || q.includes('biblioteca') || q.includes('iniciar')) {
-      return recordOracleResponse({
-        category: 'TEMPLATES',
-        relevantFiles: [
-          'packages/server/src/services/templates/template-service.ts',
-          'packages/client/src/components/templates/TemplateLibraryModal.tsx',
-          'packages/shared/src/types/template.ts'
-        ],
-        suggestedFollowUps: [
-          'Como carregar o Template de Análise de Concorrentes?',
-          'Como funciona o Template de YouTube para VSL?',
-          'Posso salvar meu próprio pipeline como template?'
-        ],
-        answer: `### 📚 Biblioteca de Templates Oficiais (UNION.AI 2.0)
+            }));
+        }
+        // 4. TEMPLATES PRONTOS
+        if (q.includes('template') || q.includes('modelo') || q.includes('pronto') || q.includes('biblioteca') || q.includes('iniciar')) {
+            return (await recordOracleResponse({
+                category: 'TEMPLATES',
+                relevantFiles: [
+                    'packages/server/src/services/templates/template-service.ts',
+                    'packages/client/src/components/templates/TemplateLibraryModal.tsx',
+                    'packages/shared/src/types/template.ts'
+                ],
+                suggestedFollowUps: [
+                    'Como carregar o Template de Análise de Concorrentes?',
+                    'Como funciona o Template de YouTube para VSL?',
+                    'Posso salvar meu próprio pipeline como template?'
+                ],
+                answer: `### 📚 Biblioteca de Templates Oficiais (UNION.AI 2.0)
 
 O sistema conta com 4 templates de produção prontos para 1 clique:
 
@@ -683,45 +600,43 @@ O sistema conta com 4 templates de produção prontos para 1 clique:
 2. **Competitor Teardown & High-Converting Copy**: Web Scraping/PDF -> Análise SWOT -> 14 Blocos de Vendas.
 3. **Omnichannel Content Engine**: Transforma conteúdo longo em carrosséis, e-mails e posts.
 4. **Research Deep Dive & Market Avatar**: Mineração de ICP e níveis de consciência de Schwartz.`
-      });
-    }
-
-    // 5. OBSERVABILIDADE & PROMETHEUS
-    if (q.includes('observabilidade') || q.includes('métrica') || q.includes('metric') || q.includes('prometheus') || q.includes('monitor') || q.includes('token')) {
-      return recordOracleResponse({
-        category: 'OBSERVABILITY',
-        relevantFiles: [
-          'packages/server/src/services/metrics-collector.ts',
-          'packages/server/src/routes/observability.ts',
-          'packages/client/src/components/observability/ObservabilityDrawer.tsx'
-        ],
-        suggestedFollowUps: [
-          'Qual endpoint expõe as métricas Prometheus?',
-          'Como visualizar o consumo de tokens por nó?',
-          'Qual é o banco de dados utilizado pelo backend?'
-        ],
-        answer: `### 📊 Observabilidade & Métricas de Produção
+            }));
+        }
+        // 5. OBSERVABILIDADE & PROMETHEUS
+        if (q.includes('observabilidade') || q.includes('métrica') || q.includes('metric') || q.includes('prometheus') || q.includes('monitor') || q.includes('token')) {
+            return (await recordOracleResponse({
+                category: 'OBSERVABILITY',
+                relevantFiles: [
+                    'packages/server/src/services/metrics-collector.ts',
+                    'packages/server/src/routes/observability.ts',
+                    'packages/client/src/components/observability/ObservabilityDrawer.tsx'
+                ],
+                suggestedFollowUps: [
+                    'Qual endpoint expõe as métricas Prometheus?',
+                    'Como visualizar o consumo de tokens por nó?',
+                    'Qual é o banco de dados utilizado pelo backend?'
+                ],
+                answer: `### 📊 Observabilidade & Métricas de Produção
 
 - **Endpoint Prometheus**: \`GET /metrics\` no padrão OpenMetrics.
 - **Painel no Frontend**: \`ObservabilityDrawer.tsx\` com gráficos de taxa de sucesso, consumo de tokens por nó e custo em créditos.`
-      });
-    }
-
-    // DEFAULT / RESUMO GERAL (FALLBACK DETERMINÍSTICO OFFLINE)
-    return recordOracleResponse({
-      category: 'QUICK_START',
-      relevantFiles: [
-        'MANUAL_DO_USUARIO.md',
-        'packages/client/src/App.tsx',
-        'packages/server/src/app.ts'
-      ],
-      suggestedFollowUps: [
-        'Como funciona o Simulador de Conversão e Heatmap?',
-        'O que é o Data Bus e como ele garante zero erro no pipeline?',
-        'Quais templates prontos eu posso utilizar agora?',
-        'Como anexar PDFs, imagens ou falar por voz no chat?'
-      ],
-      answer: `### 🤖 Olá! Eu sou o UNION.AI Project Oracle
+            }));
+        }
+        // DEFAULT / RESUMO GERAL (FALLBACK DETERMINÍSTICO OFFLINE)
+        return (await recordOracleResponse({
+            category: 'QUICK_START',
+            relevantFiles: [
+                'MANUAL_DO_USUARIO.md',
+                'packages/client/src/App.tsx',
+                'packages/server/src/app.ts'
+            ],
+            suggestedFollowUps: [
+                'Como funciona o Simulador de Conversão e Heatmap?',
+                'O que é o Data Bus e como ele garante zero erro no pipeline?',
+                'Quais templates prontos eu posso utilizar agora?',
+                'Como anexar PDFs, imagens ou falar por voz no chat?'
+            ],
+            answer: `### 🤖 Olá! Eu sou o UNION.AI Project Oracle
 
 Tenho conhecimento profundo sobre toda a arquitetura do sistema, **memória persistente contínua** e **capacidades multimodais completas**:
 
@@ -733,71 +648,71 @@ Tenho conhecimento profundo sobre toda a arquitetura do sistema, **memória pers
 - 📚 **Templates & Observabilidade**: 4 pipelines de produção prontos e telemetria Prometheus em \`/metrics\`.
 
 Como posso ajudar você agora?`
-    });
-  }
-
-  /**
-   * Retrieves full chat history for a given session from SQLite.
-   */
-  public static getSessionHistory(sessionId: string): Array<{
-    id: string;
-    sender: 'user' | 'oracle';
-    text: string;
-    category?: string;
-    relevantFiles?: string[];
-    suggestedFollowUps?: string[];
-    attachments?: OracleAttachment[];
-    createdAt: number;
-  }> {
-    const db = getDatabase();
-    const rows = db.prepare(`
+        }));
+    }
+    /**
+     * Retrieves full chat history for a given session from SQLite.
+     */
+    public static async getSessionHistory(sessionId: string): Promise<Array<{
+        id: string;
+        sender: 'user' | 'oracle';
+        text: string;
+        category?: string;
+        relevantFiles?: string[];
+        suggestedFollowUps?: string[];
+        attachments?: OracleAttachment[];
+        createdAt: number;
+    }>> {
+        const db = getOperationalDatabase();
+        const rows = (await db.prepare(`
       SELECT * FROM oracle_chat_messages WHERE session_id = ? ORDER BY created_at ASC
-    `).all(sessionId) as any[];
-
-    return rows.map(r => ({
-      id: r.id,
-      sender: r.sender,
-      text: r.text,
-      category: r.category,
-      relevantFiles: JSON.parse(r.relevant_files_json || '[]'),
-      suggestedFollowUps: JSON.parse(r.suggested_follow_ups_json || '[]'),
-      attachments: JSON.parse(r.attachments_json || '[]'),
-      createdAt: r.created_at
-    }));
-  }
-
-  /**
-   * Retrieves active retained memories for a given session.
-   */
-  public static getSessionMemories(sessionId: string): Array<{ key: string; value: string }> {
-    const db = getDatabase();
-    const rows = db.prepare(`
+    `).all(sessionId)) as any[];
+        return rows.map(r => ({
+            id: r.id,
+            sender: r.sender,
+            text: r.text,
+            category: r.category,
+            relevantFiles: JSON.parse(r.relevant_files_json || '[]'),
+            suggestedFollowUps: JSON.parse(r.suggested_follow_ups_json || '[]'),
+            attachments: JSON.parse(r.attachments_json || '[]'),
+            createdAt: r.created_at
+        }));
+    }
+    /**
+     * Retrieves active retained memories for a given session.
+     */
+    public static async getSessionMemories(sessionId: string): Promise<Array<{
+        key: string;
+        value: string;
+    }>> {
+        const db = getOperationalDatabase();
+        const rows = (await db.prepare(`
       SELECT memory_key, memory_value FROM oracle_chat_memories WHERE session_id = ?
-    `).all(sessionId) as Array<{ memory_key: string; memory_value: string }>;
-
-    return rows.map(r => ({ key: r.memory_key, value: r.memory_value }));
-  }
-
-  /**
-   * Manually store a persistent memory for a session.
-   */
-  public static saveMemory(sessionId: string, key: string, value: string): void {
-    const db = getDatabase();
-    const now = Date.now();
-    db.prepare(`
+    `).all(sessionId)) as Array<{
+            memory_key: string;
+            memory_value: string;
+        }>;
+        return rows.map(r => ({ key: r.memory_key, value: r.memory_value }));
+    }
+    /**
+     * Manually store a persistent memory for a session.
+     */
+    public static async saveMemory(sessionId: string, key: string, value: string): Promise<void> {
+        const db = getOperationalDatabase();
+        const now = Date.now();
+        (await db.prepare(`
       INSERT INTO oracle_chat_memories (id, session_id, memory_key, memory_value, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(session_id, memory_key) DO UPDATE SET memory_value = excluded.memory_value, updated_at = excluded.updated_at
-    `).run(randomUUID(), sessionId, key, value, now, now);
-  }
-
-  /**
-   * Permanently clears all messages and memories for a session.
-   */
-  public static clearSession(sessionId: string): void {
-    const db = getDatabase();
-    db.prepare(`DELETE FROM oracle_chat_memories WHERE session_id = ?`).run(sessionId);
-    db.prepare(`DELETE FROM oracle_chat_messages WHERE session_id = ?`).run(sessionId);
-    db.prepare(`DELETE FROM oracle_chat_sessions WHERE id = ?`).run(sessionId);
-  }
+    `).run(randomUUID(), sessionId, key, value, now, now));
+    }
+    /**
+     * Permanently clears all messages and memories for a session.
+     */
+    public static async clearSession(sessionId: string): Promise<void> {
+        const db = getOperationalDatabase();
+        (await db.prepare(`DELETE FROM oracle_chat_memories WHERE session_id = ?`).run(sessionId));
+        (await db.prepare(`DELETE FROM oracle_chat_messages WHERE session_id = ?`).run(sessionId));
+        (await db.prepare(`DELETE FROM oracle_chat_sessions WHERE id = ?`).run(sessionId));
+    }
 }

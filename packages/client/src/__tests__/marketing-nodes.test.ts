@@ -97,8 +97,8 @@ describe('Gate 14: Marketing Intelligence Nodes & Canvas Integration', () => {
       const nodeDef = createNodeFromTemplate('marketing-avatar');
       const result = await defaultNodeHandler(nodeDef, {}, controller.signal);
 
-      expect(result.tokens).toBeGreaterThan(100);
-      expect(result.credits).toBeGreaterThan(0.01);
+      expect(result.tokens).toBe(0);
+      expect(result.credits).toBe(0);
       expect(result.outputs['out-avatar']).toBeDefined();
       expect(result.outputs['out-avatar'].type).toBe('JSON');
       

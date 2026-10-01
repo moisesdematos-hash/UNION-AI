@@ -91,8 +91,8 @@ describe('Shared ExecutionEngine — Real-Time Flow & DataBus Orchestration', ()
     expect(summary.totalNodes).toBe(3);
     expect(summary.completedNodes).toBe(3);
     expect(summary.failedNodes).toBe(0);
-    expect(summary.totalTokens).toBeGreaterThan(0);
-    expect(summary.totalCostCredits).toBeGreaterThan(0);
+    expect(summary.totalTokens).toBe(0);
+    expect(summary.totalCostCredits).toBe(0);
     expect(summary.durationMs).toBeGreaterThanOrEqual(0);
 
     // Verify events sequence

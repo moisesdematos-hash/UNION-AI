@@ -1,0 +1,15 @@
+{
+  "production_without_database": {
+    "liveStatus": 200,
+    "readyStatus": 503,
+    "noSQLiteFallback": true
+  },
+  "local_authenticated_read_load_sqlite": {
+    "requests": 100,
+    "concurrency": 10,
+    "errors": 0,
+    "p50Ms": 7.116377,
+    "p95Ms": 18.442303999999993,
+    "p99Ms": 20.965984000000006
+  }
+}

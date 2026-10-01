@@ -26,7 +26,22 @@ const EnvSchema = z.object({
   SUPABASE_URL: z.string().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
-  DATABASE_URL: z.string().optional()
+  DATABASE_URL: z.string().url().optional(),
+  DB_SSL: z.enum(['require', 'disable']).default('require'),
+  DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(5),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GROQ_INPUT_CREDITS_PER_MILLION: z.coerce.number().nonnegative().default(1),
+  GROQ_OUTPUT_CREDITS_PER_MILLION: z.coerce.number().nonnegative().default(2)
+}).refine(data => {
+  if (data.NODE_ENV === 'production') {
+    if (data.JWT_SECRET === 'union-ai-super-secret-key-change-in-production-2026' || data.JWT_SECRET.length < 32) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: 'Em ambiente de produção (NODE_ENV=production), JWT_SECRET não pode utilizar o valor padrão e deve conter pelo menos 32 caracteres seguros.',
+  path: ['JWT_SECRET']
 });
 
 export const env = EnvSchema.parse(process.env);
