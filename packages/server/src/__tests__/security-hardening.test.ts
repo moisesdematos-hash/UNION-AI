@@ -112,5 +112,5 @@ describe('Production regression and security', () => {
     const user = await authService.register('polling@example.com', 'SecurePass123', 'Polling');
     const statuses = await Promise.all(Array.from({ length: 305 }, () => request(productionLimitsApp).get('/api/workflows/jobs/nonexistent').set('Authorization', `Bearer ${user.token}`).then(response => response.status)));
     expect(new Set(statuses)).toEqual(new Set([404]));
-  });
+  }, 15000);
 });

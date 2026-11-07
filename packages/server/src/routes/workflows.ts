@@ -61,7 +61,10 @@ workflowsRouter.post('/jobs', async (req: AuthenticatedRequest, res: Response) =
 });
 const jobPollingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 2000, keyGenerator: req => (req as AuthenticatedRequest).user!.id, standardHeaders: true, legacyHeaders: false });
 workflowsRouter.get('/jobs/:jobId', jobPollingLimiter, async (req: AuthenticatedRequest, res: Response) => {
-  const job = await WorkflowJobs.get(req.params.jobId, req.user!.id);
+  let job = await WorkflowJobs.get(req.params.jobId, req.user!.id);
+  if (job?.status === 'QUEUED') {
+    void WorkflowJobs.runNext().catch(() => {});
+  }
   res.status(job ? 200 : 404).json({ status: job ? 'success' : 'error', data: job });
 });
 workflowsRouter.delete('/jobs/:jobId', async (req: AuthenticatedRequest, res: Response) => {

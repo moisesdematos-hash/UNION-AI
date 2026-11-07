@@ -1,7 +1,17 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import crypto from 'node:crypto';
 
 dotenv.config();
+
+// In production, ensure a secure 32+ character secret exists without crashing the server if unset
+if (process.env.NODE_ENV === 'production') {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === 'union-ai-super-secret-key-change-in-production-2026' || secret.length < 32) {
+    process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn('[UNION.AI Security] AVISO: JWT_SECRET não configurado ou inseguro em produção. Foi gerado um segredo criptográfico efêmero de 256 bits para esta instância.');
+  }
+}
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
