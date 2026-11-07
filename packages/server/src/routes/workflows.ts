@@ -11,6 +11,20 @@ import { userStorageService } from '../services/user-storage-service.js';
 import { creditsService } from '../services/credits-service.js';
 import { NodeDefinitionSchema, ConnectionDefinitionSchema, ViewportSchema, WorkflowGroupSchema, WorkflowEngine } from '@union/shared';
 export const workflowsRouter = Router();
+
+// Vercel Cron Endpoint: automatic queue processing without persistent server
+workflowsRouter.get('/cron-worker', async (_req, res: Response) => {
+  try {
+    let drained = 0;
+    while (drained < 5 && (await WorkflowJobs.runNext())) {
+      drained++;
+    }
+    res.status(200).json({ status: 'success', drained });
+  } catch (err: unknown) {
+    res.status(500).json({ status: 'error', message: err instanceof Error ? err.message : 'Cron failed' });
+  }
+});
+
 workflowsRouter.use(requireAuth);
 const CreateWorkflowSchema = z.object({
     projectId: z.string().min(1),
@@ -57,13 +71,19 @@ workflowsRouter.post('/jobs', async (req: AuthenticatedRequest, res: Response) =
   if (req.body.mode && req.body.mode !== 'RUN') return res.status(422).json({ status: 'error', message: 'PARTIAL_EXECUTION_NOT_IMPLEMENTED: Execute o workflow completo; retomada parcial requer checkpoints de entradas persistidos no servidor.' });
   const workflow = WorkflowDefinitionSchema.parse(req.body.workflow);
   const job = await WorkflowJobs.enqueue(req.user!.id, workflow);
+  // Non-blocking trigger of the first execution slice
+  void WorkflowJobs.runNext().catch(() => {});
   res.status(202).json({ status: 'success', data: job });
 });
 const jobPollingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 2000, keyGenerator: req => (req as AuthenticatedRequest).user!.id, standardHeaders: true, legacyHeaders: false });
 workflowsRouter.get('/jobs/:jobId', jobPollingLimiter, async (req: AuthenticatedRequest, res: Response) => {
   let job = await WorkflowJobs.get(req.params.jobId, req.user!.id);
   if (job?.status === 'QUEUED') {
-    void WorkflowJobs.runNext().catch(() => {});
+    await Promise.race([
+      WorkflowJobs.runNext(),
+      new Promise(resolve => setTimeout(resolve, 3000))
+    ]).catch(() => {});
+    job = await WorkflowJobs.get(req.params.jobId, req.user!.id);
   }
   res.status(job ? 200 : 404).json({ status: job ? 'success' : 'error', data: job });
 });
