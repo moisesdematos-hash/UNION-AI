@@ -3,12 +3,6 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "crons": [
-    {
-      "path": "/api/workflows/cron-worker",
-      "schedule": "* * * * *"
-    }
-  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/p/(.*)", "destination": "/api" },
